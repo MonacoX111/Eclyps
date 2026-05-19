@@ -14,6 +14,7 @@ import { getTeamsForActiveTournament, type TournamentTeam } from "@/lib/data/tea
 import { getPlayersForActiveTournament, type TournamentPlayer } from "@/lib/data/players"
 import { getMatchesForActiveTournament, type TournamentMatch } from "@/lib/data/matches"
 import { getResultsForActiveTournament, type TournamentResult } from "@/lib/data/results"
+import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
 
 export const dynamic = "force-dynamic"
 
@@ -285,7 +286,7 @@ function getTournamentView(
   return {
     heroName: readString(tournament.name, tournament.title),
     sectionName: readString(tournament.name, tournament.display_name, tournament.title),
-    date: formatTournamentDate(readString(tournament.event_date)),
+    date: formatEventDate(tournament.event_date),
     game: readString(tournament.game),
     format: readString(tournament.format),
     teamCount:
@@ -344,34 +345,6 @@ function formatPrizePool(value: unknown) {
   }
 
   return readString(value)
-}
-
-function formatTournamentDate(start?: string, end?: string) {
-  if (!start) return undefined
-
-  const startDate = new Date(start)
-  if (Number.isNaN(startDate.getTime())) return start
-
-  const formattedStart = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(startDate)
-
-  if (!end) return formattedStart
-
-  const endDate = new Date(end)
-  if (Number.isNaN(endDate.getTime())) return formattedStart
-
-  const formattedEnd = new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(endDate)
-
-  return formattedStart === formattedEnd
-    ? formattedStart
-    : `${formattedStart} - ${formattedEnd}`
 }
 
 function getTeamCards(teams: TournamentTeam[]): TeamCard[] {
@@ -485,19 +458,7 @@ function getResultCards(
       season,
       placements,
       mvp: readString(results.find((result) => result.placement === 1)?.mvp),
-      date: formatResultsDate(readString(tournament?.event_date)),
+      date: formatEventMonthYear(tournament?.event_date),
     },
   ]
-}
-
-function formatResultsDate(eventDate?: string) {
-  if (!eventDate) return undefined
-
-  const date = new Date(eventDate)
-  if (Number.isNaN(date.getTime())) return eventDate
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-  }).format(date)
 }

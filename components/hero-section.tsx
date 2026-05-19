@@ -64,6 +64,16 @@ export function HeroSection({
         <span className="text-balance">Eclyps Hub</span>
       </m.h1>
 
+      {/* Event label */}
+      <m.p
+        className="relative z-10 mb-2 text-center text-sm font-semibold tracking-widest uppercase text-primary/80 md:text-base"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.55 }}
+      >
+        NEXT EVENT
+      </m.p>
+
       {/* Subtitle */}
       <m.p
         className="relative z-10 mb-2 max-w-full break-words text-center text-lg font-medium tracking-widest uppercase text-primary md:text-xl"

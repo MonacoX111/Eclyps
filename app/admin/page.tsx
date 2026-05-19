@@ -37,6 +37,7 @@ import {
   MatchParticipantFields,
   ResultParticipantFields,
 } from "@/components/admin-participant-fields"
+import { formatShortEventDate } from "@/lib/date-format"
 
 export const dynamic = "force-dynamic"
 
@@ -1242,7 +1243,6 @@ function TournamentForm({
           name="event_date"
           type="date"
           defaultValue={tournament?.event_date ?? ""}
-          required
           className={inputClassName}
         />
       </AdminField>
@@ -1374,7 +1374,6 @@ function getTournamentFeedback(searchParams?: {
     {
       "invalid-name": "Name must not be empty.",
       "invalid-game": "Game must not be empty.",
-      "invalid-event-date": "Event date must not be empty.",
       "invalid-team-count": "Team count must be a number greater than 0.",
       "invalid-match-days": "Match days must be a number greater than 0.",
       "invalid-status": "Status must be upcoming, live, or finished.",
@@ -1545,19 +1544,7 @@ function formatStatus(status: string | null) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
-function formatDisplayDate(value: string | null) {
-  if (!value) return "No date"
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)
-}
+const formatDisplayDate = formatShortEventDate
 
 function formatDisplayDateTime(value: string | null) {
   if (!value) return "—"

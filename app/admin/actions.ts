@@ -530,7 +530,7 @@ function parseTournamentFormData(formData: FormData):
       data: {
         name: string
         game: string
-        event_date: string
+        event_date: string | null
         format: string | null
         team_count: number
         match_days: number
@@ -544,7 +544,7 @@ function parseTournamentFormData(formData: FormData):
   | { ok: false; error: string } {
   const name = readRequiredString(formData.get("name"))
   const game = readRequiredString(formData.get("game"))
-  const eventDate = readRequiredString(formData.get("event_date"))
+  const eventDate = readOptionalString(formData.get("event_date"))
   const format = readOptionalString(formData.get("format"))
   const teamCount = readPositiveInteger(formData.get("team_count"))
   const matchDays = readPositiveInteger(formData.get("match_days"))
@@ -556,7 +556,6 @@ function parseTournamentFormData(formData: FormData):
 
   if (!name) return { ok: false, error: "invalid-name" }
   if (!game) return { ok: false, error: "invalid-game" }
-  if (!eventDate) return { ok: false, error: "invalid-event-date" }
   if (!teamCount) return { ok: false, error: "invalid-team-count" }
   if (!matchDays) return { ok: false, error: "invalid-match-days" }
   if (!status) return { ok: false, error: "invalid-status" }
