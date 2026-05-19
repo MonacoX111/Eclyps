@@ -4,12 +4,29 @@ __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
+
+# Deployment
 .vercel/
 
 # Environment variables
 .env*.local
 
-# Common ignores
-node_modules
+# Dependencies
+node_modules/
+
+# Next.js
 .next/
+out/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary / debug screenshots
+*.png
+
+# Keep real public assets
+!public/**/*.png
