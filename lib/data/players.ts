@@ -1,7 +1,6 @@
 import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
-import { getActiveTournament } from "@/lib/data/tournaments"
 import { supabase } from "@/lib/supabase/client"
 import {
   readNullableInteger,
@@ -15,18 +14,21 @@ export type TournamentPlayer = {
   id: string
   tournament_id: string
   name: string
-  nickname?: string | null
-  seed?: number | null
-  wins?: number | null
-  losses?: number | null
+  nickname: string | null
+  seed: number | null
+  wins: number
+  losses: number
 }
 
-export async function getPlayersForActiveTournament(): Promise<TournamentPlayer[]> {
+export async function getPlayersForTournament(
+  tournamentId: string,
+): Promise<TournamentPlayer[]> {
   noStore()
-  const tournament = await getActiveTournament()
-  const tournamentId = readStringId(tournament?.id)
 
-  if (!tournamentId) return []
+  if (!supabase) {
+    console.warn("Skipping players query because Supabase is not configured.")
+    return []
+  }
 
   try {
     const { data, error } = await supabase
@@ -36,13 +38,13 @@ export async function getPlayersForActiveTournament(): Promise<TournamentPlayer[
       .order("seed", { ascending: true, nullsFirst: false })
 
     if (error) {
-      console.error("Failed to fetch players for active tournament:", error)
+      console.error("Failed to fetch players for tournament:", error)
       return []
     }
 
     return normalizeRows(data, normalizePlayer)
   } catch (error) {
-    console.error("Unexpected error while fetching players for active tournament:", error)
+    console.error("Unexpected error while fetching players for tournament:", error)
     return []
   }
 }

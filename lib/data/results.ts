@@ -1,5 +1,4 @@
 import { unstable_noStore as noStore } from "next/cache"
-import { getActiveTournament } from "@/lib/data/tournaments"
 import { supabase } from "@/lib/supabase/client"
 import {
   readNullableInteger,
@@ -14,46 +13,63 @@ export type TournamentResult = {
   tournament_id: string
   team: string | null
   placement: number | null
-  label?: string | null
-  mvp?: string | null
-  scoreline?: string | null
-  note?: string | null
-  participant_type?: string | null
+  label: string | null
+  mvp: string | null
+  scoreline: string | null
+  note: string | null
+  participant_type: "team" | "player"
+  participant_id: string | null
 }
 
-export async function getResultsForActiveTournament(): Promise<TournamentResult[]> {
+export async function getResultsForTournament(
+  tournamentId: string,
+): Promise<TournamentResult[]> {
   noStore()
-
-  const tournament = await getActiveTournament()
-  const tournamentId = readStringId(tournament?.id)
 
   if (!supabase) {
     console.warn("Skipping results query because Supabase is not configured.")
     return []
   }
 
-  if (!tournamentId) {
-    console.warn("Skipping results query because no active tournament id was found.")
-    return []
-  }
-
   try {
-    const { data, error } = await supabase
+    const result = await supabase
       .from("results")
-      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type")
+      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id")
       .eq("tournament_id", tournamentId)
       .order("placement", { ascending: true, nullsFirst: false })
 
-    if (error) {
-      console.error("Failed to fetch results for active tournament:", error)
-      return []
+    if (result.error && isMissingColumnError(result.error)) {
+      const fallbackResult = await supabase
+        .from("results")
+        .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type")
+        .eq("tournament_id", tournamentId)
+        .order("placement", { ascending: true, nullsFirst: false })
+
+      return logAndReturnResults(fallbackResult.data, fallbackResult.error)
     }
 
-    return normalizeRows(data, normalizeResult)
+    return logAndReturnResults(result.data, result.error)
   } catch (error) {
-    console.error("Unexpected error while fetching results for active tournament:", error)
+    console.error("Unexpected error while fetching results for tournament:", error)
     return []
   }
+}
+
+function logAndReturnResults(
+  data: Record<string, unknown>[] | null,
+  error: {
+    message: string
+    code: string
+    details: string
+    hint: string
+  } | null,
+) {
+  if (error) {
+    console.error("Failed to fetch results for tournament:", error)
+    return []
+  }
+
+  return normalizeRows(data, normalizeResult)
 }
 
 function normalizeResult(row: Record<string, unknown>): TournamentResult | null {
@@ -75,5 +91,10 @@ function normalizeResult(row: Record<string, unknown>): TournamentResult | null 
     scoreline: readNullableString(row.scoreline),
     note: readNullableString(row.note),
     participant_type: readParticipantType(row.participant_type),
+    participant_id: readStringId(row.participant_id),
   }
+}
+
+function isMissingColumnError(error: { code?: string }) {
+  return error.code === "42703" || error.code === "PGRST204"
 }

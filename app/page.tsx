@@ -2,19 +2,14 @@ import { Suspense } from "react"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
 import { TournamentInfo } from "@/components/tournament-info"
-import { TeamsGrid, type TeamCard } from "@/components/teams-grid"
-import { MatchSchedule, type MatchScheduleItem } from "@/components/match-schedule"
-import { Results, type ResultCard } from "@/components/results"
+import { TeamsGrid } from "@/components/teams-grid"
+import { MatchSchedule } from "@/components/match-schedule"
+import { Results } from "@/components/results"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
-import { getActiveTournament, type ActiveTournament } from "@/lib/data/tournaments"
-import { getTeamsForActiveTournament, type TournamentTeam } from "@/lib/data/teams"
-import { getPlayersForActiveTournament, type TournamentPlayer } from "@/lib/data/players"
-import { getMatchesForActiveTournament, type TournamentMatch } from "@/lib/data/matches"
-import { getResultsForActiveTournament, type TournamentResult } from "@/lib/data/results"
-import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
+import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
 
 export const dynamic = "force-dynamic"
 
@@ -65,72 +60,39 @@ export default function Page() {
 }
 
 async function ActiveTournamentBlocks() {
-  const [tournament, matches, results, players] = await Promise.all([
-    getActiveTournament(),
-    getMatchesForActiveTournament(),
-    getResultsForActiveTournament(),
-    getPlayersForActiveTournament(),
-  ])
-  if (!tournament) return <TournamentUnavailable />
+  const homepageData = await getHomepageData()
+  if (!homepageData.tournamentView) return <TournamentUnavailable />
 
-  const participantType = getParticipantType(matches, results)
-  const tournamentView = getTournamentView(tournament, participantType, players.length)
-
-  return <TournamentBlocks {...tournamentView} />
+  return <TournamentBlocks {...homepageData.tournamentView} />
 }
 
 async function ActiveNavbar() {
-  const [matches, results] = await Promise.all([
-    getMatchesForActiveTournament(),
-    getResultsForActiveTournament(),
-  ])
-  const participantType = getParticipantType(matches, results)
+  const homepageData = await getHomepageData()
 
-  return <Navbar participantLabel={participantType === "player" ? "Players" : "Teams"} />
+  return <Navbar participantLabel={homepageData.participantLabel} />
 }
 
 async function ActiveTournamentTeams() {
-  const [teams, players, matches, results] = await Promise.all([
-    getTeamsForActiveTournament(),
-    getPlayersForActiveTournament(),
-    getMatchesForActiveTournament(),
-    getResultsForActiveTournament(),
-  ])
-  const participantType = getParticipantType(matches, results)
-  return participantType === "player"
-    ? <TeamsGrid teams={getPlayerCards(players)} participantLabel="Players" />
-    : <TeamsGrid teams={getTeamCards(teams)} participantLabel="Teams" />
+  const homepageData = await getHomepageData()
+
+  return (
+    <TeamsGrid
+      teams={homepageData.participantCards}
+      participantLabel={homepageData.participantLabel}
+    />
+  )
 }
 
 async function ActiveTournamentMatches() {
-  const matches = await getMatchesForActiveTournament()
+  const homepageData = await getHomepageData()
 
-  return <MatchSchedule matches={getMatchScheduleItems(matches)} />
+  return <MatchSchedule matches={homepageData.matchScheduleItems} />
 }
 
 async function ActiveTournamentResults() {
-  const [tournament, results] = await Promise.all([
-    getActiveTournament(),
-    getResultsForActiveTournament(),
-  ])
+  const homepageData = await getHomepageData()
 
-  return <Results results={getResultCards(results, tournament)} />
-}
-
-type TournamentBlocksProps = {
-  heroName?: string
-  sectionName?: string
-  date?: string
-  game?: string
-  format?: string
-  teamCount?: string
-  status?: string
-  prizePool?: string
-  matchDays?: string
-  arenaTitle?: string
-  arenaDescription?: string
-  arenaTags?: string[]
-  participantLabel?: "Teams" | "Players"
+  return <Results results={homepageData.resultCards} />
 }
 
 function TournamentBlocks({
@@ -147,7 +109,7 @@ function TournamentBlocks({
   arenaDescription,
   arenaTags,
   participantLabel,
-}: TournamentBlocksProps = {}) {
+}: Partial<TournamentBlocksView> = {}) {
   return (
     <>
       <HeroSection
@@ -274,191 +236,4 @@ function ResultsLoading() {
       </div>
     </section>
   )
-}
-
-function getTournamentView(
-  tournament: ActiveTournament | null,
-  participantType: "team" | "player",
-  playerCount: number,
-): TournamentBlocksProps {
-  if (!tournament) return {}
-
-  return {
-    heroName: readString(tournament.name, tournament.title),
-    sectionName: readString(tournament.name, tournament.display_name, tournament.title),
-    date: formatEventDate(tournament.event_date),
-    game: readString(tournament.game),
-    format: readString(tournament.format),
-    teamCount:
-      participantType === "player"
-        ? String(playerCount || readNumberString(tournament.team_count) || "0")
-        : readNumberString(tournament.team_count),
-    status: formatStatus(readString(tournament.status)),
-    prizePool: formatPrizePool(tournament.prize_pool),
-    matchDays: readNumberString(tournament.match_days),
-    arenaTitle: readString(tournament.arena_title),
-    arenaDescription: readString(tournament.arena_description),
-    arenaTags: readStringArray(tournament.arena_tags),
-    participantLabel: participantType === "player" ? "Players" : "Teams",
-  }
-}
-
-function readString(...values: unknown[]) {
-  return values.find((value): value is string => typeof value === "string" && value.trim().length > 0)
-}
-
-function readNumberString(...values: unknown[]) {
-  const value = values.find(
-    (candidate): candidate is number | string =>
-      typeof candidate === "number" ||
-      (typeof candidate === "string" && candidate.trim().length > 0),
-  )
-
-  return value === undefined ? undefined : String(value)
-}
-
-function readStringArray(value: unknown) {
-  if (!Array.isArray(value)) return undefined
-
-  const tags = value.filter(
-    (item): item is string => typeof item === "string" && item.trim().length > 0,
-  )
-
-  return tags.length > 0 ? tags : undefined
-}
-
-function formatStatus(status?: string) {
-  if (!status) return undefined
-
-  return status
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-function formatPrizePool(value: unknown) {
-  if (typeof value === "number") {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
-
-  return readString(value)
-}
-
-function getTeamCards(teams: TournamentTeam[]): TeamCard[] {
-  return teams.map((team, index) => {
-    return {
-      id: team.id,
-      name: team.name,
-      tag: createTeamTag(team.name),
-      wins: team.wins ?? 0,
-      losses: team.losses ?? 0,
-      rank: team.seed ?? index + 1,
-    }
-  })
-}
-
-function getPlayerCards(players: TournamentPlayer[]): TeamCard[] {
-  return players.map((player, index) => ({
-    id: player.id,
-    name: player.name,
-    tag: player.nickname || createTeamTag(player.name),
-    wins: player.wins ?? 0,
-    losses: player.losses ?? 0,
-    rank: player.seed ?? index + 1,
-  }))
-}
-
-function getParticipantType(
-  matches: TournamentMatch[],
-  results: TournamentResult[],
-): "team" | "player" {
-  return matches.some((match) => match.participant_type === "player") ||
-    results.some((result) => result.participant_type === "player")
-    ? "player"
-    : "team"
-}
-
-function createTeamTag(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase()
-}
-
-function getMatchScheduleItems(matches: TournamentMatch[]): MatchScheduleItem[] {
-  return matches
-    .filter(
-      (match): match is TournamentMatch & { team1: string; team2: string } =>
-        Boolean(match.team1 && match.team2),
-    )
-    .map((match) => ({
-      id: match.id,
-      round: formatRoundLabel(match.round),
-      teamA: match.team1,
-      teamB: match.team2,
-      time: null,
-      status: normalizeMatchStatus(match.status),
-      score1: match.score1,
-      score2: match.score2,
-    }))
-}
-
-function formatRoundLabel(round: string | null) {
-  if (!round) return "Matches"
-
-  const normalized = round.toLowerCase()
-
-  if (normalized === "quarterfinal") return "Quarterfinals"
-  if (normalized === "semifinal") return "Semifinals"
-  if (normalized === "final" || normalized === "grand final") return "Grand Final"
-
-  return round
-}
-
-function normalizeMatchStatus(status?: string | null): MatchScheduleItem["status"] {
-  if (status === "live" || status === "finished") return status
-
-  return "upcoming"
-}
-
-function getResultCards(
-  results: TournamentResult[],
-  tournament: ActiveTournament | null,
-): ResultCard[] {
-  if (results.length === 0) {
-    return []
-  }
-
-  const placements = results
-    .filter(
-      (result): result is TournamentResult & { placement: 1 | 2 | 3; team: string } =>
-        (result.placement === 1 ||
-          result.placement === 2 ||
-          result.placement === 3) &&
-        Boolean(result.team),
-    )
-    .map((result) => ({
-      placement: result.placement,
-      team: result.team,
-    }))
-
-  if (placements.length === 0) return []
-
-  const season = readString(tournament?.name)
-  if (!season) return []
-
-  return [
-    {
-      season,
-      placements,
-      mvp: readString(results.find((result) => result.placement === 1)?.mvp),
-      date: formatEventMonthYear(tournament?.event_date),
-    },
-  ]
 }

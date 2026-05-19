@@ -1,5 +1,4 @@
 import { unstable_noStore as noStore } from "next/cache"
-import { getActiveTournament } from "@/lib/data/tournaments"
 import { supabase } from "@/lib/supabase/client"
 import {
   readMatchStatus,
@@ -14,41 +13,42 @@ export type TournamentMatch = {
   id: string
   tournament_id: string
   round: string | null
-  match_order?: number | null
+  match_order: number | null
   team1: string | null
   team2: string | null
-  score1?: number | null
-  score2?: number | null
-  status?: string | null
-  participant_type?: string | null
+  score1: number | null
+  score2: number | null
+  status: "upcoming" | "live" | "finished"
+  participant_type: "team" | "player"
+  participant_1_id: string | null
+  participant_2_id: string | null
+  winner_participant_id: string | null
+  bracket_round: string | null
+  bracket_position: number | null
+  next_match_id: string | null
+  next_match_slot: number | null
 }
 
-export async function getMatchesForActiveTournament(): Promise<TournamentMatch[]> {
+export async function getMatchesForTournament(
+  tournamentId: string,
+): Promise<TournamentMatch[]> {
   noStore()
-
-  const tournament = await getActiveTournament()
-  const tournamentId = readStringId(tournament?.id)
 
   if (!supabase) {
     console.warn("Skipping matches query because Supabase is not configured.")
     return []
   }
 
-  if (!tournamentId) {
-    console.warn("Skipping matches query because no active tournament id was found.")
-    return []
-  }
-
   try {
     const orderedResult = await supabase
       .from("matches")
-      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type")
+      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_round, bracket_position, next_match_id, next_match_slot")
       .eq("tournament_id", tournamentId)
       .order("match_order", { ascending: true, nullsFirst: false })
 
-    if (orderedResult.error && orderedResult.error.code === "42703") {
+    if (orderedResult.error && isMissingColumnError(orderedResult.error)) {
       console.warn(
-        "matches.match_order column is unavailable. Falling back to unordered results.",
+        "New match participant columns are unavailable. Falling back to legacy match results.",
       )
 
       const fallbackResult = await supabase
@@ -61,7 +61,7 @@ export async function getMatchesForActiveTournament(): Promise<TournamentMatch[]
 
     return logAndReturnMatches(orderedResult.data, orderedResult.error)
   } catch (error) {
-    console.error("Unexpected error while fetching matches for active tournament:", error)
+    console.error("Unexpected error while fetching matches for tournament:", error)
     return []
   }
 }
@@ -76,7 +76,7 @@ function logAndReturnMatches(
   } | null,
 ) {
   if (error) {
-    console.error("Failed to fetch matches for active tournament:", error)
+    console.error("Failed to fetch matches for tournament:", error)
     return []
   }
 
@@ -103,5 +103,16 @@ function normalizeMatch(row: Record<string, unknown>): TournamentMatch | null {
     score2: readNullableInteger(row.score2),
     status: readMatchStatus(row.status),
     participant_type: readParticipantType(row.participant_type),
+    participant_1_id: readStringId(row.participant_1_id),
+    participant_2_id: readStringId(row.participant_2_id),
+    winner_participant_id: readStringId(row.winner_participant_id),
+    bracket_round: readNullableString(row.bracket_round),
+    bracket_position: readNullableInteger(row.bracket_position),
+    next_match_id: readStringId(row.next_match_id),
+    next_match_slot: readNullableInteger(row.next_match_slot),
   }
+}
+
+function isMissingColumnError(error: { code?: string }) {
+  return error.code === "42703" || error.code === "PGRST204"
 }

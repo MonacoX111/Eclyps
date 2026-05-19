@@ -20,6 +20,7 @@ export type AdminResult = {
   scoreline: string | null
   note: string | null
   participant_type: string | null
+  participant_id: string | null
 }
 
 export type AdminResultQueryResult = {
@@ -34,13 +35,21 @@ export async function getAdminResults(): Promise<AdminResultQueryResult> {
     return { results: [], error: "Supabase is not configured." }
   }
 
-  const { rows, error } = await runAdminRowsQuery("results", () =>
-    supabase
+  const { rows, error } = await runAdminRowsQuery("results", async () => {
+    const result = await supabase
       .from("results")
-      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type")
-      .order("placement", { ascending: true, nullsFirst: false }),
-    normalizeResult,
-  )
+      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id")
+      .order("placement", { ascending: true, nullsFirst: false })
+
+    if (isMissingColumnError(result.error)) {
+      return supabase
+        .from("results")
+        .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type")
+        .order("placement", { ascending: true, nullsFirst: false })
+    }
+
+    return result
+  }, normalizeResult)
 
   return { results: rows, error }
 }
@@ -59,5 +68,16 @@ function normalizeResult(row: Record<string, unknown>): AdminResult | null {
     scoreline: readNullableString(row.scoreline),
     note: readNullableString(row.note),
     participant_type: readParticipantType(row.participant_type),
+    participant_id: readStringId(row.participant_id),
   }
+}
+
+function isMissingColumnError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    ((error as { code?: unknown }).code === "42703" ||
+      (error as { code?: unknown }).code === "PGRST204")
+  )
 }
