@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import {
   ADMIN_SESSION_COOKIE,
+  isAdminAuthStorageConfigured,
   isAdminPasswordConfigured,
   isValidAdminSession,
 } from "@/lib/admin-auth"
@@ -60,7 +61,8 @@ type AdminPageProps = {
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
-  const isAuthenticated = isValidAdminSession(sessionCookie)
+  const isAuthenticated = await isValidAdminSession(sessionCookie)
+  const isAdminConfigured = isAdminPasswordConfigured() && isAdminAuthStorageConfigured()
   const resolvedSearchParams = await searchParams
 
   if (!isAuthenticated) {
@@ -100,9 +102,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               </p>
             )}
 
+            {resolvedSearchParams?.error === "rate-limited" && (
+              <p className="text-sm text-red-300">
+                Too many attempts. Try again later.
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={!isAdminPasswordConfigured()}
+              disabled={!isAdminConfigured}
               className="w-full rounded-xl bg-emerald-300 px-4 py-3 font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
             >
               Continue
@@ -285,41 +293,6 @@ async function AdminDashboard({
         fetchError={tournamentError}
         feedback={getActiveTournamentFeedback(searchParams)}
       />
-
-      <section className="grid gap-4">
-        {adminSections
-          .filter(
-            (section) =>
-              section.id !== "tournaments" &&
-              section.id !== "teams" &&
-              section.id !== "players" &&
-              section.id !== "matches" &&
-              section.id !== "active-tournament",
-          )
-          .map((section) => (
-            <article
-              key={section.id}
-              id={section.id}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur"
-            >
-              <div className="flex h-full flex-col justify-between gap-6">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-white/40">
-                    Planned module
-                  </p>
-                  <h2 className="mt-3 text-xl font-semibold">{section.title}</h2>
-                  <p className="mt-3 text-sm leading-6 text-white/60">
-                    {section.description}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-white/45">
-                  Placeholder panel ready for future CRUD controls.
-                </div>
-              </div>
-            </article>
-          ))}
-      </section>
     </div>
   )
 }

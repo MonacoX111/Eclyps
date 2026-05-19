@@ -2,7 +2,7 @@ import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
 import { getActiveTournament } from "@/lib/data/tournaments"
-import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { supabase } from "@/lib/supabase/client"
 import {
   readNullableInteger,
   readNullableString,
@@ -25,12 +25,11 @@ export async function getPlayersForActiveTournament(): Promise<TournamentPlayer[
   noStore()
   const tournament = await getActiveTournament()
   const tournamentId = readStringId(tournament?.id)
-  const supabaseAdmin = createSupabaseAdminClient()
 
-  if (!supabaseAdmin || !tournamentId) return []
+  if (!tournamentId) return []
 
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("players")
       .select("id, tournament_id, name, nickname, seed, wins, losses")
       .eq("tournament_id", tournamentId)

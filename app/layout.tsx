@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
+import { getPublicEnv } from '@/lib/env/public'
 import './globals.css'
 
 const title = 'Eclyps — Competitive Esports Tournaments'
@@ -15,12 +16,10 @@ const keywords = [
   'online tournaments',
   'competitive gaming',
 ]
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-  process.env.VERCEL_URL
+const publicEnv = getPublicEnv()
+const siteUrl = publicEnv.siteUrl
 const metadataBase = new URL(
-  siteUrl ? (siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`) : 'http://localhost:3000',
+  siteUrl ?? 'http://localhost:3000',
 )
 const ogImage = '/og-image.png'
 
@@ -75,7 +74,7 @@ export default function RootLayout({
     <html lang="en" className="bg-background">
       <body className="font-sans antialiased">
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {publicEnv.isProduction && <Analytics />}
       </body>
     </html>
   )

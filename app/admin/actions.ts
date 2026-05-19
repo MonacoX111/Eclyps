@@ -1,14 +1,24 @@
 "use server"
 
 import { cookies } from "next/headers"
+import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import {
   ADMIN_SESSION_COOKIE,
-  createAdminSessionValue,
+  checkAdminLoginRateLimit,
+  clearAdminLoginRateLimit,
+  createAdminSession,
+  getAdminLoginIdentifier,
+  getAdminSessionCookieOptions,
+  getAdminSessionDeleteCookieOptions,
+  getAdminUserAgent,
+  isAdminAuthStorageConfigured,
   isAdminPasswordConfigured,
   isValidAdminPassword,
   isValidAdminSession,
+  recordFailedAdminLogin,
+  revokeAdminSession,
 } from "@/lib/admin-auth"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { logMutationError } from "@/lib/admin/errors"
@@ -26,43 +36,53 @@ import {
   type ValidStatus,
 } from "@/lib/admin/form-values"
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
-
 export async function loginAdmin(formData: FormData) {
-  if (!isAdminPasswordConfigured()) {
+  if (!isAdminPasswordConfigured() || !isAdminAuthStorageConfigured()) {
     redirect("/admin?error=unavailable")
   }
 
-  if (!isValidAdminPassword(formData.get("password"))) {
+  const headersList = await headers()
+  const identifier = getAdminLoginIdentifier(headersList)
+  const rateLimit = await checkAdminLoginRateLimit(identifier)
+
+  if (!rateLimit.allowed) {
+    redirect(rateLimit.retryAfterSeconds ? "/admin?error=rate-limited" : "/admin?error=unavailable")
+  }
+
+  if (!(await isValidAdminPassword(formData.get("password")))) {
+    await recordFailedAdminLogin(identifier)
     redirect("/admin?error=invalid")
   }
 
-  const sessionValue = createAdminSessionValue()
+  await clearAdminLoginRateLimit(identifier)
 
-  if (!sessionValue) {
+  const session = await createAdminSession({
+    identifier,
+    userAgent: getAdminUserAgent(headersList),
+  })
+
+  if (!session) {
     redirect("/admin?error=unavailable")
   }
 
   const cookieStore = await cookies()
 
-  cookieStore.set(ADMIN_SESSION_COOKIE, sessionValue, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/admin",
-    maxAge: SESSION_MAX_AGE_SECONDS,
-  })
+  cookieStore.set(
+    ADMIN_SESSION_COOKIE,
+    session.token,
+    getAdminSessionCookieOptions(session.maxAge),
+  )
 
   redirect("/admin")
 }
 
 export async function logoutAdmin() {
   const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
 
-  cookieStore.delete({
-    name: ADMIN_SESSION_COOKIE,
-    path: "/admin",
-  })
+  await revokeAdminSession(sessionCookie)
+
+  cookieStore.delete(getAdminSessionDeleteCookieOptions())
 
   redirect("/admin")
 }
@@ -479,14 +499,14 @@ async function requireAdminSession() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
 
-  if (!isValidAdminSession(sessionCookie)) {
+  if (!(await isValidAdminSession(sessionCookie))) {
     redirect("/admin")
   }
 }
 
 async function runSupabaseMutation<T extends { error: unknown }>(
   context: string,
-  mutation: () => Promise<T>,
+  mutation: () => PromiseLike<T>,
 ) {
   try {
     return await mutation()

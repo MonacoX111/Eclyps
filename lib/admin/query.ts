@@ -4,7 +4,7 @@ import { getSafeAdminFetchError } from "@/lib/admin/errors"
 
 export async function runAdminRowsQuery<T>(
   context: string,
-  query: () => Promise<{ data: Record<string, unknown>[] | null; error: unknown }>,
+  query: () => PromiseLike<{ data: Record<string, unknown>[] | null; error: unknown }>,
   normalize: (row: Record<string, unknown>) => T | null,
 ) {
   try {

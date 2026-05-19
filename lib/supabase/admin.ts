@@ -1,31 +1,19 @@
 import "server-only"
 
 import { createClient } from "@supabase/supabase-js"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+import { getServerEnv } from "@/lib/env/server"
 
 export function createSupabaseAdminClient() {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    return null
-  }
+  const serverEnv = getServerEnv()
 
-  try {
-    new URL(supabaseUrl)
-  } catch {
-    console.error("NEXT_PUBLIC_SUPABASE_URL is invalid for the admin Supabase client.")
-    return null
-  }
-
-  try {
-    return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(
+    serverEnv.public.supabaseUrl,
+    serverEnv.supabaseServiceRoleKey,
+    {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
-    })
-  } catch (error) {
-    console.error("Failed to initialize Supabase admin client:", error)
-    return null
-  }
+    },
+  )
 }
