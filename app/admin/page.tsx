@@ -1,8 +1,6 @@
 import { cookies } from "next/headers"
 import {
   ADMIN_SESSION_COOKIE,
-  isAdminAuthStorageConfigured,
-  isAdminPasswordConfigured,
   isValidAdminSession,
 } from "@/lib/admin-auth"
 import {
@@ -38,6 +36,7 @@ import {
   ResultParticipantFields,
 } from "@/components/admin-participant-fields"
 import { formatShortEventDate } from "@/lib/date-format"
+import { AdminLoginForm } from "./login-form"
 
 export const dynamic = "force-dynamic"
 
@@ -63,7 +62,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
   const isAuthenticated = await isValidAdminSession(sessionCookie)
-  const isAdminConfigured = isAdminPasswordConfigured() && isAdminAuthStorageConfigured()
   const resolvedSearchParams = await searchParams
 
   if (!isAuthenticated) {
@@ -78,45 +76,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             Enter the admin password to continue.
           </p>
 
-          <form action={loginAdmin} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm text-white/80">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-emerald-300/60"
-              />
-            </div>
-
-            {resolvedSearchParams?.error === "invalid" && (
-              <p className="text-sm text-red-300">Incorrect password.</p>
-            )}
-
-            {resolvedSearchParams?.error === "unavailable" && (
-              <p className="text-sm text-amber-200">
-                Admin access is not configured yet.
-              </p>
-            )}
-
-            {resolvedSearchParams?.error === "rate-limited" && (
-              <p className="text-sm text-red-300">
-                Too many attempts. Try again later.
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={!isAdminConfigured}
-              className="w-full rounded-xl bg-emerald-300 px-4 py-3 font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
-            >
-              Continue
-            </button>
-          </form>
+          <AdminLoginForm action={loginAdmin} error={resolvedSearchParams?.error} />
         </section>
       </AdminShell>
     )

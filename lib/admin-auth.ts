@@ -30,6 +30,14 @@ type LoginRateLimitResult = {
   retryAfterSeconds?: number
 }
 
+export type AdminAuthReadiness =
+  | { ok: true }
+  | {
+      ok: false
+      reason: "env" | "storage"
+      message: string
+    }
+
 export function isAdminPasswordConfigured() {
   const adminEnv = getOptionalAdminEnv()
 
@@ -37,7 +45,54 @@ export function isAdminPasswordConfigured() {
 }
 
 export function isAdminAuthStorageConfigured() {
-  return Boolean(createSupabaseAdminClient())
+  try {
+    return Boolean(createSupabaseAdminClient())
+  } catch (error) {
+    console.error("Admin auth storage is not configured:", error)
+    return false
+  }
+}
+
+export async function getAdminAuthReadiness(): Promise<AdminAuthReadiness> {
+  if (!isAdminPasswordConfigured()) {
+    return {
+      ok: false,
+      reason: "env",
+      message:
+        "Admin password hash and session secret are required before admin login is available.",
+    }
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    return {
+      ok: false,
+      reason: "env",
+      message:
+        "Supabase service-role credentials are required before admin login is available.",
+    }
+  }
+
+  const checks = await Promise.all([
+    supabaseAdmin.from("admin_sessions").select("id").limit(1),
+    supabaseAdmin
+      .from("admin_login_attempts")
+      .select("identifier")
+      .limit(1),
+  ])
+
+  const failedCheck = checks.find((check) => check.error)?.error
+  if (failedCheck) {
+    console.error("Admin auth storage check failed:", failedCheck)
+    return {
+      ok: false,
+      reason: "storage",
+      message:
+        "Admin auth tables are missing or unavailable to the service-role API. Apply the admin auth migration and grants.",
+    }
+  }
+
+  return { ok: true }
 }
 
 export function getAdminSessionCookieOptions(maxAge = ADMIN_SESSION_MAX_AGE_SECONDS) {

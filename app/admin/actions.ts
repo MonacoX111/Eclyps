@@ -9,12 +9,11 @@ import {
   checkAdminLoginRateLimit,
   clearAdminLoginRateLimit,
   createAdminSession,
+  getAdminAuthReadiness,
   getAdminLoginIdentifier,
   getAdminSessionCookieOptions,
   getAdminSessionDeleteCookieOptions,
   getAdminUserAgent,
-  isAdminAuthStorageConfigured,
-  isAdminPasswordConfigured,
   isValidAdminPassword,
   isValidAdminSession,
   recordFailedAdminLogin,
@@ -37,8 +36,9 @@ import {
 } from "@/lib/admin/form-values"
 
 export async function loginAdmin(formData: FormData) {
-  if (!isAdminPasswordConfigured() || !isAdminAuthStorageConfigured()) {
-    redirect("/admin?error=unavailable")
+  const readiness = await getAdminAuthReadiness()
+  if (!readiness.ok) {
+    redirect(readiness.reason === "storage" ? "/admin?error=storage" : "/admin?error=unavailable")
   }
 
   const headersList = await headers()
