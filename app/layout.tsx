@@ -32,14 +32,14 @@ export const metadata: Metadata = {
   authors: [{ name: 'Eclyps' }],
   creator: 'Eclyps',
   applicationName: 'Eclyps',
-  icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/icon-dark-32x32.png', sizes: '32x32', type: 'image/png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-light-32x32.png', sizes: '32x32', type: 'image/png', media: '(prefers-color-scheme: dark)' },
-    ],
-    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
-  },
+icons: {
+  icon: [
+    { url: '/favicon.ico' },
+    { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    { url: '/favicon.svg', type: 'image/svg+xml' },
+  ],
+  apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+},
   openGraph: {
     title,
     description,
