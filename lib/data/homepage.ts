@@ -355,6 +355,7 @@ function createHomepageData({
   const participantLabel = participantType === "player" ? "Players" : "Teams"
   const participantCards =
     participantType === "player" ? getPlayerCards(players) : getTeamCards(teams)
+  const { bracketMatches, normalMatches } = splitHomepageMatches(matches)
 
   return {
     tournament,
@@ -368,8 +369,8 @@ function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, players.length)
       : null,
     participantCards,
-    publicBracket: getPublicBracketData(matches, tournament),
-    matchScheduleItems: getMatchScheduleItems(matches),
+    publicBracket: getPublicBracketData(bracketMatches, tournament),
+    matchScheduleItems: getMatchScheduleItems(normalMatches),
     resultCards: getResultCards(results, tournament),
   }
 }
@@ -614,12 +615,18 @@ function getParticipantType(
     : "team"
 }
 
+function splitHomepageMatches(matches: HomepageMatch[]) {
+  return {
+    bracketMatches: matches.filter((match) => Boolean(match.bracket_id)),
+    normalMatches: matches.filter((match) => !match.bracket_id),
+  }
+}
+
 function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
   return matches
     .filter(
       (match): match is HomepageMatch & { team1: string; team2: string } =>
-        Boolean(match.team1 && match.team2) &&
-        !isHiddenTemplateBracketMatch(match),
+        Boolean(match.team1 && match.team2),
     )
     .map((match) => ({
       id: match.id,
@@ -638,19 +645,17 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
 }
 
 function getPublicBracketData(
-  matches: HomepageMatch[],
+  bracketMatches: HomepageMatch[],
   tournament: HomepageTournament | null,
 ): PublicBracketData | null {
-  const bracketMatches = matches
-    .filter((match) => Boolean(match.bracket_id))
-    .sort(compareBracketMatches)
+  const sortedBracketMatches = [...bracketMatches].sort(compareBracketMatches)
 
-  if (bracketMatches.length === 0) return null
+  if (sortedBracketMatches.length === 0) return null
 
-  const bracketId = bracketMatches[0]?.bracket_id
+  const bracketId = sortedBracketMatches[0]?.bracket_id
   if (!bracketId) return null
 
-  const selectedBracketMatches = bracketMatches.filter(
+  const selectedBracketMatches = sortedBracketMatches.filter(
     (match) => match.bracket_id === bracketId,
   )
 
@@ -768,15 +773,6 @@ function compareBracketMatches(left: HomepageMatch, right: HomepageMatch) {
       (right.bracket_position ?? Number.MAX_SAFE_INTEGER) ||
     (left.match_order ?? Number.MAX_SAFE_INTEGER) -
       (right.match_order ?? Number.MAX_SAFE_INTEGER)
-  )
-}
-
-function isHiddenTemplateBracketMatch(match: HomepageMatch) {
-  return Boolean(
-    match.bracket_id &&
-      match.bracket_status === "template" &&
-      !match.participant_1_id &&
-      !match.participant_2_id,
   )
 }
 
