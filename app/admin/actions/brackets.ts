@@ -283,7 +283,7 @@ export async function updateBracketMatch(formData: FormData) {
 
   const { data: match, error: matchError } = await supabaseAdmin
     .from("matches")
-    .select("id, tournament_id, bracket_id, bracket_status, participant_1_id, participant_2_id")
+    .select("id, tournament_id, bracket_id, bracket_status, participant_1_id, participant_2_id, team1, team2, status, winner_participant_id, next_match_id, next_match_slot")
     .eq("id", parsed.data.match_id)
     .maybeSingle()
 
@@ -344,6 +344,27 @@ export async function updateBracketMatch(formData: FormData) {
   if (updateError) {
     logMutationError("update bracket match", updateError)
     redirect("/admin?matchError=mutation-failed#matches")
+  }
+
+  const propagationResult = await syncBracketWinnerPropagation(supabaseAdmin, {
+    match: {
+      id: match.id,
+      bracketId: match.bracket_id,
+      previousStatus: match.status,
+      previousWinnerParticipantId: match.winner_participant_id,
+      participant1Id: match.participant_1_id,
+      participant2Id: match.participant_2_id,
+      team1: match.team1,
+      team2: match.team2,
+      nextMatchId: match.next_match_id,
+      nextMatchSlot: match.next_match_slot,
+    },
+    nextStatus: parsed.data.status,
+    nextWinnerParticipantId: winnerResult.winnerParticipantId,
+  })
+
+  if (!propagationResult.ok) {
+    redirect(`/admin?matchError=${propagationResult.error}#matches`)
   }
 
   const lifecycleStatus = await resolveBracketLifecycleStatus(
@@ -434,6 +455,240 @@ async function bracketHasActiveMatches(
   }
 
   return (data ?? []).length > 0
+}
+
+type BracketPropagationMatch = {
+  id: string
+  bracketId: string
+  previousStatus: string | null
+  previousWinnerParticipantId: string | null
+  participant1Id: string | null
+  participant2Id: string | null
+  team1: string | null
+  team2: string | null
+  nextMatchId: string | null
+  nextMatchSlot: number | null
+}
+
+type BracketPropagationResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
+async function syncBracketWinnerPropagation(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  {
+    match,
+    nextStatus,
+    nextWinnerParticipantId,
+  }: {
+    match: BracketPropagationMatch
+    nextStatus: "upcoming" | "live" | "finished"
+    nextWinnerParticipantId: string | null
+  },
+): Promise<BracketPropagationResult> {
+  const winnerChanged = match.previousWinnerParticipantId !== nextWinnerParticipantId
+  const shouldClearPreviousWinner =
+    winnerChanged &&
+    Boolean(match.previousWinnerParticipantId) &&
+    Boolean(match.nextMatchId)
+
+  if (shouldClearPreviousWinner) {
+    const clearResult = await clearPropagatedWinnerFromNextMatch(supabaseAdmin, {
+      bracketId: match.bracketId,
+      nextMatchId: match.nextMatchId,
+      nextMatchSlot: match.nextMatchSlot,
+      participantId: match.previousWinnerParticipantId,
+    })
+
+    if (!clearResult.ok) return clearResult
+  }
+
+  if (nextStatus !== "finished" || !nextWinnerParticipantId || !match.nextMatchId) {
+    return { ok: true }
+  }
+
+  if (
+    nextWinnerParticipantId !== match.participant1Id &&
+    nextWinnerParticipantId !== match.participant2Id
+  ) {
+    return { ok: false, error: "invalid-winner" }
+  }
+
+  if (match.nextMatchSlot !== 1 && match.nextMatchSlot !== 2) {
+    return { ok: false, error: "invalid-bracket-chain" }
+  }
+
+  const winnerName =
+    nextWinnerParticipantId === match.participant1Id ? match.team1 : match.team2
+
+  if (!winnerName) {
+    return { ok: false, error: "invalid-winner" }
+  }
+
+  return advanceWinnerToNextMatch(supabaseAdmin, {
+    bracketId: match.bracketId,
+    nextMatchId: match.nextMatchId,
+    nextMatchSlot: match.nextMatchSlot,
+    participantId: nextWinnerParticipantId,
+    participantName: winnerName,
+  })
+}
+
+async function advanceWinnerToNextMatch(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  {
+    bracketId,
+    nextMatchId,
+    nextMatchSlot,
+    participantId,
+    participantName,
+  }: {
+    bracketId: string
+    nextMatchId: string
+    nextMatchSlot: 1 | 2
+    participantId: string
+    participantName: string
+  },
+): Promise<BracketPropagationResult> {
+  const { data: nextMatch, error } = await supabaseAdmin
+    .from("matches")
+    .select("id, bracket_id, status, participant_1_id, participant_2_id")
+    .eq("id", nextMatchId)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("fetch next bracket match for propagation", error)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  if (!nextMatch || nextMatch.bracket_id !== bracketId) {
+    return { ok: false, error: "invalid-bracket-chain" }
+  }
+
+  const currentSlotParticipant =
+    nextMatchSlot === 1 ? nextMatch.participant_1_id : nextMatch.participant_2_id
+  const otherSlotParticipant =
+    nextMatchSlot === 1 ? nextMatch.participant_2_id : nextMatch.participant_1_id
+
+  if (currentSlotParticipant === participantId) {
+    return { ok: true }
+  }
+
+  if (nextMatch.status === "live" || nextMatch.status === "finished") {
+    return { ok: false, error: "bracket-propagation-target-locked" }
+  }
+
+  if (currentSlotParticipant && currentSlotParticipant !== participantId) {
+    return { ok: false, error: "bracket-propagation-conflict" }
+  }
+
+  if (otherSlotParticipant === participantId) {
+    return { ok: false, error: "duplicate-bracket-participant" }
+  }
+
+  const update =
+    nextMatchSlot === 1
+      ? { participant_1_id: participantId, team1: participantName }
+      : { participant_2_id: participantId, team2: participantName }
+
+  const { error: updateError } = await runSupabaseMutation("advance bracket winner", () =>
+    supabaseAdmin.from("matches").update(update).eq("id", nextMatchId),
+  )
+
+  if (updateError) {
+    logMutationError("advance bracket winner", updateError)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  return { ok: true }
+}
+
+async function clearPropagatedWinnerFromNextMatch(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  {
+    bracketId,
+    nextMatchId,
+    nextMatchSlot,
+    participantId,
+  }: {
+    bracketId: string
+    nextMatchId: string | null
+    nextMatchSlot: number | null
+    participantId: string | null
+  },
+): Promise<BracketPropagationResult> {
+  if (!nextMatchId || !participantId) return { ok: true }
+
+  if (nextMatchSlot !== 1 && nextMatchSlot !== 2) {
+    return { ok: false, error: "invalid-bracket-chain" }
+  }
+
+  const { data: nextMatch, error } = await supabaseAdmin
+    .from("matches")
+    .select("id, bracket_id, status, participant_1_id, participant_2_id, winner_participant_id, next_match_id, next_match_slot")
+    .eq("id", nextMatchId)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("fetch next bracket match for propagation cleanup", error)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  if (!nextMatch || nextMatch.bracket_id !== bracketId) {
+    return { ok: false, error: "invalid-bracket-chain" }
+  }
+
+  const currentSlotParticipant =
+    nextMatchSlot === 1 ? nextMatch.participant_1_id : nextMatch.participant_2_id
+
+  if (currentSlotParticipant !== participantId) {
+    return { ok: true }
+  }
+
+  if (nextMatch.status === "live" || nextMatch.status === "finished") {
+    return { ok: false, error: "bracket-propagation-target-locked" }
+  }
+
+  if (nextMatch.winner_participant_id === participantId) {
+    const clearDownstreamResult = await clearPropagatedWinnerFromNextMatch(supabaseAdmin, {
+      bracketId,
+      nextMatchId: nextMatch.next_match_id,
+      nextMatchSlot: nextMatch.next_match_slot,
+      participantId,
+    })
+
+    if (!clearDownstreamResult.ok) return clearDownstreamResult
+  }
+
+  const update =
+    nextMatchSlot === 1
+      ? {
+          participant_1_id: null,
+          team1: null,
+          winner_participant_id:
+            nextMatch.winner_participant_id === participantId
+              ? null
+              : nextMatch.winner_participant_id,
+        }
+      : {
+          participant_2_id: null,
+          team2: null,
+          winner_participant_id:
+            nextMatch.winner_participant_id === participantId
+              ? null
+              : nextMatch.winner_participant_id,
+        }
+
+  const { error: updateError } = await runSupabaseMutation("clear propagated bracket winner", () =>
+    supabaseAdmin.from("matches").update(update).eq("id", nextMatchId),
+  )
+
+  if (updateError) {
+    logMutationError("clear propagated bracket winner", updateError)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  return { ok: true }
 }
 
 async function resolveBracketLifecycleStatus(

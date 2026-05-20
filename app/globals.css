@@ -111,6 +111,31 @@
   100% { background-position: 200% center; }
 }
 
+@keyframes bracket-logo-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 42px oklch(0.78 0.18 165 / 0.14);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow: 0 0 64px oklch(0.78 0.18 165 / 0.22);
+  }
+}
+
+@keyframes bracket-live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 22px oklch(0.78 0.18 165 / 0.08);
+  }
+  50% {
+    box-shadow: 0 0 34px oklch(0.78 0.18 165 / 0.20);
+  }
+}
+
+@keyframes bracket-line-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
   will-change: transform;
@@ -134,6 +159,24 @@
   animation: shimmer 3s linear infinite;
 }
 
+.bracket-logo-breathe {
+  animation: bracket-logo-breathe 4s ease-in-out infinite;
+  will-change: transform, box-shadow;
+}
+
+.bracket-live-pulse {
+  animation: bracket-live-pulse 2.4s ease-in-out infinite;
+}
+
+.bracket-line-pulse {
+  animation: bracket-line-pulse 2s ease-in-out infinite;
+}
+
+.bracket-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.78 0.18 165 / 0.35) transparent;
+}
+
 .glass-card {
   background: oklch(0.12 0.015 180 / 0.6);
   backdrop-filter: blur(20px);
@@ -151,7 +194,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
-  .animate-pulse-glow {
+  .animate-pulse-glow,
+  .bracket-logo-breathe,
+  .bracket-live-pulse,
+  .bracket-line-pulse {
     animation: none;
   }
 }

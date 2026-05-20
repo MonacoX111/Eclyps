@@ -1,6 +1,12 @@
 import { cache } from "react"
 import { unstable_noStore as noStore } from "next/cache"
 import type { MatchScheduleItem } from "@/components/match-schedule"
+import type {
+  PublicBracketData,
+  PublicBracketMatch,
+  PublicBracketParticipant,
+  PublicBracketRound,
+} from "@/components/public-bracket"
 import type { ResultCard } from "@/components/results"
 import type { TeamCard } from "@/components/teams-grid"
 import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
@@ -128,6 +134,7 @@ export type HomepageData = {
   participantLabel: "Teams" | "Players"
   tournamentView: TournamentBlocksView | null
   participantCards: TeamCard[]
+  publicBracket: PublicBracketData | null
   matchScheduleItems: MatchScheduleItem[]
   resultCards: ResultCard[]
 }
@@ -355,6 +362,7 @@ function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, players.length)
       : null,
     participantCards,
+    publicBracket: getPublicBracketData(matches),
     matchScheduleItems: getMatchScheduleItems(matches),
     resultCards: getResultCards(results, tournament),
   }
@@ -616,6 +624,126 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
       score1: match.score1,
       score2: match.score2,
     }))
+}
+
+function getPublicBracketData(matches: HomepageMatch[]): PublicBracketData | null {
+  const bracketMatches = matches
+    .filter((match) => Boolean(match.bracket_id))
+    .sort(compareBracketMatches)
+
+  if (bracketMatches.length === 0) return null
+
+  const bracketId = bracketMatches[0]?.bracket_id
+  if (!bracketId) return null
+
+  const selectedBracketMatches = bracketMatches.filter(
+    (match) => match.bracket_id === bracketId,
+  )
+
+  if (selectedBracketMatches.length === 0) return null
+
+  const roundMap = new Map<number, HomepageMatch[]>()
+
+  selectedBracketMatches.forEach((match) => {
+    const roundOrder = match.round_order ?? Number.MAX_SAFE_INTEGER
+    roundMap.set(roundOrder, [...(roundMap.get(roundOrder) ?? []), match])
+  })
+
+  const rounds: PublicBracketRound[] = Array.from(roundMap.entries())
+    .sort(([leftOrder], [rightOrder]) => leftOrder - rightOrder)
+    .map(([order, roundMatches]) => {
+      const sortedRoundMatches = [...roundMatches].sort(compareBracketMatches)
+      const label =
+        sortedRoundMatches.find((match) => match.bracket_round || match.round)
+          ?.bracket_round ??
+        sortedRoundMatches.find((match) => match.round)?.round ??
+        "Bracket"
+
+      return {
+        order,
+        label,
+        matches: sortedRoundMatches.map(getPublicBracketMatch),
+      }
+    })
+
+  return {
+    id: bracketId,
+    status: selectedBracketMatches.find((match) => match.bracket_status)?.bracket_status ?? null,
+    rounds,
+    champion: getBracketChampion(selectedBracketMatches),
+  }
+}
+
+function getPublicBracketMatch(match: HomepageMatch): PublicBracketMatch {
+  return {
+    id: match.id,
+    label: match.bracket_round ?? match.round ?? "Bracket match",
+    position: match.bracket_position ?? 0,
+    status: match.status,
+    participants: [
+      getPublicBracketParticipant({
+        participantId: match.participant_1_id,
+        name: match.team1,
+        score: match.score1,
+        winnerParticipantId: match.winner_participant_id,
+      }),
+      getPublicBracketParticipant({
+        participantId: match.participant_2_id,
+        name: match.team2,
+        score: match.score2,
+        winnerParticipantId: match.winner_participant_id,
+      }),
+    ],
+  }
+}
+
+function getPublicBracketParticipant({
+  participantId,
+  name,
+  score,
+  winnerParticipantId,
+}: {
+  participantId: string | null
+  name: string | null
+  score: number | null
+  winnerParticipantId: string | null
+}): PublicBracketParticipant {
+  return {
+    id: participantId,
+    name: name ?? "TBD",
+    score,
+    isWinner: Boolean(participantId && participantId === winnerParticipantId),
+  }
+}
+
+function getBracketChampion(matches: HomepageMatch[]) {
+  const finalMatch = [...matches]
+    .filter((match) => match.status === "finished" && match.winner_participant_id)
+    .sort(compareBracketMatches)
+    .at(-1)
+
+  if (!finalMatch?.winner_participant_id) return null
+
+  if (finalMatch.winner_participant_id === finalMatch.participant_1_id) {
+    return finalMatch.team1 ?? "TBD"
+  }
+
+  if (finalMatch.winner_participant_id === finalMatch.participant_2_id) {
+    return finalMatch.team2 ?? "TBD"
+  }
+
+  return null
+}
+
+function compareBracketMatches(left: HomepageMatch, right: HomepageMatch) {
+  return (
+    (left.round_order ?? Number.MAX_SAFE_INTEGER) -
+      (right.round_order ?? Number.MAX_SAFE_INTEGER) ||
+    (left.bracket_position ?? Number.MAX_SAFE_INTEGER) -
+      (right.bracket_position ?? Number.MAX_SAFE_INTEGER) ||
+    (left.match_order ?? Number.MAX_SAFE_INTEGER) -
+      (right.match_order ?? Number.MAX_SAFE_INTEGER)
+  )
 }
 
 function isHiddenTemplateBracketMatch(match: HomepageMatch) {

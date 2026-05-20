@@ -4,6 +4,7 @@ import { HeroSection } from "@/components/hero-section"
 import { TournamentInfo } from "@/components/tournament-info"
 import { TeamsGrid } from "@/components/teams-grid"
 import { MatchSchedule } from "@/components/match-schedule"
+import { PublicBracket } from "@/components/public-bracket"
 import { Results } from "@/components/results"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
@@ -28,6 +29,10 @@ export default function Page() {
 
         <Suspense fallback={<CardsLoading />}>
           <ActiveTournamentTeams />
+        </Suspense>
+
+        <Suspense fallback={<BracketLoading />}>
+          <ActiveTournamentBracket />
         </Suspense>
 
         <div
@@ -87,6 +92,12 @@ async function ActiveTournamentMatches() {
   const homepageData = await getHomepageData()
 
   return <MatchSchedule matches={homepageData.matchScheduleItems} />
+}
+
+async function ActiveTournamentBracket() {
+  const homepageData = await getHomepageData()
+
+  return <PublicBracket bracket={homepageData.publicBracket} />
 }
 
 async function ActiveTournamentResults() {
@@ -220,6 +231,25 @@ function ScheduleLoading() {
         <div className="space-y-3">
           {[1, 2, 3].map((item) => (
             <div key={item} className="glass-card h-20 animate-pulse rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function BracketLoading() {
+  return (
+    <section className="relative z-10 px-4 py-24">
+      <div className="mx-auto max-w-7xl">
+        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
+        <div className="grid gap-4 md:grid-flow-col md:auto-cols-fr">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="space-y-3">
+              <div className="mx-auto h-5 w-32 animate-pulse rounded bg-white/[0.04]" />
+              <div className="glass-card h-36 animate-pulse rounded-xl" />
+              <div className="glass-card h-36 animate-pulse rounded-xl" />
+            </div>
           ))}
         </div>
       </div>

@@ -132,6 +132,10 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
         "Assign both bracket slots before starting or finishing the match.",
       "duplicate-bracket-participant":
         "A participant cannot be assigned twice in the same bracket.",
+      "bracket-propagation-target-locked":
+        "Winner could not advance because the next bracket match has already started.",
+      "bracket-propagation-conflict":
+        "Winner could not advance because the next bracket slot already has a different participant.",
       "missing-id": "Match id is missing.",
       "admin-client-unavailable":
         "Match mutations require a server-only Supabase admin client.",
