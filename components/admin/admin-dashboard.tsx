@@ -96,7 +96,7 @@ export async function AdminDashboard({
               href="/"
               className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:border-white/20 hover:text-white"
             >
-              ??? Back to site
+              {"\u2190"} Back to site
             </a>
 
             <form action={logoutAdmin}>

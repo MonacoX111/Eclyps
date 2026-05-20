@@ -21,9 +21,9 @@ export function getTeamNames(teams: AdminTeam[]) {
 export function getPlayerNames(players: AdminPlayer[]) {
   return Array.from(
     new Set(
-      players.flatMap((player) => [player.nickname?.trim(), player.name?.trim()]).filter(
-        (value): value is string => Boolean(value),
-      ),
+      players
+        .map((player) => player.display_name.trim())
+        .filter((value): value is string => Boolean(value)),
     ),
   ).sort((left, right) => left.localeCompare(right))
 }

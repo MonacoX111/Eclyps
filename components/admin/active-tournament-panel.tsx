@@ -34,7 +34,7 @@ export function ActiveTournamentPanel({
               <div className="min-w-0">
                 <h3 className="break-words font-medium">{tournament.name ?? "Untitled tournament"}</h3>
                 <p className="mt-1 break-words text-sm text-white/55">
-                  {tournament.game ?? "Unknown game"} ?? {formatDisplayDate(tournament.event_date)}
+                  {tournament.game ?? "Unknown game"} {"\u2022"} {formatDisplayDate(tournament.event_date)}
                 </p>
               </div>
 

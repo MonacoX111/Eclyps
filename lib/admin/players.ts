@@ -14,6 +14,8 @@ export type AdminPlayer = {
   tournament_id: string | null
   name: string | null
   nickname: string | null
+  real_name: string | null
+  display_name: string
   seed: number | null
   wins: number | null
   losses: number | null
@@ -46,14 +48,24 @@ function normalizePlayer(row: Record<string, unknown>): AdminPlayer | null {
   const id = readStringId(row.id)
   if (!id) return null
 
+  const realName = readNullableString(row.name)
+  const nickname = readNullableString(row.nickname)
+  const displayName = getPlayerDisplayName(realName, nickname)
+
   return {
     id,
     tournament_id: readStringId(row.tournament_id),
-    name: readNullableString(row.name),
-    nickname: readNullableString(row.nickname),
+    name: realName,
+    nickname,
+    real_name: realName,
+    display_name: displayName,
     seed: readNullableInteger(row.seed),
     wins: readNullableInteger(row.wins),
     losses: readNullableInteger(row.losses),
     created_at: readNullableString(row.created_at),
   }
+}
+
+function getPlayerDisplayName(realName: string | null, nickname: string | null) {
+  return nickname?.trim() || realName?.trim() || "Untitled player"
 }

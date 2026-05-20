@@ -7,6 +7,7 @@ import { SectionHeading } from "@/components/section-heading"
 export type TeamCard = {
   id: string
   name: string
+  subtitle?: string | null
   tag: string
   wins: number
   losses: number
@@ -57,6 +58,11 @@ export function TeamsGrid({
                 <h3 className="break-words text-lg font-bold text-foreground">
                   {team.name}
                 </h3>
+                {team.subtitle && (
+                  <p className="mt-1 break-words text-xs text-muted-foreground">
+                    {team.subtitle}
+                  </p>
+                )}
                 <p className="mb-3 break-all font-mono text-xs text-muted-foreground">
                   [{team.tag}]
                 </p>

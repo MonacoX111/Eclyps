@@ -456,7 +456,7 @@ function MatchRecord({
               {match.team1 ?? "TBD"} vs {match.team2 ?? "TBD"}
             </h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {tournamentName} ?? {match.round ?? "No round"}
+              {tournamentName} {"\u2022"} {match.round ?? "No round"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">

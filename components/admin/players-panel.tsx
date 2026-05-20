@@ -68,12 +68,19 @@ function PlayerRecord({
   tournaments: AdminTournament[]
   tournamentName: string
 }) {
+  const showRealName = Boolean(
+    player.real_name && player.real_name !== player.display_name,
+  )
+
   return (
     <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h4 className="break-words font-medium">{player.nickname || player.name || "Untitled player"}</h4>
+            <h4 className="break-words font-medium">{player.display_name}</h4>
+            {showRealName && (
+              <p className="mt-1 break-words text-sm text-white/45">{player.real_name}</p>
+            )}
             <p className="mt-1 break-words text-sm text-white/55">{tournamentName}</p>
           </div>
           <span className={pillClassName}>Seed {player.seed ?? "???"}</span>
@@ -104,10 +111,10 @@ function PlayerForm({
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {player && <input type="hidden" name="id" value={player.id} />}
       <TournamentSelect tournaments={tournaments} value={player?.tournament_id} />
-      <AdminField label="Name">
+      <AdminField label="Real name">
         <input name="name" defaultValue={player?.name ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label="Nickname">
+      <AdminField label="Nickname / display name">
         <input name="nickname" defaultValue={player?.nickname ?? ""} className={inputClassName} />
       </AdminField>
       <AdminField label="Seed">

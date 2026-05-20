@@ -67,6 +67,8 @@ export type HomepagePlayer = {
   tournament_id: string
   name: string
   nickname: string | null
+  real_name: string | null
+  display_name: string
   seed: number | null
   wins: number
   losses: number
@@ -435,6 +437,7 @@ function normalizeHomepagePlayer(row: Record<string, unknown>): HomepagePlayer |
   const id = readStringId(row.id)
   const tournamentId = readStringId(row.tournament_id)
   const name = readNullableString(row.name)
+  const nickname = readNullableString(row.nickname)
 
   if (!id || !tournamentId || !name) {
     console.error("Skipping malformed homepage player row:", row)
@@ -445,7 +448,9 @@ function normalizeHomepagePlayer(row: Record<string, unknown>): HomepagePlayer |
     id,
     tournament_id: tournamentId,
     name,
-    nickname: readNullableString(row.nickname),
+    nickname,
+    real_name: name,
+    display_name: getPlayerDisplayName(name, nickname),
     seed: readNullableInteger(row.seed),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
@@ -597,8 +602,12 @@ function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
 function getPlayerCards(players: HomepagePlayer[]): TeamCard[] {
   return players.map((player, index) => ({
     id: player.id,
-    name: player.name,
-    tag: player.nickname || createTeamTag(player.name),
+    name: player.display_name,
+    subtitle:
+      player.real_name && player.real_name !== player.display_name
+        ? player.real_name
+        : null,
+    tag: createTeamTag(player.display_name),
     wins: player.wins,
     losses: player.losses,
     rank: player.seed ?? index + 1,
@@ -820,6 +829,10 @@ function createTeamTag(name: string) {
     .join("")
     .slice(0, 3)
     .toUpperCase()
+}
+
+function getPlayerDisplayName(realName: string | null, nickname: string | null) {
+  return nickname?.trim() || realName?.trim() || "Untitled player"
 }
 
 function formatRoundLabel(round: string | null) {
