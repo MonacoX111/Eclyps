@@ -74,6 +74,16 @@ export type HomepagePlayer = {
   losses: number
 }
 
+export type HomepageParticipant = {
+  id: string
+  tournament_id: string
+  participant_type: "team" | "player"
+  display_name: string
+  seed: number | null
+  source_team_id: string | null
+  source_player_id: string | null
+}
+
 export type HomepageMatch = {
   id: string
   tournament_id: string
@@ -136,6 +146,7 @@ export type HomepageData = {
   tournament: HomepageTournament | null
   teams: HomepageTeam[]
   players: HomepagePlayer[]
+  participants: HomepageParticipant[]
   matches: HomepageMatch[]
   results: HomepageResult[]
   participantType: "team" | "player"
@@ -156,14 +167,16 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
       tournament: null,
       teams: [],
       players: [],
+      participants: [],
       matches: [],
       results: [],
     })
   }
 
-  const [teams, players, matches, results] = await Promise.all([
+  const [teams, players, participants, matches, results] = await Promise.all([
     fetchHomepageTeams(tournament.id),
     fetchHomepagePlayers(tournament.id),
+    fetchHomepageParticipants(tournament.id),
     fetchHomepageMatches(tournament.id),
     fetchHomepageResults(tournament.id),
   ])
@@ -172,6 +185,7 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
     tournament,
     teams,
     players,
+    participants,
     matches,
     results,
   })
@@ -269,6 +283,34 @@ async function fetchHomepagePlayers(tournamentId: string): Promise<HomepagePlaye
   }
 }
 
+async function fetchHomepageParticipants(
+  tournamentId: string,
+): Promise<HomepageParticipant[]> {
+  if (!supabase) {
+    console.warn("Skipping homepage participants query because Supabase is not configured.")
+    return []
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("participants")
+      .select("id, tournament_id, participant_type, display_name, seed, source_team_id, source_player_id")
+      .eq("tournament_id", tournamentId)
+      .order("seed", { ascending: true, nullsFirst: false })
+      .order("display_name", { ascending: true })
+
+    if (error) {
+      console.error("Failed to fetch homepage participants:", error)
+      return []
+    }
+
+    return normalizeRows(data, normalizeHomepageParticipant)
+  } catch (error) {
+    console.error("Unexpected error while fetching homepage participants:", error)
+    return []
+  }
+}
+
 async function fetchHomepageMatches(tournamentId: string): Promise<HomepageMatch[]> {
   if (!supabase) {
     console.warn("Skipping homepage matches query because Supabase is not configured.")
@@ -344,31 +386,40 @@ function createHomepageData({
   tournament,
   teams,
   players,
+  participants,
   matches,
   results,
 }: {
   tournament: HomepageTournament | null
   teams: HomepageTeam[]
   players: HomepagePlayer[]
+  participants: HomepageParticipant[]
   matches: HomepageMatch[]
   results: HomepageResult[]
 }): HomepageData {
-  const participantType = getParticipantType(matches, results)
+  const participantType = getParticipantType(participants, matches, results)
   const participantLabel = participantType === "player" ? "Players" : "Teams"
   const participantCards =
-    participantType === "player" ? getPlayerCards(players) : getTeamCards(teams)
+    participantType === "player"
+      ? getPlayerCards(players, participants)
+      : getTeamCards(teams)
   const { bracketMatches, normalMatches } = splitHomepageMatches(matches)
+  const publicPlayerCount =
+    participantType === "player"
+      ? getPlayerCount(players, participants)
+      : players.length
 
   return {
     tournament,
     teams,
     players,
+    participants,
     matches,
     results,
     participantType,
     participantLabel,
     tournamentView: tournament
-      ? getTournamentBlocksView(tournament, participantType, players.length)
+      ? getTournamentBlocksView(tournament, participantType, publicPlayerCount)
       : null,
     participantCards,
     publicBracket: getPublicBracketData(bracketMatches, tournament),
@@ -454,6 +505,29 @@ function normalizeHomepagePlayer(row: Record<string, unknown>): HomepagePlayer |
     seed: readNullableInteger(row.seed),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
+  }
+}
+
+function normalizeHomepageParticipant(
+  row: Record<string, unknown>,
+): HomepageParticipant | null {
+  const id = readStringId(row.id)
+  const tournamentId = readStringId(row.tournament_id)
+  const displayName = readNullableString(row.display_name)
+
+  if (!id || !tournamentId || !displayName) {
+    console.error("Skipping malformed homepage participant row:", row)
+    return null
+  }
+
+  return {
+    id,
+    tournament_id: tournamentId,
+    participant_type: readParticipantType(row.participant_type),
+    display_name: displayName,
+    seed: readNullableInteger(row.seed),
+    source_team_id: readStringId(row.source_team_id),
+    source_player_id: readStringId(row.source_player_id),
   }
 }
 
@@ -599,29 +673,88 @@ function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
   }))
 }
 
-function getPlayerCards(players: HomepagePlayer[]): TeamCard[] {
-  return players.map((player, index) => ({
-    id: player.id,
-    name: player.display_name,
-    subtitle:
-      player.real_name && player.real_name !== player.display_name
-        ? player.real_name
-        : null,
-    tag: createTeamTag(player.display_name),
-    wins: player.wins,
-    losses: player.losses,
-    rank: player.seed ?? index + 1,
+function getPlayerCards(
+  players: HomepagePlayer[],
+  participants: HomepageParticipant[],
+): TeamCard[] {
+  const playerParticipants = getPlayerParticipants(participants)
+
+  if (players.length > 0) {
+    const participantsByPlayerId = new Map(
+      playerParticipants
+        .filter((participant) => participant.source_player_id)
+        .map((participant) => [participant.source_player_id, participant]),
+    )
+
+    return players.map((player, index) => {
+      const participant = participantsByPlayerId.get(player.id)
+
+      return {
+        id: participant?.id ?? player.id,
+        name: participant?.display_name ?? player.display_name,
+        subtitle: getPlayerCardSubtitle({
+          realName: player.real_name,
+          displayName: participant?.display_name ?? player.display_name,
+          seed: participant?.seed ?? player.seed,
+        }),
+        tag: createTeamTag(participant?.display_name ?? player.display_name),
+        wins: player.wins,
+        losses: player.losses,
+        rank: participant?.seed ?? player.seed ?? index + 1,
+      }
+    })
+  }
+
+  return playerParticipants.map((participant, index) => ({
+    id: participant.id,
+    name: participant.display_name,
+    subtitle: getPlayerCardSubtitle({
+      realName: null,
+      displayName: participant.display_name,
+      seed: participant.seed,
+    }),
+    tag: createTeamTag(participant.display_name),
+    wins: 0,
+    losses: 0,
+    rank: participant.seed ?? index + 1,
   }))
 }
 
 function getParticipantType(
+  participants: HomepageParticipant[],
   matches: HomepageMatch[],
   results: HomepageResult[],
 ): "team" | "player" {
-  return matches.some((match) => match.participant_type === "player") ||
+  return participants.some((participant) => participant.participant_type === "player") ||
+    matches.some((match) => match.participant_type === "player") ||
     results.some((result) => result.participant_type === "player")
     ? "player"
     : "team"
+}
+
+function getPlayerCount(
+  players: HomepagePlayer[],
+  participants: HomepageParticipant[],
+) {
+  return Math.max(players.length, getPlayerParticipants(participants).length)
+}
+
+function getPlayerParticipants(participants: HomepageParticipant[]) {
+  return participants.filter((participant) => participant.participant_type === "player")
+}
+
+function getPlayerCardSubtitle({
+  realName,
+  displayName,
+  seed,
+}: {
+  realName: string | null
+  displayName: string
+  seed: number | null
+}) {
+  if (realName && realName !== displayName) return realName
+
+  return seed ? `Seed ${seed}` : "Player"
 }
 
 function splitHomepageMatches(matches: HomepageMatch[]) {

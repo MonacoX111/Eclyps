@@ -20,7 +20,7 @@ export default function Page() {
       <AdminShortcut />
       <ParticleField />
       <MotionProvider>
-        <Suspense fallback={<Navbar />}>
+        <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
         <Suspense fallback={<TournamentBlocksLoading />}>

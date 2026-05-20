@@ -10,9 +10,10 @@ type NavbarProps = {
 
 export function Navbar({ participantLabel = "Teams" }: NavbarProps) {
   const [open, setOpen] = useState(false)
+  const participantHref = participantLabel === "Players" ? "#players" : "#teams"
   const navLinks = [
     { href: "#tournament", label: "Tournament" },
-    { href: "#teams", label: participantLabel },
+    { href: participantHref, label: participantLabel },
     { href: "#schedule", label: "Schedule" },
     { href: "#results", label: "Results" },
   ]
