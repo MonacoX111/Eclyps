@@ -5,6 +5,7 @@ import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import { formatStatus } from "@/lib/admin/formatters"
 import { createTournamentNameMap, getPlayerNames, getTeamNames } from "@/lib/admin/view-helpers"
+import { getWinnerSelectionFromParticipantId } from "@/lib/matches/core"
 import { createMatch, deleteMatch, updateMatch } from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
@@ -165,10 +166,35 @@ function MatchForm({
         <input name="score2" type="number" defaultValue={match?.score2 ?? ""} className={inputClassName} />
       </AdminField>
       <StatusSelect value={match?.status} />
+      <WinnerSelect match={match} />
       <AdminField label="Match order">
         <input name="match_order" type="number" min={1} step={1} defaultValue={match?.match_order ?? ""} required className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
     </form>
+  )
+}
+
+function WinnerSelect({ match }: { match?: AdminMatch }) {
+  return (
+    <AdminField label="Winner">
+      <select
+        name="winner_selection"
+        defaultValue={
+          match
+            ? getWinnerSelectionFromParticipantId({
+                winnerParticipantId: match.winner_participant_id,
+                participant1Id: match.participant_1_id,
+                participant2Id: match.participant_2_id,
+              })
+            : ""
+        }
+        className={inputClassName}
+      >
+        <option value="">Auto / none</option>
+        <option value="participant_1">{match?.team1 ?? "Participant 1"}</option>
+        <option value="participant_2">{match?.team2 ?? "Participant 2"}</option>
+      </select>
+    </AdminField>
   )
 }

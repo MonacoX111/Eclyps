@@ -6,6 +6,34 @@ export type ParticipantReference = {
   participant_type: ParticipantType
 }
 
+export function readParticipantReference(
+  value: unknown,
+  fallbackType: ParticipantType,
+): ParticipantReference | null {
+  const row = Array.isArray(value) ? value[0] : value
+
+  if (typeof row !== "object" || row === null) {
+    return null
+  }
+
+  const record = row as Record<string, unknown>
+  const id = typeof record.id === "string" ? record.id : null
+  const displayName =
+    typeof record.display_name === "string" && record.display_name.trim().length > 0
+      ? record.display_name.trim()
+      : null
+
+  if (!id && !displayName) {
+    return null
+  }
+
+  return {
+    id,
+    display_name: displayName,
+    participant_type: record.participant_type === "player" ? "player" : fallbackType,
+  }
+}
+
 export function resolveParticipantName(
   participant: ParticipantReference | null | undefined,
   legacyName: string | null,

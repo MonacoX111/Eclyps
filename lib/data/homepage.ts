@@ -15,6 +15,11 @@ import {
   readStringArray,
   readStringId,
 } from "@/lib/data/normalize"
+import {
+  readParticipantReference,
+  resolveParticipantName,
+  type ParticipantReference,
+} from "@/lib/data/participants"
 import { normalizeRows } from "@/lib/data/query"
 
 export type HomepageTournament = {
@@ -67,6 +72,8 @@ export type HomepageMatch = {
   participant_type: "team" | "player"
   participant_1_id: string | null
   participant_2_id: string | null
+  participant_1: ParticipantReference | null
+  participant_2: ParticipantReference | null
   winner_participant_id: string | null
   bracket_round: string | null
   bracket_position: number | null
@@ -248,7 +255,7 @@ async function fetchHomepageMatches(tournamentId: string): Promise<HomepageMatch
   try {
     const orderedResult = await supabase
       .from("matches")
-      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_round, bracket_position, next_match_id, next_match_slot")
+      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type), winner_participant_id, bracket_round, bracket_position, next_match_id, next_match_slot")
       .eq("tournament_id", tournamentId)
       .order("match_order", { ascending: true, nullsFirst: false })
 
@@ -428,14 +435,22 @@ function normalizeHomepageMatch(row: Record<string, unknown>): HomepageMatch | n
     tournament_id: tournamentId,
     round: readNullableString(row.round),
     match_order: readNullableInteger(row.match_order),
-    team1: readNullableString(row.team1),
-    team2: readNullableString(row.team2),
+    team1: resolveParticipantName(
+      readParticipantReference(row.participant_1, readParticipantType(row.participant_type)),
+      readNullableString(row.team1),
+    ),
+    team2: resolveParticipantName(
+      readParticipantReference(row.participant_2, readParticipantType(row.participant_type)),
+      readNullableString(row.team2),
+    ),
     score1: readNullableInteger(row.score1),
     score2: readNullableInteger(row.score2),
     status: readMatchStatus(row.status),
     participant_type: readParticipantType(row.participant_type),
     participant_1_id: readStringId(row.participant_1_id),
     participant_2_id: readStringId(row.participant_2_id),
+    participant_1: readParticipantReference(row.participant_1, readParticipantType(row.participant_type)),
+    participant_2: readParticipantReference(row.participant_2, readParticipantType(row.participant_type)),
     winner_participant_id: readStringId(row.winner_participant_id),
     bracket_round: readNullableString(row.bracket_round),
     bracket_position: readNullableInteger(row.bracket_position),
@@ -502,7 +517,7 @@ function logAndReturnHomepageResults(
 }
 
 function isMissingColumnError(error: { code?: string }) {
-  return error.code === "42703" || error.code === "PGRST204"
+  return error.code === "42703" || error.code === "PGRST200" || error.code === "PGRST204"
 }
 
 function getTournamentBlocksView(

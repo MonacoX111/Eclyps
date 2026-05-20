@@ -4,9 +4,29 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { logMutationError } from "@/lib/admin/errors"
 import { findParticipantIdByDisplayName } from "@/lib/admin/participants"
+import { resolveMatchWinner, type WinnerSelection } from "@/lib/matches/core"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseMatchFormData, parseRequiredIdFormData } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
+
+type MatchMutationData = {
+  tournament_id: string
+  round: string | null
+  team1: string
+  team2: string
+  score1: number | null
+  score2: number | null
+  status: "upcoming" | "live" | "finished"
+  match_order: number
+  participant_type: "team" | "player"
+  participant_1_id: string | null
+  participant_2_id: string | null
+  winner_participant_id: string | null
+}
+
+type MatchMutationResult =
+  | { ok: true; data: MatchMutationData }
+  | { ok: false; error: string }
 
 export async function createMatch(formData: FormData) {
   await requireAdminSession()
@@ -16,9 +36,10 @@ export async function createMatch(formData: FormData) {
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
   const matchData = await withMatchParticipantReferences(supabaseAdmin, parsed.data)
+  if (!matchData.ok) redirect(`/admin?matchError=${matchData.error}#matches`)
 
   const { error } = await runSupabaseMutation("create match", () =>
-    supabaseAdmin.from("matches").insert(matchData),
+    supabaseAdmin.from("matches").insert(matchData.data),
   )
   if (error) {
     logMutationError("create match", error)
@@ -39,9 +60,10 @@ export async function updateMatch(formData: FormData) {
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
   const matchData = await withMatchParticipantReferences(supabaseAdmin, parsed.data)
+  if (!matchData.ok) redirect(`/admin?matchError=${matchData.error}#matches`)
 
   const { error } = await runSupabaseMutation("update match", () =>
-    supabaseAdmin.from("matches").update(matchData).eq("id", parsedId.data.id),
+    supabaseAdmin.from("matches").update(matchData.data).eq("id", parsedId.data.id),
   )
   if (error) {
     logMutationError("update match", error)
@@ -82,52 +104,45 @@ async function withMatchParticipantReferences(
     score2: number | null
     status: "upcoming" | "live" | "finished"
     participant_type: "team" | "player"
-  } & Record<string, unknown>,
-) {
+    winner_selection: WinnerSelection
+    round: string | null
+    match_order: number
+  },
+): Promise<MatchMutationResult> {
+  const { winner_selection: winnerSelection, ...matchData } = data
   const [participant1Id, participant2Id] = await Promise.all([
     findParticipantIdByDisplayName(supabaseAdmin, {
-      tournamentId: data.tournament_id,
-      participantType: data.participant_type,
-      displayName: data.team1,
+      tournamentId: matchData.tournament_id,
+      participantType: matchData.participant_type,
+      displayName: matchData.team1,
     }),
     findParticipantIdByDisplayName(supabaseAdmin, {
-      tournamentId: data.tournament_id,
-      participantType: data.participant_type,
-      displayName: data.team2,
+      tournamentId: matchData.tournament_id,
+      participantType: matchData.participant_type,
+      displayName: matchData.team2,
     }),
   ])
-  const winnerParticipantId = resolveWinnerParticipantId({
-    status: data.status,
-    score1: data.score1,
-    score2: data.score2,
+
+  const winnerResult = resolveMatchWinner({
+    status: matchData.status,
+    score1: matchData.score1,
+    score2: matchData.score2,
     participant1Id,
     participant2Id,
+    winnerSelection,
   })
 
+  if (!winnerResult.ok) {
+    return winnerResult
+  }
+
   return {
-    ...data,
-    ...(participant1Id ? { participant_1_id: participant1Id } : {}),
-    ...(participant2Id ? { participant_2_id: participant2Id } : {}),
-    ...(winnerParticipantId ? { winner_participant_id: winnerParticipantId } : {}),
+    ok: true,
+    data: {
+      ...matchData,
+      participant_1_id: participant1Id,
+      participant_2_id: participant2Id,
+      winner_participant_id: winnerResult.winnerParticipantId,
+    },
   }
-}
-
-function resolveWinnerParticipantId({
-  status,
-  score1,
-  score2,
-  participant1Id,
-  participant2Id,
-}: {
-  status: "upcoming" | "live" | "finished"
-  score1: number | null
-  score2: number | null
-  participant1Id: string | null
-  participant2Id: string | null
-}) {
-  if (status !== "finished" || score1 === null || score2 === null || score1 === score2) {
-    return null
-  }
-
-  return score1 > score2 ? participant1Id : participant2Id
 }

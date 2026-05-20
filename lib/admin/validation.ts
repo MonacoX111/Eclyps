@@ -1,8 +1,8 @@
 import "server-only"
 
 import { z } from "zod"
+import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
 
-const validStatuses = ["upcoming", "live", "finished"] as const
 const participantTypes = ["team", "player"] as const
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -52,11 +52,12 @@ export const matchSchema = z
     round: optionalString(),
     team1: requiredString(),
     team2: requiredString(),
-    score1: optionalInteger(),
-    score2: optionalInteger(),
+    score1: optionalNonNegativeInteger(),
+    score2: optionalNonNegativeInteger(),
     status: statusSchema(),
     match_order: positiveInteger(),
     participant_type: participantTypeSchema(),
+    winner_selection: winnerSelectionSchema(),
   })
   .superRefine((value, context) => {
     if (value.team1.toLowerCase() === value.team2.toLowerCase()) {
@@ -152,6 +153,7 @@ export function parseMatchFormData(formData: FormData): ParseResult<MatchInput> 
     status: "invalid-status",
     match_order: "invalid-match-order",
     participant_type: "invalid-participant-type",
+    winner_selection: "invalid-winner",
   })
 }
 
@@ -239,6 +241,13 @@ function optionalInteger() {
   )
 }
 
+function optionalNonNegativeInteger() {
+  return z.preprocess(
+    toOptionalNumber,
+    z.union([z.number().int().min(0), z.null()]),
+  )
+}
+
 function optionalPositiveInteger() {
   return z.preprocess(
     toOptionalNumber,
@@ -249,12 +258,28 @@ function optionalPositiveInteger() {
 function statusSchema() {
   return z.preprocess(
     (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
-    z.enum(validStatuses),
+    z.enum(MATCH_STATUSES),
   )
 }
 
 function participantTypeSchema() {
   return z.enum(participantTypes)
+}
+
+function winnerSelectionSchema() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return ""
+
+      const normalized = value.trim()
+      return isWinnerSelection(normalized) ? normalized : value
+    },
+    z.union([
+      z.literal(""),
+      z.literal("participant_1"),
+      z.literal("participant_2"),
+    ]),
+  )
 }
 
 function toRequiredNumber(value: unknown) {

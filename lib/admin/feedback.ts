@@ -97,6 +97,12 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
       "invalid-status": "Status must be upcoming, live, or finished.",
       "invalid-match-order": "Match order must be a positive integer.",
       "invalid-participant-type": "Participant type must be team or player.",
+      "invalid-winner": "Winner must be one of the match participants.",
+      "finished-match-requires-scores": "Finished matches require both scores.",
+      "finished-match-requires-participants":
+        "Finished matches require matched participant records.",
+      "tie-match-requires-winner": "Tied finished matches require a selected winner.",
+      "winner-score-mismatch": "Winner must match the higher score.",
       "missing-id": "Match id is missing.",
       "admin-client-unavailable":
         "Match mutations require a server-only Supabase admin client.",
