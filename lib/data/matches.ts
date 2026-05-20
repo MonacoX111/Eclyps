@@ -30,10 +30,17 @@ export type TournamentMatch = {
   participant_1: ParticipantReference | null
   participant_2: ParticipantReference | null
   winner_participant_id: string | null
+  bracket_id: string | null
+  bracket_type: string | null
+  bracket_status: string | null
+  round_order: number | null
   bracket_round: string | null
   bracket_position: number | null
   next_match_id: string | null
   next_match_slot: number | null
+  scheduled_at: string | null
+  timezone: string | null
+  schedule_note: string | null
 }
 
 export async function getMatchesForTournament(
@@ -49,8 +56,11 @@ export async function getMatchesForTournament(
   try {
     const orderedResult = await supabase
       .from("matches")
-      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type), winner_participant_id, bracket_round, bracket_position, next_match_id, next_match_slot")
+      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type), winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note")
       .eq("tournament_id", tournamentId)
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+      .order("round_order", { ascending: true, nullsFirst: false })
+      .order("bracket_position", { ascending: true, nullsFirst: false })
       .order("match_order", { ascending: true, nullsFirst: false })
 
     if (orderedResult.error && isMissingColumnError(orderedResult.error)) {
@@ -121,10 +131,17 @@ function normalizeMatch(row: Record<string, unknown>): TournamentMatch | null {
     participant_1: readParticipantReference(row.participant_1, readParticipantType(row.participant_type)),
     participant_2: readParticipantReference(row.participant_2, readParticipantType(row.participant_type)),
     winner_participant_id: readStringId(row.winner_participant_id),
+    bracket_id: readStringId(row.bracket_id),
+    bracket_type: readNullableString(row.bracket_type),
+    bracket_status: readNullableString(row.bracket_status),
+    round_order: readNullableInteger(row.round_order),
     bracket_round: readNullableString(row.bracket_round),
     bracket_position: readNullableInteger(row.bracket_position),
     next_match_id: readStringId(row.next_match_id),
     next_match_slot: readNullableInteger(row.next_match_slot),
+    scheduled_at: readNullableString(row.scheduled_at),
+    timezone: readNullableString(row.timezone),
+    schedule_note: readNullableString(row.schedule_note),
   }
 }
 

@@ -7,5 +7,6 @@ export {
 } from "./actions/tournaments"
 export { createTeam, deleteTeam, updateTeam } from "./actions/teams"
 export { createPlayer, deletePlayer, updatePlayer } from "./actions/players"
+export { assignBracketSlot, generateBracketTemplate } from "./actions/brackets"
 export { createMatch, deleteMatch, updateMatch } from "./actions/matches"
 export { createResult, deleteResult, updateResult } from "./actions/results"

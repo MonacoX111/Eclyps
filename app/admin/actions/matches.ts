@@ -22,6 +22,9 @@ type MatchMutationData = {
   participant_1_id: string | null
   participant_2_id: string | null
   winner_participant_id: string | null
+  scheduled_at: string | null
+  timezone: string | null
+  schedule_note: string | null
 }
 
 type MatchMutationResult =
@@ -107,9 +110,20 @@ async function withMatchParticipantReferences(
     winner_selection: WinnerSelection
     round: string | null
     match_order: number
+    schedule_date: string | null
+    schedule_time: string | null
+    timezone: string
+    schedule_note: string | null
   },
 ): Promise<MatchMutationResult> {
-  const { winner_selection: winnerSelection, ...matchData } = data
+  const {
+    winner_selection: winnerSelection,
+    schedule_date: scheduleDate,
+    schedule_time: scheduleTime,
+    timezone,
+    schedule_note: scheduleNote,
+    ...matchData
+  } = data
   const [participant1Id, participant2Id] = await Promise.all([
     findParticipantIdByDisplayName(supabaseAdmin, {
       tournamentId: matchData.tournament_id,
@@ -143,6 +157,15 @@ async function withMatchParticipantReferences(
       participant_1_id: participant1Id,
       participant_2_id: participant2Id,
       winner_participant_id: winnerResult.winnerParticipantId,
+      scheduled_at: createScheduledAt(scheduleDate, scheduleTime),
+      timezone: scheduleDate && scheduleTime ? timezone : null,
+      schedule_note: scheduleNote,
     },
   }
+}
+
+function createScheduledAt(scheduleDate: string | null, scheduleTime: string | null) {
+  if (!scheduleDate || !scheduleTime) return null
+
+  return new Date(`${scheduleDate}T${scheduleTime}:00.000Z`).toISOString()
 }

@@ -1,6 +1,15 @@
 import "server-only"
 
+import { unstable_noStore as noStore } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { runAdminRowsQuery } from "@/lib/admin/query"
+import {
+  readNullableInteger,
+  readNullableString,
+  readParticipantType,
+  readStringId,
+} from "@/lib/data/normalize"
+import { supabase } from "@/lib/supabase/client"
 
 export type ParticipantType = "team" | "player"
 
@@ -18,6 +27,30 @@ export type AdminParticipant = {
 }
 
 type SupabaseAdminClient = SupabaseClient
+
+export type AdminParticipantQueryResult = {
+  participants: AdminParticipant[]
+  error: string | null
+}
+
+export async function getAdminParticipants(): Promise<AdminParticipantQueryResult> {
+  noStore()
+
+  if (!supabase) {
+    return { participants: [], error: "Supabase is not configured." }
+  }
+
+  const { rows, error } = await runAdminRowsQuery("participants", () =>
+    supabase
+      .from("participants")
+      .select("id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id, created_at")
+      .order("seed", { ascending: true, nullsFirst: false })
+      .order("display_name", { ascending: true }),
+    normalizeParticipant,
+  )
+
+  return { participants: rows, error }
+}
 
 export async function upsertTeamParticipant(
   supabaseAdmin: SupabaseAdminClient,
@@ -142,5 +175,28 @@ async function deleteParticipantBySource(
 
   if (error) {
     console.error("Failed to delete participant:", error)
+  }
+}
+
+function normalizeParticipant(row: Record<string, unknown>): AdminParticipant | null {
+  const id = readStringId(row.id)
+  const tournamentId = readStringId(row.tournament_id)
+  const displayName = readNullableString(row.display_name)
+
+  if (!id || !tournamentId || !displayName) {
+    return null
+  }
+
+  return {
+    id,
+    tournament_id: tournamentId,
+    participant_type: readParticipantType(row.participant_type),
+    display_name: displayName,
+    seed: readNullableInteger(row.seed),
+    logo_url: readNullableString(row.logo_url),
+    avatar_url: readNullableString(row.avatar_url),
+    source_team_id: readStringId(row.source_team_id),
+    source_player_id: readStringId(row.source_player_id),
+    created_at: readNullableString(row.created_at),
   }
 }

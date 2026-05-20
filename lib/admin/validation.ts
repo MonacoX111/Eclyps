@@ -1,7 +1,9 @@
 import "server-only"
 
 import { z } from "zod"
+import { BRACKET_SIZES } from "@/lib/brackets/template"
 import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
+import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedule"
 
 const participantTypes = ["team", "player"] as const
 
@@ -58,6 +60,10 @@ export const matchSchema = z
     match_order: positiveInteger(),
     participant_type: participantTypeSchema(),
     winner_selection: winnerSelectionSchema(),
+    schedule_date: optionalDateInput(),
+    schedule_time: optionalTimeInput(),
+    timezone: timezoneSchema(),
+    schedule_note: optionalString(),
   })
   .superRefine((value, context) => {
     if (value.team1.toLowerCase() === value.team2.toLowerCase()) {
@@ -65,6 +71,14 @@ export const matchSchema = z
         code: z.ZodIssueCode.custom,
         message: "duplicate-match-teams",
         path: ["team2"],
+      })
+    }
+
+    if ((value.schedule_date && !value.schedule_time) || (!value.schedule_date && value.schedule_time)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid-schedule",
+        path: ["schedule_date"],
       })
     }
   })
@@ -80,6 +94,24 @@ export const resultSchema = z.object({
   participant_type: participantTypeSchema(),
 })
 
+export const bracketTemplateSchema = z.object({
+  tournament_id: requiredString(),
+  bracket_size: z.preprocess(toRequiredNumber, z.union([
+    z.literal(BRACKET_SIZES[0]),
+    z.literal(BRACKET_SIZES[1]),
+    z.literal(BRACKET_SIZES[2]),
+    z.literal(BRACKET_SIZES[3]),
+  ])),
+  confirm_regenerate: checkboxBoolean(),
+})
+
+export const bracketSlotAssignmentSchema = z.object({
+  tournament_id: requiredString(),
+  match_id: requiredString(),
+  slot: z.preprocess(toRequiredNumber, z.union([z.literal(1), z.literal(2)])),
+  participant_id: optionalString(),
+})
+
 export type AdminLoginInput = z.infer<typeof loginPasswordSchema>
 export type ActiveTournamentInput = z.infer<typeof activeTournamentSchema>
 export type TournamentInput = z.infer<typeof tournamentSchema>
@@ -87,6 +119,8 @@ export type TeamInput = z.infer<typeof teamSchema>
 export type PlayerInput = z.infer<typeof playerSchema>
 export type MatchInput = z.infer<typeof matchSchema>
 export type ResultInput = z.infer<typeof resultSchema>
+export type BracketTemplateInput = z.infer<typeof bracketTemplateSchema>
+export type BracketSlotAssignmentInput = z.infer<typeof bracketSlotAssignmentSchema>
 
 export function parseLoginFormData(formData: FormData): ParseResult<AdminLoginInput> {
   return parseFormData(loginPasswordSchema, formData, {
@@ -154,6 +188,9 @@ export function parseMatchFormData(formData: FormData): ParseResult<MatchInput> 
     match_order: "invalid-match-order",
     participant_type: "invalid-participant-type",
     winner_selection: "invalid-winner",
+    schedule_date: "invalid-schedule",
+    schedule_time: "invalid-schedule",
+    timezone: "invalid-timezone",
   })
 }
 
@@ -163,6 +200,26 @@ export function parseResultFormData(formData: FormData): ParseResult<ResultInput
     team: "invalid-result-team",
     placement: "invalid-placement",
     participant_type: "invalid-participant-type",
+  })
+}
+
+export function parseBracketTemplateFormData(
+  formData: FormData,
+): ParseResult<BracketTemplateInput> {
+  return parseFormData(bracketTemplateSchema, formData, {
+    tournament_id: "invalid-tournament-id",
+    bracket_size: "invalid-bracket-size",
+  })
+}
+
+export function parseBracketSlotAssignmentFormData(
+  formData: FormData,
+): ParseResult<BracketSlotAssignmentInput> {
+  return parseFormData(bracketSlotAssignmentSchema, formData, {
+    tournament_id: "invalid-tournament-id",
+    match_id: "missing-id",
+    slot: "invalid-bracket-slot",
+    participant_id: "invalid-participant",
   })
 }
 
@@ -181,6 +238,10 @@ function parseFormData<T extends z.ZodTypeAny>(
   const field = issue?.path[0]
 
   if (typeof issue?.message === "string" && issue.message.startsWith("duplicate-")) {
+    return { ok: false, error: issue.message }
+  }
+
+  if (typeof issue?.message === "string" && issue.message.startsWith("invalid-")) {
     return { ok: false, error: issue.message }
   }
 
@@ -279,6 +340,56 @@ function winnerSelectionSchema() {
       z.literal("participant_1"),
       z.literal("participant_2"),
     ]),
+  )
+}
+
+function optionalDateInput() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : null
+    },
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine((value) => {
+        const date = new Date(`${value}T00:00:00.000Z`)
+        return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+      })
+      .nullable(),
+  )
+}
+
+function optionalTimeInput() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : null
+    },
+    z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  )
+}
+
+function timezoneSchema() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return DEFAULT_MATCH_TIMEZONE
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : DEFAULT_MATCH_TIMEZONE
+    },
+    z.string().refine((value) => normalizeTimeZone(value) === value),
+  )
+}
+
+function checkboxBoolean() {
+  return z.preprocess(
+    (value) => value === "on" || value === "true" || value === true,
+    z.boolean(),
   )
 }
 

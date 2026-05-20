@@ -13,6 +13,8 @@ export type AdminSearchParams = {
   playerSuccess?: string
   matchError?: string
   matchSuccess?: string
+  bracketError?: string
+  bracketSuccess?: string
   resultError?: string
   resultSuccess?: string
   activeError?: string

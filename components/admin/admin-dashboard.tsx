@@ -15,6 +15,7 @@ import {
   getTournamentFeedback,
 } from "@/lib/admin/feedback"
 import { getAdminMatches } from "@/lib/admin/matches"
+import { getAdminParticipants } from "@/lib/admin/participants"
 import { getAdminPlayers } from "@/lib/admin/players"
 import { getAdminResults } from "@/lib/admin/results"
 import { getAdminTeams } from "@/lib/admin/teams"
@@ -59,12 +60,14 @@ export async function AdminDashboard({
     { tournaments, error: tournamentError },
     { teams, error: teamError },
     { players, error: playerError },
+    { participants, error: participantError },
     { matches, error: matchError },
     { results, error: resultError },
   ] = await Promise.all([
     getAdminTournaments(),
     getAdminTeams(),
     getAdminPlayers(),
+    getAdminParticipants(),
     getAdminMatches(),
     getAdminResults(),
   ])
@@ -148,7 +151,8 @@ export async function AdminDashboard({
         tournaments={tournaments}
         teams={teams}
         players={players}
-        fetchError={matchError}
+        participants={participants}
+        fetchError={matchError ?? participantError}
         feedback={getMatchFeedback(searchParams)}
       />
 

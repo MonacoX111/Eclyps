@@ -24,10 +24,17 @@ export type AdminMatch = {
   participant_1_id: string | null
   participant_2_id: string | null
   winner_participant_id: string | null
+  bracket_id: string | null
+  bracket_type: string | null
+  bracket_status: string | null
+  round_order: number | null
   bracket_round: string | null
   bracket_position: number | null
   next_match_id: string | null
   next_match_slot: number | null
+  scheduled_at: string | null
+  timezone: string | null
+  schedule_note: string | null
 }
 
 export type AdminMatchQueryResult = {
@@ -45,7 +52,10 @@ export async function getAdminMatches(): Promise<AdminMatchQueryResult> {
   const { rows, error } = await runAdminRowsQuery("matches", async () => {
     const result = await supabase
       .from("matches")
-      .select("id, tournament_id, round, team1, team2, score1, score2, status, match_order, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_round, bracket_position, next_match_id, next_match_slot")
+      .select("id, tournament_id, round, team1, team2, score1, score2, status, match_order, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note")
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+      .order("round_order", { ascending: true, nullsFirst: false })
+      .order("bracket_position", { ascending: true, nullsFirst: false })
       .order("match_order", { ascending: true, nullsFirst: false })
 
     if (isMissingColumnError(result.error)) {
@@ -79,10 +89,17 @@ function normalizeMatch(row: Record<string, unknown>): AdminMatch | null {
     participant_1_id: readStringId(row.participant_1_id),
     participant_2_id: readStringId(row.participant_2_id),
     winner_participant_id: readStringId(row.winner_participant_id),
+    bracket_id: readStringId(row.bracket_id),
+    bracket_type: readNullableString(row.bracket_type),
+    bracket_status: readNullableString(row.bracket_status),
+    round_order: readNullableInteger(row.round_order),
     bracket_round: readNullableString(row.bracket_round),
     bracket_position: readNullableInteger(row.bracket_position),
     next_match_id: readStringId(row.next_match_id),
     next_match_slot: readNullableInteger(row.next_match_slot),
+    scheduled_at: readNullableString(row.scheduled_at),
+    timezone: readNullableString(row.timezone),
+    schedule_note: readNullableString(row.schedule_note),
   }
 }
 
@@ -92,6 +109,7 @@ function isMissingColumnError(error: unknown) {
     error !== null &&
     "code" in error &&
     ((error as { code?: unknown }).code === "42703" ||
+      (error as { code?: unknown }).code === "PGRST200" ||
       (error as { code?: unknown }).code === "PGRST204")
   )
 }

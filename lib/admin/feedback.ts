@@ -85,6 +85,8 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
   if (searchParams?.matchSuccess === "created") return { tone: "success", message: "Match created." }
   if (searchParams?.matchSuccess === "updated") return { tone: "success", message: "Match updated." }
   if (searchParams?.matchSuccess === "deleted") return { tone: "success", message: "Match deleted." }
+  if (searchParams?.matchSuccess === "bracket-generated") return { tone: "success", message: "Bracket template generated." }
+  if (searchParams?.matchSuccess === "bracket-slot-updated") return { tone: "success", message: "Bracket slot updated." }
   if (!searchParams?.matchError) return null
 
   const message =
@@ -103,6 +105,20 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
         "Finished matches require matched participant records.",
       "tie-match-requires-winner": "Tied finished matches require a selected winner.",
       "winner-score-mismatch": "Winner must match the higher score.",
+      "invalid-schedule": "Schedule date and time must both be valid or both be empty.",
+      "invalid-timezone": "Timezone must be a valid IANA timezone.",
+      "invalid-bracket-size": "Bracket size must be 2, 4, 8, or 16 participants.",
+      "bracket-confirm-required":
+        "This tournament already has matches. Confirm regeneration to create a bracket template.",
+      "invalid-bracket-chain": "Bracket template links could not be generated safely.",
+      "invalid-bracket-slot": "Bracket slot must be 1 or 2.",
+      "invalid-participant": "Participant must belong to this tournament and match type.",
+      "bracket-match-not-found": "Bracket match could not be found for this tournament.",
+      "not-bracket-match": "Only generated bracket matches can use slot assignment.",
+      "finished-match-locked": "Finished matches cannot have bracket slots changed.",
+      "bracket-locked": "This bracket is locked and cannot be edited.",
+      "duplicate-bracket-participant":
+        "A participant cannot be assigned twice in the same bracket.",
       "missing-id": "Match id is missing.",
       "admin-client-unavailable":
         "Match mutations require a server-only Supabase admin client.",
