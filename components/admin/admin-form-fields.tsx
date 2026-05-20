@@ -38,10 +38,21 @@ export function TournamentSelect({
   )
 }
 
-export function StatusSelect({ value }: { value?: string | null }) {
+export function StatusSelect({
+  value,
+  disabled = false,
+}: {
+  value?: string | null
+  disabled?: boolean
+}) {
   return (
     <AdminField label="Status">
-      <select name="status" defaultValue={normalizeStatus(value)} className={inputClassName}>
+      <select
+        name="status"
+        defaultValue={normalizeStatus(value)}
+        disabled={disabled}
+        className={inputClassName}
+      >
         <option value="upcoming">Upcoming</option>
         <option value="live">Live</option>
         <option value="finished">Finished</option>

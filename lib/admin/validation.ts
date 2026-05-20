@@ -112,6 +112,21 @@ export const bracketSlotAssignmentSchema = z.object({
   participant_id: optionalString(),
 })
 
+export const bracketStatusSchema = z.object({
+  tournament_id: requiredString(),
+  bracket_id: requiredString(),
+  action: z.union([z.literal("lock"), z.literal("unlock")]),
+})
+
+export const bracketMatchUpdateSchema = z.object({
+  tournament_id: requiredString(),
+  match_id: requiredString(),
+  status: statusSchema(),
+  score1: optionalNonNegativeInteger(),
+  score2: optionalNonNegativeInteger(),
+  winner_selection: winnerSelectionSchema(),
+})
+
 export type AdminLoginInput = z.infer<typeof loginPasswordSchema>
 export type ActiveTournamentInput = z.infer<typeof activeTournamentSchema>
 export type TournamentInput = z.infer<typeof tournamentSchema>
@@ -121,6 +136,8 @@ export type MatchInput = z.infer<typeof matchSchema>
 export type ResultInput = z.infer<typeof resultSchema>
 export type BracketTemplateInput = z.infer<typeof bracketTemplateSchema>
 export type BracketSlotAssignmentInput = z.infer<typeof bracketSlotAssignmentSchema>
+export type BracketStatusInput = z.infer<typeof bracketStatusSchema>
+export type BracketMatchUpdateInput = z.infer<typeof bracketMatchUpdateSchema>
 
 export function parseLoginFormData(formData: FormData): ParseResult<AdminLoginInput> {
   return parseFormData(loginPasswordSchema, formData, {
@@ -220,6 +237,29 @@ export function parseBracketSlotAssignmentFormData(
     match_id: "missing-id",
     slot: "invalid-bracket-slot",
     participant_id: "invalid-participant",
+  })
+}
+
+export function parseBracketStatusFormData(
+  formData: FormData,
+): ParseResult<BracketStatusInput> {
+  return parseFormData(bracketStatusSchema, formData, {
+    tournament_id: "invalid-tournament-id",
+    bracket_id: "invalid-bracket",
+    action: "invalid-bracket-status",
+  })
+}
+
+export function parseBracketMatchUpdateFormData(
+  formData: FormData,
+): ParseResult<BracketMatchUpdateInput> {
+  return parseFormData(bracketMatchUpdateSchema, formData, {
+    tournament_id: "invalid-tournament-id",
+    match_id: "missing-id",
+    status: "invalid-status",
+    score1: "invalid-score",
+    score2: "invalid-score",
+    winner_selection: "invalid-winner",
   })
 }
 

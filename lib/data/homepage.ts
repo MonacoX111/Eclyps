@@ -599,7 +599,8 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
   return matches
     .filter(
       (match): match is HomepageMatch & { team1: string; team2: string } =>
-        Boolean(match.team1 && match.team2),
+        Boolean(match.team1 && match.team2) &&
+        !isHiddenTemplateBracketMatch(match),
     )
     .map((match) => ({
       id: match.id,
@@ -615,6 +616,15 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
       score1: match.score1,
       score2: match.score2,
     }))
+}
+
+function isHiddenTemplateBracketMatch(match: HomepageMatch) {
+  return Boolean(
+    match.bracket_id &&
+      match.bracket_status === "template" &&
+      !match.participant_1_id &&
+      !match.participant_2_id,
+  )
 }
 
 function getResultCards(

@@ -13,7 +13,7 @@ import {
   getScheduleDateInputValue,
   getScheduleTimeInputValue,
 } from "@/lib/matches/schedule"
-import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, updateMatch } from "@/app/admin/actions"
+import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
@@ -38,6 +38,8 @@ export function MatchesPanel({
   const tournamentNames = createTournamentNameMap(tournaments)
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
+  const normalMatches = matches.filter((match) => !match.bracket_id)
+  const bracketMatches = matches.filter((match) => match.bracket_id)
 
   return (
     <AdminSection
@@ -57,7 +59,7 @@ export function MatchesPanel({
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Bracket editor</h3>
           <BracketEditor
-            matches={matches}
+            matches={bracketMatches}
             participants={participants}
             tournamentNames={tournamentNames}
           />
@@ -76,11 +78,11 @@ export function MatchesPanel({
 
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Existing matches</h3>
-          {matches.length === 0 ? (
+          {normalMatches.length === 0 ? (
             <AdminEmptyState>No matches exist in Supabase yet.</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
-              {matches.map((match) => (
+              {normalMatches.map((match) => (
                 <MatchRecord
                   key={match.id}
                   match={match}
@@ -165,11 +167,21 @@ function BracketEditor({
                   {tournamentNames.get(bracket.tournamentId) ?? "Unknown tournament"}
                 </h4>
                 <p className="mt-1 text-sm text-white/50">
-                  {formatStatus(bracket.status)} bracket
+                  {formatBracketStatus(bracket.status)} bracket
                 </p>
               </div>
-              <span className={pillClassName}>{bracket.matches.length} matches</span>
+              <div className="flex flex-wrap gap-2">
+                <span className={pillClassName}>{formatBracketStatus(bracket.status)}</span>
+                <span className={pillClassName}>{bracket.matches.length} matches</span>
+              </div>
             </div>
+
+            <BracketStatusControls
+              bracketId={bracket.bracketId}
+              tournamentId={bracket.tournamentId}
+              status={bracket.status}
+              hasActiveMatches={bracket.hasActiveMatches}
+            />
 
             <ParticipantPool
               participants={bracketParticipants}
@@ -185,6 +197,7 @@ function BracketEditor({
                       <BracketMatchCard
                         key={match.id}
                         match={match}
+                        bracketStatus={bracket.status}
                         participants={bracketParticipants}
                         assignedIds={assignedIds}
                       />
@@ -196,6 +209,49 @@ function BracketEditor({
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function BracketStatusControls({
+  bracketId,
+  tournamentId,
+  status,
+  hasActiveMatches,
+}: {
+  bracketId: string
+  tournamentId: string
+  status: string
+  hasActiveMatches: boolean
+}) {
+  const isLocked = isLockedBracketStatus(status)
+
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <form action={updateBracketStatus}>
+        <input type="hidden" name="tournament_id" value={tournamentId} />
+        <input type="hidden" name="bracket_id" value={bracketId} />
+        <input type="hidden" name="action" value="lock" />
+        <button
+          type="submit"
+          disabled={isLocked || hasActiveMatches}
+          className="w-full rounded-xl bg-emerald-300 px-3 py-2 text-sm font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
+        >
+          Lock bracket
+        </button>
+      </form>
+      <form action={updateBracketStatus}>
+        <input type="hidden" name="tournament_id" value={tournamentId} />
+        <input type="hidden" name="bracket_id" value={bracketId} />
+        <input type="hidden" name="action" value="unlock" />
+        <button
+          type="submit"
+          disabled={status !== "locked" || hasActiveMatches}
+          className="w-full rounded-xl border border-white/10 px-3 py-2 text-sm text-white/80 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:text-white/35"
+        >
+          Unlock bracket
+        </button>
+      </form>
     </div>
   )
 }
@@ -228,10 +284,12 @@ function ParticipantPool({
 
 function BracketMatchCard({
   match,
+  bracketStatus,
   participants,
   assignedIds,
 }: {
   match: AdminMatch
+  bracketStatus: BracketLifecycleStatus
   participants: AdminParticipant[]
   assignedIds: Set<string>
 }) {
@@ -247,6 +305,7 @@ function BracketMatchCard({
           slot={1}
           value={match.participant_1_id}
           label={match.team1 ?? "Empty slot"}
+          bracketStatus={bracketStatus}
           participants={participants}
           assignedIds={assignedIds}
         />
@@ -255,11 +314,63 @@ function BracketMatchCard({
           slot={2}
           value={match.participant_2_id}
           label={match.team2 ?? "Empty slot"}
+          bracketStatus={bracketStatus}
           participants={participants}
           assignedIds={assignedIds}
         />
       </div>
+      <BracketMatchResultForm match={match} bracketStatus={bracketStatus} />
     </div>
+  )
+}
+
+function BracketMatchResultForm({
+  match,
+  bracketStatus,
+}: {
+  match: AdminMatch
+  bracketStatus: BracketLifecycleStatus
+}) {
+  const isTemplateBracket = bracketStatus === "template"
+  const isBracketEditable = isLockedBracketStatus(bracketStatus)
+  const hasParticipants = Boolean(match.participant_1_id && match.participant_2_id)
+  const disabled = !isBracketEditable || !hasParticipants
+
+  return (
+    <form action={updateBracketMatch} className="mt-3 grid gap-3 border-t border-white/10 pt-3 sm:grid-cols-2">
+      <input type="hidden" name="tournament_id" value={match.tournament_id ?? ""} />
+      <input type="hidden" name="match_id" value={match.id} />
+      {isTemplateBracket && (
+        <p className="text-xs text-white/45 sm:col-span-2">
+          Lock bracket before starting matches.
+        </p>
+      )}
+      <StatusSelect value={match.status} disabled={disabled} />
+      <WinnerSelect match={match} disabled={disabled} />
+      <AdminField label="Score 1">
+        <input
+          name="score1"
+          type="number"
+          min={0}
+          step={1}
+          defaultValue={match.score1 ?? ""}
+          disabled={disabled}
+          className={inputClassName}
+        />
+      </AdminField>
+      <AdminField label="Score 2">
+        <input
+          name="score2"
+          type="number"
+          min={0}
+          step={1}
+          defaultValue={match.score2 ?? ""}
+          disabled={disabled}
+          className={inputClassName}
+        />
+      </AdminField>
+      <SubmitButton label="Save match" disabled={disabled} />
+    </form>
   )
 }
 
@@ -268,6 +379,7 @@ function BracketSlotForm({
   slot,
   value,
   label,
+  bracketStatus,
   participants,
   assignedIds,
 }: {
@@ -275,10 +387,11 @@ function BracketSlotForm({
   slot: 1 | 2
   value: string | null
   label: string
+  bracketStatus: BracketLifecycleStatus
   participants: AdminParticipant[]
   assignedIds: Set<string>
 }) {
-  const disabled = match.status === "finished" || isLockedBracketStatus(match.bracket_status)
+  const disabled = match.status === "finished" || isLockedBracketStatus(bracketStatus)
 
   return (
     <form action={assignBracketSlot} className="space-y-2">
@@ -455,7 +568,7 @@ function MatchForm({
   )
 }
 
-function WinnerSelect({ match }: { match?: AdminMatch }) {
+function WinnerSelect({ match, disabled = false }: { match?: AdminMatch; disabled?: boolean }) {
   return (
     <AdminField label="Winner">
       <select
@@ -469,6 +582,7 @@ function WinnerSelect({ match }: { match?: AdminMatch }) {
               })
             : ""
         }
+        disabled={disabled}
         className={inputClassName}
       >
         <option value="">Auto / none</option>
@@ -478,6 +592,8 @@ function WinnerSelect({ match }: { match?: AdminMatch }) {
     </AdminField>
   )
 }
+
+type BracketLifecycleStatus = "template" | "locked" | "active" | "finished"
 
 function groupBracketMatches(matches: AdminMatch[]) {
   const bracketMap = new Map<string, AdminMatch[]>()
@@ -502,7 +618,10 @@ function groupBracketMatches(matches: AdminMatch[]) {
     return {
       tournamentId,
       bracketId,
-      status: sortedMatches.find((match) => match.bracket_status)?.bracket_status ?? "template",
+      status: resolveBracketStatus(sortedMatches),
+      hasActiveMatches: sortedMatches.some(
+        (match) => match.status === "live" || match.status === "finished",
+      ),
       matches: sortedMatches,
       rounds: Array.from(roundMap.entries()).map(([label, roundMatches]) => ({
         label,
@@ -535,5 +654,35 @@ function getAssignedParticipantIds(matches: AdminMatch[]) {
 }
 
 function isLockedBracketStatus(status: string | null) {
-  return status === "locked" || status === "completed" || status === "finished"
+  return status === "locked" || status === "active" || status === "finished"
+}
+
+function resolveBracketStatus(matches: AdminMatch[]): BracketLifecycleStatus {
+  const matchStatuses = matches.map((match) => match.status)
+  if (matchStatuses.length > 0 && matchStatuses.every((status) => status === "finished")) {
+    return "finished"
+  }
+
+  if (matchStatuses.some((status) => status === "live" || status === "finished")) {
+    return "active"
+  }
+
+  const storedStatuses = matches.map((match) => normalizeBracketStatus(match.bracket_status))
+  if (storedStatuses.includes("locked")) return "locked"
+  if (storedStatuses.includes("active")) return "active"
+  if (storedStatuses.includes("finished")) return "finished"
+
+  return "template"
+}
+
+function normalizeBracketStatus(status: string | null): BracketLifecycleStatus {
+  if (status === "locked" || status === "active" || status === "finished") {
+    return status
+  }
+
+  return "template"
+}
+
+function formatBracketStatus(status: BracketLifecycleStatus) {
+  return status.charAt(0).toUpperCase() + status.slice(1)
 }

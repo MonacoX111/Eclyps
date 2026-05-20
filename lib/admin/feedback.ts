@@ -87,6 +87,9 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
   if (searchParams?.matchSuccess === "deleted") return { tone: "success", message: "Match deleted." }
   if (searchParams?.matchSuccess === "bracket-generated") return { tone: "success", message: "Bracket template generated." }
   if (searchParams?.matchSuccess === "bracket-slot-updated") return { tone: "success", message: "Bracket slot updated." }
+  if (searchParams?.matchSuccess === "bracket-locked") return { tone: "success", message: "Bracket locked." }
+  if (searchParams?.matchSuccess === "bracket-unlocked") return { tone: "success", message: "Bracket unlocked." }
+  if (searchParams?.matchSuccess === "bracket-match-updated") return { tone: "success", message: "Bracket match updated." }
   if (!searchParams?.matchError) return null
 
   const message =
@@ -108,8 +111,10 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
       "invalid-schedule": "Schedule date and time must both be valid or both be empty.",
       "invalid-timezone": "Timezone must be a valid IANA timezone.",
       "invalid-bracket-size": "Bracket size must be 2, 4, 8, or 16 participants.",
+      "invalid-bracket": "Bracket id is missing.",
+      "invalid-bracket-status": "Bracket status action is invalid.",
       "bracket-confirm-required":
-        "This tournament already has matches. Confirm regeneration to create a bracket template.",
+        "This tournament already has a bracket. Confirm regeneration to replace the bracket template.",
       "invalid-bracket-chain": "Bracket template links could not be generated safely.",
       "invalid-bracket-slot": "Bracket slot must be 1 or 2.",
       "invalid-participant": "Participant must belong to this tournament and match type.",
@@ -117,6 +122,14 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
       "not-bracket-match": "Only generated bracket matches can use slot assignment.",
       "finished-match-locked": "Finished matches cannot have bracket slots changed.",
       "bracket-locked": "This bracket is locked and cannot be edited.",
+      "bracket-active-locked":
+        "This bracket has live or finished matches and cannot be structurally edited.",
+      "bracket-unlock-blocked":
+        "Brackets cannot be unlocked after matches are live or finished.",
+      "bracket-match-controls-locked":
+        "Lock the bracket before editing bracket match status or scores.",
+      "bracket-match-incomplete":
+        "Assign both bracket slots before starting or finishing the match.",
       "duplicate-bracket-participant":
         "A participant cannot be assigned twice in the same bracket.",
       "missing-id": "Match id is missing.",
