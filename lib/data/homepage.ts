@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from "next/cache"
 import type { MatchScheduleItem } from "@/components/match-schedule"
 import type {
   PublicBracketData,
+  PublicBracketLabels,
   PublicBracketMatch,
   PublicBracketParticipant,
   PublicBracketRound,
@@ -44,6 +45,11 @@ export type HomepageTournament = {
   arena_title: string | null
   arena_description: string | null
   arena_tags: string[]
+  bracket_title: string | null
+  bracket_subtitle: string | null
+  bracket_stage_label: string | null
+  bracket_participant_label: string | null
+  bracket_arena_label: string | null
   is_active: boolean
 }
 
@@ -362,7 +368,7 @@ function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, players.length)
       : null,
     participantCards,
-    publicBracket: getPublicBracketData(matches),
+    publicBracket: getPublicBracketData(matches, tournament),
     matchScheduleItems: getMatchScheduleItems(matches),
     resultCards: getResultCards(results, tournament),
   }
@@ -395,6 +401,11 @@ function normalizeHomepageTournament(
     arena_title: readNullableString(row.arena_title),
     arena_description: readNullableString(row.arena_description),
     arena_tags: readStringArray(row.arena_tags),
+    bracket_title: readNullableString(row.bracket_title),
+    bracket_subtitle: readNullableString(row.bracket_subtitle),
+    bracket_stage_label: readNullableString(row.bracket_stage_label),
+    bracket_participant_label: readNullableString(row.bracket_participant_label),
+    bracket_arena_label: readNullableString(row.bracket_arena_label),
     is_active: row.is_active === true,
   }
 }
@@ -626,7 +637,10 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
     }))
 }
 
-function getPublicBracketData(matches: HomepageMatch[]): PublicBracketData | null {
+function getPublicBracketData(
+  matches: HomepageMatch[],
+  tournament: HomepageTournament | null,
+): PublicBracketData | null {
   const bracketMatches = matches
     .filter((match) => Boolean(match.bracket_id))
     .sort(compareBracketMatches)
@@ -669,8 +683,19 @@ function getPublicBracketData(matches: HomepageMatch[]): PublicBracketData | nul
   return {
     id: bracketId,
     status: selectedBracketMatches.find((match) => match.bracket_status)?.bracket_status ?? null,
+    labels: getPublicBracketLabels(tournament),
     rounds,
     champion: getBracketChampion(selectedBracketMatches),
+  }
+}
+
+function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBracketLabels {
+  return {
+    title: readString(tournament?.bracket_title) ?? "Live Bracket",
+    subtitle: readString(tournament?.bracket_subtitle) ?? "Tournament Tree",
+    stageLabel: readString(tournament?.bracket_stage_label) ?? "Grand Final",
+    participantLabel: readString(tournament?.bracket_participant_label) ?? "Finalist",
+    arenaLabel: readString(tournament?.bracket_arena_label) ?? "Eclyps Arena",
   }
 }
 

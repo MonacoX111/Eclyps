@@ -29,6 +29,11 @@ export const tournamentSchema = z.object({
   arena_title: optionalString(),
   arena_description: optionalString(),
   arena_tags: optionalStringArray(),
+  bracket_title: optionalString(),
+  bracket_subtitle: optionalString(),
+  bracket_stage_label: optionalString(),
+  bracket_participant_label: optionalString(),
+  bracket_arena_label: optionalString(),
 })
 
 export const teamSchema = z.object({

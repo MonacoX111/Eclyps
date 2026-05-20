@@ -162,6 +162,35 @@ function TournamentForm({
         </AdminField>
       </div>
 
+      <div className="sm:col-span-2">
+        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+          <p className="text-sm font-medium text-white/80">Cinematic bracket labels</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <AdminField label="Bracket title">
+              <input name="bracket_title" defaultValue={tournament?.bracket_title ?? ""} placeholder="Live Bracket" className={inputClassName} />
+            </AdminField>
+
+            <AdminField label="Bracket subtitle">
+              <input name="bracket_subtitle" defaultValue={tournament?.bracket_subtitle ?? ""} placeholder="Tournament Tree" className={inputClassName} />
+            </AdminField>
+
+            <AdminField label="Stage label">
+              <input name="bracket_stage_label" defaultValue={tournament?.bracket_stage_label ?? ""} placeholder="Grand Final" className={inputClassName} />
+            </AdminField>
+
+            <AdminField label="Participant label">
+              <input name="bracket_participant_label" defaultValue={tournament?.bracket_participant_label ?? ""} placeholder="Finalist" className={inputClassName} />
+            </AdminField>
+
+            <div className="sm:col-span-2">
+              <AdminField label="Arena label">
+                <input name="bracket_arena_label" defaultValue={tournament?.bracket_arena_label ?? ""} placeholder="Eclyps Arena" className={inputClassName} />
+              </AdminField>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <SubmitButton label={submitLabel} />
     </form>
   )

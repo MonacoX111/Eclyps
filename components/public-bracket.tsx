@@ -28,8 +28,17 @@ export type PublicBracketRound = {
 export type PublicBracketData = {
   id: string
   status: string | null
+  labels: PublicBracketLabels
   rounds: PublicBracketRound[]
   champion: string | null
+}
+
+export type PublicBracketLabels = {
+  title: string
+  subtitle: string
+  stageLabel: string
+  participantLabel: string
+  arenaLabel: string
 }
 
 type PublicBracketProps = {
@@ -46,14 +55,18 @@ export function PublicBracket({ bracket }: PublicBracketProps) {
   return (
     <section className="relative z-10 px-4 py-24" id="bracket">
       <div className="mx-auto max-w-7xl">
-        <SectionHeading eyebrow="Tournament Tree" title="Live Bracket" />
+        <SectionHeading eyebrow={bracket.labels.subtitle} title={bracket.labels.title} />
 
         <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-black/30 px-4 py-6 shadow-[0_0_60px_oklch(0.78_0.18_165_/_0.06)] md:px-6 md:py-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165_/_0.10),transparent_36%)]" />
 
           {finalOnly && finalMatch ? (
-            <FinalOnlyBracket match={finalMatch} champion={bracket.champion} />
+            <FinalOnlyBracket
+              match={finalMatch}
+              champion={bracket.champion}
+              labels={bracket.labels}
+            />
           ) : (
             <MultiRoundBracket bracket={bracket} finalMatch={finalMatch} />
           )}
@@ -66,9 +79,11 @@ export function PublicBracket({ bracket }: PublicBracketProps) {
 function FinalOnlyBracket({
   match,
   champion,
+  labels,
 }: {
   match: PublicBracketMatch
   champion: string | null
+  labels: PublicBracketLabels
 }) {
   return (
     <div className="relative">
@@ -79,7 +94,11 @@ function FinalOnlyBracket({
           viewport={{ once: true }}
           transition={{ duration: 0.55 }}
         >
-          <FinalistPanel participant={match.participants[0]} matchStatus={match.status} />
+          <FinalistPanel
+            participant={match.participants[0]}
+            matchStatus={match.status}
+            label={labels.participantLabel}
+          />
         </m.div>
 
         <m.div
@@ -90,7 +109,7 @@ function FinalOnlyBracket({
           transition={{ duration: 0.6, delay: 0.08 }}
         >
           <ConnectorLine direction="left" active={match.status === "live"} />
-          <BracketCore champion={champion} status={match.status} />
+          <BracketCore champion={champion} status={match.status} labels={labels} />
           <ConnectorLine direction="right" active={match.status === "live"} />
         </m.div>
 
@@ -100,7 +119,11 @@ function FinalOnlyBracket({
           viewport={{ once: true }}
           transition={{ duration: 0.55 }}
         >
-          <FinalistPanel participant={match.participants[1]} matchStatus={match.status} />
+          <FinalistPanel
+            participant={match.participants[1]}
+            matchStatus={match.status}
+            label={labels.participantLabel}
+          />
         </m.div>
       </div>
     </div>
@@ -117,7 +140,11 @@ function MultiRoundBracket({
   return (
     <div className="relative">
       <div className="mb-8 flex justify-center">
-        <BracketCore champion={bracket.champion} status={finalMatch?.status ?? "upcoming"} />
+        <BracketCore
+          champion={bracket.champion}
+          status={finalMatch?.status ?? "upcoming"}
+          labels={bracket.labels}
+        />
       </div>
 
       <div className="bracket-scroll flex gap-6 overflow-x-auto pb-4 md:grid md:grid-flow-col md:auto-cols-fr md:overflow-visible">
@@ -168,9 +195,11 @@ function RoundHeader({ label, index }: { label: string; index: number }) {
 function BracketCore({
   champion,
   status,
+  labels,
 }: {
   champion: string | null
   status: PublicBracketMatch["status"]
+  labels: PublicBracketLabels
 }) {
   const isChampion = Boolean(champion)
 
@@ -193,10 +222,10 @@ function BracketCore({
 
       <div className="mt-4 min-h-16">
         <p className="text-xs font-semibold tracking-[0.3em] text-primary uppercase">
-          {isChampion ? "Champion" : "Grand Final"}
+          {isChampion ? "Champion" : labels.stageLabel}
         </p>
         <p className="mt-2 min-w-0 break-words text-lg font-bold text-foreground">
-          {champion ?? "Eclyps Arena"}
+          {champion ?? labels.arenaLabel}
         </p>
       </div>
     </div>
@@ -226,9 +255,11 @@ function ConnectorLine({
 function FinalistPanel({
   participant,
   matchStatus,
+  label,
 }: {
   participant: PublicBracketParticipant
   matchStatus: PublicBracketMatch["status"]
+  label: string
 }) {
   const isLoser = matchStatus === "finished" && participant.id && !participant.isWinner
 
@@ -247,7 +278,7 @@ function FinalistPanel({
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="mb-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
-            Finalist
+            {label}
           </p>
           <h3 className="break-words text-2xl font-bold text-foreground">
             {participant.name}

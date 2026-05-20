@@ -24,6 +24,11 @@ export type AdminTournament = {
   arena_title: string | null
   arena_description: string | null
   arena_tags: string[] | null
+  bracket_title: string | null
+  bracket_subtitle: string | null
+  bracket_stage_label: string | null
+  bracket_participant_label: string | null
+  bracket_arena_label: string | null
   is_active: boolean | null
   created_at: string | null
 }
@@ -46,7 +51,7 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
   const { rows, error } = await runAdminRowsQuery("tournaments", () =>
     supabase
       .from("tournaments")
-      .select("id, name, game, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, is_active, created_at")
+      .select("id, name, game, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, is_active, created_at")
       .order("created_at", { ascending: false }),
     normalizeTournament,
   )
@@ -71,6 +76,11 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     arena_title: readNullableString(row.arena_title),
     arena_description: readNullableString(row.arena_description),
     arena_tags: readStringArray(row.arena_tags),
+    bracket_title: readNullableString(row.bracket_title),
+    bracket_subtitle: readNullableString(row.bracket_subtitle),
+    bracket_stage_label: readNullableString(row.bracket_stage_label),
+    bracket_participant_label: readNullableString(row.bracket_participant_label),
+    bracket_arena_label: readNullableString(row.bracket_arena_label),
     is_active: row.is_active === true,
     created_at: readNullableString(row.created_at),
   }
