@@ -14,6 +14,7 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
+import { getPlatformUserState } from "@/lib/auth/player-state"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
 
@@ -124,6 +125,10 @@ async function ActiveTournamentRegistration({
     getHomepageData(),
     getCurrentUserProfile(),
   ])
+  const platformState = await getPlatformUserState({
+    userProfile,
+    tournamentId: homepageData.registrationSummary?.tournamentId ?? null,
+  })
 
   return (
     <RegistrationSection
@@ -135,7 +140,7 @@ async function ActiveTournamentRegistration({
         homepageData.tournament?.title
       }
       feedback={feedback}
-      userProfile={userProfile}
+      platformState={platformState}
     />
   )
 }
@@ -297,6 +302,27 @@ function getRegistrationFeedback(searchParams?: {
     }
   }
 
+  if (searchParams?.registrationSuccess === "player-application-submitted") {
+    return {
+      tone: "success",
+      message: "Player application submitted. An admin will review it before tournament registration opens for you.",
+    }
+  }
+
+  if (searchParams?.registrationSuccess === "player-application-pending") {
+    return {
+      tone: "success",
+      message: "Your player application is already pending review.",
+    }
+  }
+
+  if (searchParams?.registrationSuccess === "player-approved") {
+    return {
+      tone: "success",
+      message: "You are already approved as an Eclyps player.",
+    }
+  }
+
   if (!searchParams?.registrationError) return null
 
   const message =
@@ -317,6 +343,10 @@ function getRegistrationFeedback(searchParams?: {
       "discord-login-required": "Please log in with Discord before registering.",
       "discord-profile-unavailable": "Discord profile could not be synced. Please log out and try again.",
       "discord-login-failed": "Discord login could not be completed. Please try again.",
+      "player-approval-required": "Apply as a player and wait for admin approval before registering for tournaments.",
+      "player-application-pending": "Your player application is waiting for admin review.",
+      "invalid-player-application": "Player application nickname must not be empty.",
+      "already-registered": "You already have a tournament registration in review or approved.",
       "admin-client-unavailable": "Registration service is not configured.",
       "mutation-failed": "Registration could not be submitted. Please try again.",
     }[searchParams.registrationError] ?? "Registration could not be submitted."

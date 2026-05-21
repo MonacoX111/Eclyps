@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
-import { loginWithDiscord, logoutDiscord } from "@/app/auth/actions"
+import { logoutDiscord } from "@/app/auth/actions"
+import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import type { UserProfile } from "@/lib/auth/user-profile"
 
 type NavbarProps = {
@@ -150,16 +151,11 @@ function AuthControl({
 }) {
   if (!userProfile) {
     return (
-      <form action={loginWithDiscord}>
-        <button
-          type="submit"
-          className={`rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/60 hover:bg-primary/15 ${
-            mobile ? "w-full" : ""
-          }`}
-        >
-          Login with Discord
-        </button>
-      </form>
+      <DiscordLoginOnboarding
+        className={`rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/60 hover:bg-primary/15 ${
+          mobile ? "w-full" : ""
+        }`}
+      />
     )
   }
 

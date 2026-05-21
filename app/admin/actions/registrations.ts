@@ -208,19 +208,8 @@ async function approvePlayerRegistration(
   const existingPlayer =
     registration.source_player_id
       ? await findExistingPlayerProfileById(supabaseAdmin, registration.source_player_id)
-      : await findExistingPlayerProfile(supabaseAdmin, {
-          displayName: registration.display_name,
-          ownerUserId: registration.user_profile_id,
-        })
-  const sourceId =
-    existingPlayer?.id ??
-    (await createPlayerProfile(supabaseAdmin, {
-      tournamentId: registration.tournament_id,
-      displayName: registration.display_name,
-      region: registration.region,
-      seed,
-      ownerUserId: registration.user_profile_id,
-    }))
+      : null
+  const sourceId = existingPlayer?.id ?? null
 
   if (!sourceId) return null
 

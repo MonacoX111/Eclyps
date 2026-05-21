@@ -167,6 +167,24 @@ export function getResultFeedback(searchParams?: Pick<AdminSearchParams, "result
   return { tone: "error", message }
 }
 
+export function getPlayerApplicationFeedback(searchParams?: Pick<AdminSearchParams, "playerApplicationError" | "playerApplicationSuccess">): AdminFeedback | null {
+  if (searchParams?.playerApplicationSuccess === "approved") return { tone: "success", message: "Player application approved." }
+  if (searchParams?.playerApplicationSuccess === "rejected") return { tone: "success", message: "Player application rejected." }
+  if (!searchParams?.playerApplicationError) return null
+
+  const message =
+    {
+      "missing-id": "Player application id is missing.",
+      "invalid-status": "Player application decision must be approve or reject.",
+      "already-reviewed": "This player application has already been reviewed.",
+      "admin-client-unavailable":
+        "Player application review requires a server-only Supabase admin client.",
+      "mutation-failed": "Player application review could not be saved. Please try again.",
+    }[searchParams.playerApplicationError] ?? "Player application review could not be saved."
+
+  return { tone: "error", message }
+}
+
 export function getRegistrationFeedback(searchParams?: Pick<AdminSearchParams, "registrationError" | "registrationSuccess">): AdminFeedback | null {
   if (searchParams?.registrationSuccess === "approved") return { tone: "success", message: "Registration approved and added to participants." }
   if (searchParams?.registrationSuccess === "rejected") return { tone: "success", message: "Registration rejected." }

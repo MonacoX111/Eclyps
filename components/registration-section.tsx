@@ -1,9 +1,10 @@
 import type React from "react"
 import Image from "next/image"
-import { loginWithDiscord } from "@/app/auth/actions"
+import { submitPlayerApplication } from "@/app/actions/player-applications"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
+import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
-import type { UserProfile } from "@/lib/auth/user-profile"
+import type { PlatformUserState } from "@/lib/auth/player-state"
 import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
 
 type RegistrationSectionProps = {
@@ -11,7 +12,7 @@ type RegistrationSectionProps = {
   participantLabel: "Teams" | "Players"
   tournamentName?: string | null
   feedback?: RegistrationFeedback | null
-  userProfile?: UserProfile | null
+  platformState?: PlatformUserState
 }
 
 export type RegistrationFeedback = {
@@ -27,10 +28,14 @@ export function RegistrationSection({
   participantLabel,
   tournamentName,
   feedback,
-  userProfile = null,
+  platformState,
 }: RegistrationSectionProps) {
   if (!summary) return null
 
+  const userProfile = platformState?.userProfile ?? null
+  const approvedPlayer = platformState?.approvedPlayer ?? null
+  const playerApplication = platformState?.playerApplication ?? null
+  const tournamentRegistration = platformState?.tournamentRegistration ?? null
   const isDisabled = summary.isClosed || summary.isFull
   const typeLabel = summary.participantType === "player" ? "Player" : "Team"
   const typeLabelPlural = summary.participantType === "player" ? "players" : "teams"
@@ -39,7 +44,14 @@ export function RegistrationSection({
   const disabledMessage = summary.isFull
     ? `This tournament has reached the maximum number of ${typeLabelPlural}.`
     : `Registration is closed for this ${typeLabelPlural} tournament.`
-  const canSubmit = !isDisabled && Boolean(userProfile)
+  const isTournamentPending = tournamentRegistration?.status === "pending"
+  const isTournamentApproved = tournamentRegistration?.status === "approved"
+  const canSubmit =
+    !isDisabled &&
+    Boolean(approvedPlayer) &&
+    !isTournamentPending &&
+    !isTournamentApproved
+  const applicationStatus = playerApplication?.status ?? null
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
@@ -127,12 +139,33 @@ export function RegistrationSection({
                 )}
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.18em] text-primary/70">
-                    Registering as
+                    Discord account
                   </p>
                   <p className="truncate text-sm font-medium text-white/80">
                     {userProfile.discord_username}
                   </p>
                 </div>
+              </div>
+            ) : null}
+            {!isDisabled && userProfile && !approvedPlayer ? (
+              <PlayerApplicationPrompt
+                status={applicationStatus}
+                defaultNickname={userProfile.display_name}
+              />
+            ) : null}
+            {!isDisabled && approvedPlayer ? (
+              <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
+                Approved player: {approvedPlayer.nickname ?? approvedPlayer.name}
+              </div>
+            ) : null}
+            {!isDisabled && isTournamentPending ? (
+              <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4 text-sm text-amber-100">
+                Your tournament registration is pending admin approval.
+              </div>
+            ) : null}
+            {!isDisabled && isTournamentApproved ? (
+              <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 text-sm text-primary">
+                You are approved for this tournament.
               </div>
             ) : null}
             <input type="hidden" name="tournament_id" value={summary.tournamentId} />
@@ -150,6 +183,11 @@ export function RegistrationSection({
                   required
                   disabled={!canSubmit}
                   className={inputClassName}
+                  defaultValue={
+                    summary.participantType === "player" && approvedPlayer
+                      ? approvedPlayer.nickname ?? approvedPlayer.name
+                      : undefined
+                  }
                   placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
                 />
               </RegistrationField>
@@ -201,9 +239,17 @@ export function RegistrationSection({
               >
                 {isDisabled
                   ? summary.statusLabel
-                  : userProfile
+                  : isTournamentPending
+                    ? "Tournament approval pending"
+                    : isTournamentApproved
+                      ? "Tournament approved"
+                      : approvedPlayer
                     ? `Register ${typeLabel}`
-                    : "Login with Discord to register"}
+                    : userProfile
+                      ? applicationStatus === "pending"
+                        ? "Player application pending"
+                        : "Apply as Player to register"
+                      : "Login with Discord to register"}
               </button>
             </div>
           </form>
@@ -213,15 +259,74 @@ export function RegistrationSection({
   )
 }
 
+function PlayerApplicationPrompt({
+  status,
+  defaultNickname,
+}: {
+  status: "pending" | "approved" | "rejected" | null
+  defaultNickname: string
+}) {
+  if (status === "pending") {
+    return (
+      <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
+        <p className="text-sm font-semibold text-amber-100">
+          Player application pending
+        </p>
+        <p className="mt-2 text-sm leading-6 text-white/70">
+          An admin needs to approve your Eclyps player application before
+          tournament registration unlocks.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4">
+      <p className="text-sm font-semibold text-primary">
+        Apply as an Eclyps player
+      </p>
+      <p className="mt-2 text-sm leading-6 text-white/70">
+        Discord login lets you browse. Player approval is required before you
+        can enter tournaments.
+      </p>
+      {status === "rejected" ? (
+        <p className="mt-2 text-sm text-red-100">
+          Your previous application was rejected. You can submit a new one.
+        </p>
+      ) : null}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <RegistrationField label="Player nickname">
+          <input
+            name="requested_nickname"
+            required
+            defaultValue={defaultNickname}
+            className={inputClassName}
+          />
+        </RegistrationField>
+        <RegistrationField label="Region">
+          <input
+            name="requested_region"
+            className={inputClassName}
+            placeholder="Ukraine, EU, North America"
+          />
+        </RegistrationField>
+      </div>
+      <button
+        type="submit"
+        formAction={submitPlayerApplication}
+        className="mt-4 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+      >
+        Apply as Player
+      </button>
+    </div>
+  )
+}
+
 function LoginButton() {
   return (
-    <button
-      type="submit"
-      formAction={loginWithDiscord}
+    <DiscordLoginOnboarding
       className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
-    >
-      Login with Discord
-    </button>
+    />
   )
 }
 

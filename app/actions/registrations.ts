@@ -1,6 +1,5 @@
 "use server"
 
-import type { SupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
@@ -29,6 +28,17 @@ export async function submitTournamentRegistration(formData: FormData) {
 
   if (!supabaseAdmin) {
     redirect(`/?registrationError=admin-client-unavailable&${registrationTypeQuery}#registration`)
+  }
+
+  const approvedPlayer = await findApprovedOwnedPlayer(userProfile.id)
+
+  if (!approvedPlayer) {
+    const pendingApplication = await findPendingPlayerApplication(userProfile.id)
+    redirect(
+      `/?registrationError=${
+        pendingApplication ? "player-application-pending" : "player-approval-required"
+      }&${registrationTypeQuery}#registration`,
+    )
   }
 
   const { data: tournament, error: tournamentError } = await supabaseAdmin
@@ -77,6 +87,24 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=registration-full&${registrationTypeQuery}#registration`)
   }
 
+  const { data: existingUserRegistration, error: existingUserRegistrationError } =
+    await supabaseAdmin
+      .from("tournament_registrations")
+      .select("id")
+      .eq("tournament_id", parsed.data.tournament_id)
+      .eq("user_profile_id", userProfile.id)
+      .in("status", ["pending", "approved"])
+      .limit(1)
+      .maybeSingle()
+
+  if (existingUserRegistrationError) {
+    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+  }
+
+  if (existingUserRegistration) {
+    redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
+  }
+
   const duplicateResult = await findActiveRegistrationByName(supabaseAdmin, {
     tournamentId: parsed.data.tournament_id,
     participantType: parsed.data.participant_type,
@@ -105,25 +133,17 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
   }
 
-  const sourcePlayerId =
-    parsed.data.participant_type === "player"
-      ? await findOrCreateOwnedPlayerProfile(supabaseAdmin, {
-          userProfileId: userProfile.id,
-          tournamentId: parsed.data.tournament_id,
-          displayName: parsed.data.display_name,
-          region: parsed.data.region,
-        })
-      : null
-
-  if (parsed.data.participant_type === "player" && !sourcePlayerId) {
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
-  }
-
   const { roster, ...registrationPayload } = parsed.data
+  const displayName =
+    parsed.data.participant_type === "player"
+      ? approvedPlayer.nickname ?? approvedPlayer.name
+      : registrationPayload.display_name
   const { data: createdRegistration, error } = await supabaseAdmin.from("tournament_registrations").insert({
     ...registrationPayload,
+    display_name: displayName,
     user_profile_id: userProfile.id,
-    source_player_id: sourcePlayerId,
+    source_player_id:
+      parsed.data.participant_type === "player" ? approvedPlayer.id : null,
     status: "pending",
   }).select("id").maybeSingle()
 
@@ -189,101 +209,52 @@ function normalizeRosterNickname(value: string) {
   return value.trim().toLowerCase()
 }
 
-async function findOrCreateOwnedPlayerProfile(
-  supabaseAdmin: SupabaseClient,
-  {
-    userProfileId,
-    tournamentId,
-    displayName,
-    region,
-  }: {
-    userProfileId: string
-    tournamentId: string
-    displayName: string
-    region: string | null
-  },
-) {
-  const existingPlayer =
-    (await findOwnedPlayerByColumn(supabaseAdmin, {
-      userProfileId,
-      column: "name",
-      displayName,
-    })) ??
-    (await findOwnedPlayerByColumn(supabaseAdmin, {
-      userProfileId,
-      column: "nickname",
-      displayName,
-    }))
+async function findApprovedOwnedPlayer(userProfileId: string) {
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return null
 
-  if (existingPlayer) {
-    if (region && typeof existingPlayer.region !== "string") {
-      await supabaseAdmin
-        .from("players")
-        .update({ region, updated_at: new Date().toISOString() })
-        .eq("id", existingPlayer.id)
-    }
-
-    return existingPlayer.id
-  }
-
-  const insertPayload = {
-    tournament_id: tournamentId,
-    name: displayName,
-    nickname: null,
-    region,
-    seed: null,
-    wins: 0,
-    losses: 0,
-    owner_user_id: userProfileId,
-  }
   const { data, error } = await supabaseAdmin
     .from("players")
-    .insert(insertPayload)
-    .select("id")
-    .maybeSingle()
-
-  if (error || typeof data?.id !== "string") {
-    console.error("Failed to create owned player profile for registration:", error)
-    return null
-  }
-
-  return data.id
-}
-
-async function findOwnedPlayerByColumn(
-  supabaseAdmin: SupabaseClient,
-  {
-    userProfileId,
-    column,
-    displayName,
-  }: {
-    userProfileId: string
-    column: "name" | "nickname"
-    displayName: string
-  },
-) {
-  const { data, error } = await supabaseAdmin
-    .from("players")
-    .select("id, region")
+    .select("id, name, nickname")
     .eq("owner_user_id", userProfileId)
-    .ilike(column, displayName)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle()
 
-  if (error && !isMissingOwnershipColumnError(error)) {
-    console.error("Failed to find owned player profile for registration:", error)
+  if (error && !isMissingApplicationStorageError(error)) {
+    console.error("Failed to resolve approved player for registration:", error)
     return null
   }
 
-  return typeof data?.id === "string"
+  return typeof data?.id === "string" && typeof data.name === "string"
     ? {
         id: data.id,
-        region: typeof data.region === "string" ? data.region : null,
+        name: data.name,
+        nickname: typeof data.nickname === "string" ? data.nickname : null,
       }
     : null
 }
 
-function isMissingOwnershipColumnError(error: { code?: string }) {
-  return error.code === "42703" || error.code === "PGRST204"
+async function findPendingPlayerApplication(userProfileId: string) {
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return false
+
+  const { data, error } = await supabaseAdmin
+    .from("player_applications")
+    .select("id")
+    .eq("user_profile_id", userProfileId)
+    .eq("status", "pending")
+    .limit(1)
+    .maybeSingle()
+
+  if (error && !isMissingApplicationStorageError(error)) {
+    console.error("Failed to resolve pending player application:", error)
+    return false
+  }
+
+  return Boolean(data)
+}
+
+function isMissingApplicationStorageError(error: { code?: string }) {
+  return error.code === "42P01" || error.code === "42703" || error.code === "PGRST200" || error.code === "PGRST204"
 }

@@ -1,6 +1,7 @@
 import { logoutAdmin } from "@/app/admin/actions"
 import { ActiveTournamentPanel } from "@/components/admin/active-tournament-panel"
 import { MatchesPanel } from "@/components/admin/matches-panel"
+import { PlayerApplicationsPanel } from "@/components/admin/player-applications-panel"
 import { PlayersPanel } from "@/components/admin/players-panel"
 import { RegistrationsPanel } from "@/components/admin/registrations-panel"
 import { ResultsPanel } from "@/components/admin/results-panel"
@@ -10,6 +11,7 @@ import { TeamNameDatalist } from "@/components/admin/admin-form-fields"
 import {
   getActiveTournamentFeedback,
   getMatchFeedback,
+  getPlayerApplicationFeedback,
   getPlayerFeedback,
   getRegistrationFeedback,
   getResultFeedback,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/admin/feedback"
 import { getAdminMatches } from "@/lib/admin/matches"
 import { getAdminParticipants } from "@/lib/admin/participants"
+import { getAdminPlayerApplications } from "@/lib/admin/player-applications"
 import { getAdminPlayers } from "@/lib/admin/players"
 import { getAdminRegistrations } from "@/lib/admin/registrations"
 import { getAdminResults } from "@/lib/admin/results"
@@ -41,6 +44,11 @@ const adminSections = [
     id: "players",
     title: "Players",
     description: "Player management is active.",
+  },
+  {
+    id: "player-applications",
+    title: "Player Applications",
+    description: "Approve Discord users into the Eclyps player pool.",
   },
   {
     id: "matches",
@@ -68,6 +76,7 @@ export async function AdminDashboard({
     { tournaments, error: tournamentError },
     { teams, error: teamError },
     { players, error: playerError },
+    { applications, error: playerApplicationError },
     { participants, error: participantError },
     { registrations, error: registrationError },
     { matches, error: matchError },
@@ -76,6 +85,7 @@ export async function AdminDashboard({
     getAdminTournaments(),
     getAdminTeams(),
     getAdminPlayers(),
+    getAdminPlayerApplications(),
     getAdminParticipants(),
     getAdminRegistrations(),
     getAdminMatches(),
@@ -154,6 +164,12 @@ export async function AdminDashboard({
         tournaments={tournaments}
         fetchError={playerError}
         feedback={getPlayerFeedback(searchParams)}
+      />
+
+      <PlayerApplicationsPanel
+        applications={applications}
+        fetchError={playerApplicationError}
+        feedback={getPlayerApplicationFeedback(searchParams)}
       />
 
       <RegistrationsPanel

@@ -11,6 +11,7 @@ export type UserProfile = {
   discord_username: string
   display_name: string
   avatar_url: string | null
+  onboarding_seen_at: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -45,7 +46,7 @@ export async function upsertUserProfileFromAuthUser(user: User) {
       },
       { onConflict: "auth_user_id" },
     )
-    .select("id, auth_user_id, discord_id, discord_username, display_name, avatar_url, created_at, updated_at")
+    .select("id, auth_user_id, discord_id, discord_username, display_name, avatar_url, onboarding_seen_at, created_at, updated_at")
     .maybeSingle()
 
   if (error) {
@@ -117,6 +118,7 @@ function normalizeUserProfile(row: unknown): UserProfile | null {
     discord_username: discordUsername,
     display_name: displayName,
     avatar_url: readString(record.avatar_url),
+    onboarding_seen_at: readString(record.onboarding_seen_at),
     created_at: readString(record.created_at),
     updated_at: readString(record.updated_at),
   }
