@@ -81,6 +81,9 @@ function PlayerRecord({
             {showRealName && (
               <p className="mt-1 break-words text-sm text-white/45">{player.real_name}</p>
             )}
+            {player.region && (
+              <p className="mt-1 break-words text-sm text-white/45">{player.region}</p>
+            )}
             <p className="mt-1 break-words text-sm text-white/55">{tournamentName}</p>
           </div>
           <span className={pillClassName}>Seed {player.seed ?? "???"}</span>
@@ -116,6 +119,14 @@ function PlayerForm({
       </AdminField>
       <AdminField label="Nickname / display name">
         <input name="nickname" defaultValue={player?.nickname ?? ""} className={inputClassName} />
+      </AdminField>
+      <AdminField label="Region">
+        <input
+          name="region"
+          defaultValue={player?.region ?? ""}
+          placeholder="Ukraine, EU, North America"
+          className={inputClassName}
+        />
       </AdminField>
       <AdminField label="Seed">
         <input name="seed" type="number" min={1} step={1} defaultValue={player?.seed ?? ""} className={inputClassName} />

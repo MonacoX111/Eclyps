@@ -30,6 +30,8 @@ import {
 import { normalizeRows } from "@/lib/data/query"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 
+const BRACKET_FINAL_RESULT_NOTE_PREFIX = "synced:bracket-final:"
+
 export type HomepageTournament = {
   id: string
   name: string | null
@@ -670,6 +672,7 @@ function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
     wins: team.wins,
     losses: team.losses,
     rank: team.seed ?? index + 1,
+    profileHref: `/teams/${team.id}`,
   }))
 }
 
@@ -701,6 +704,7 @@ function getPlayerCards(
         wins: player.wins,
         losses: player.losses,
         rank: participant?.seed ?? player.seed ?? index + 1,
+        profileHref: `/players/${participant?.id ?? player.id}`,
       }
     })
   }
@@ -717,6 +721,7 @@ function getPlayerCards(
     wins: 0,
     losses: 0,
     rank: participant.seed ?? index + 1,
+    profileHref: `/players/${participant.id}`,
   }))
 }
 
@@ -937,9 +942,25 @@ function getResultCards(
     .map((result) => ({
       placement: result.placement,
       team: result.team,
+      isBracketSynced: isBracketSyncedResult(result),
     }))
 
   if (placements.length === 0) return []
+  const placementsByRank = new Map<
+    1 | 2 | 3,
+    { placement: 1 | 2 | 3; team: string; isBracketSynced: boolean }
+  >()
+
+  placements.forEach((placement) => {
+    const existing = placementsByRank.get(placement.placement)
+    if (!existing || (!existing.isBracketSynced && placement.isBracketSynced)) {
+      placementsByRank.set(placement.placement, placement)
+    }
+  })
+
+  const visiblePlacements = Array.from(placementsByRank.values())
+    .sort((left, right) => left.placement - right.placement)
+    .map(({ placement, team }) => ({ placement, team }))
 
   const season = readString(tournament?.name)
   if (!season) return []
@@ -947,11 +968,15 @@ function getResultCards(
   return [
     {
       season,
-      placements,
+      placements: visiblePlacements,
       mvp: readString(results.find((result) => result.placement === 1)?.mvp),
       date: formatEventMonthYear(tournament?.event_date),
     },
   ]
+}
+
+function isBracketSyncedResult(result: HomepageResult) {
+  return result.note?.startsWith(BRACKET_FINAL_RESULT_NOTE_PREFIX) ?? false
 }
 
 function createTeamTag(name: string) {

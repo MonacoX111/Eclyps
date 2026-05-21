@@ -15,6 +15,7 @@ export type AdminPlayer = {
   name: string | null
   nickname: string | null
   real_name: string | null
+  region: string | null
   display_name: string
   seed: number | null
   wins: number | null
@@ -36,7 +37,7 @@ export async function getAdminPlayers() {
   const { rows, error } = await runAdminRowsQuery("players", () =>
     supabaseAdmin
       .from("players")
-      .select("id, tournament_id, name, nickname, seed, wins, losses, created_at")
+      .select("id, tournament_id, name, nickname, region, seed, wins, losses, created_at")
       .order("seed", { ascending: true, nullsFirst: false }),
     normalizePlayer,
   )
@@ -50,6 +51,7 @@ function normalizePlayer(row: Record<string, unknown>): AdminPlayer | null {
 
   const realName = readNullableString(row.name)
   const nickname = readNullableString(row.nickname)
+  const region = readNullableString(row.region)
   const displayName = getPlayerDisplayName(realName, nickname)
 
   return {
@@ -58,6 +60,7 @@ function normalizePlayer(row: Record<string, unknown>): AdminPlayer | null {
     name: realName,
     nickname,
     real_name: realName,
+    region,
     display_name: displayName,
     seed: readNullableInteger(row.seed),
     wins: readNullableInteger(row.wins),

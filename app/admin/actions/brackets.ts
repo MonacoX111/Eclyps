@@ -18,6 +18,8 @@ import {
 } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
 
+const BRACKET_FINAL_RESULT_NOTE_PREFIX = "synced:bracket-final:"
+
 export async function generateBracketTemplate(formData: FormData) {
   await requireAdminSession()
   const parsed = parseBracketTemplateFormData(formData)
@@ -283,7 +285,7 @@ export async function updateBracketMatch(formData: FormData) {
 
   const { data: match, error: matchError } = await supabaseAdmin
     .from("matches")
-    .select("id, tournament_id, bracket_id, bracket_status, participant_1_id, participant_2_id, team1, team2, status, winner_participant_id, next_match_id, next_match_slot")
+    .select("id, tournament_id, bracket_id, bracket_status, participant_type, participant_1_id, participant_2_id, team1, team2, status, winner_participant_id, next_match_id, next_match_slot")
     .eq("id", parsed.data.match_id)
     .maybeSingle()
 
@@ -367,6 +369,25 @@ export async function updateBracketMatch(formData: FormData) {
     redirect(`/admin?matchError=${propagationResult.error}#matches`)
   }
 
+  const resultSync = await syncFinalBracketResults(supabaseAdmin, {
+    id: match.id,
+    tournamentId: match.tournament_id,
+    participantType: match.participant_type === "team" ? "team" : "player",
+    participant1Id: match.participant_1_id,
+    participant2Id: match.participant_2_id,
+    team1: match.team1,
+    team2: match.team2,
+    nextMatchId: match.next_match_id,
+    status: parsed.data.status,
+    score1: parsed.data.score1,
+    score2: parsed.data.score2,
+    winnerParticipantId: winnerResult.winnerParticipantId,
+  })
+
+  if (!resultSync.ok) {
+    redirect(`/admin?matchError=${resultSync.error}#matches`)
+  }
+
   const lifecycleStatus = await resolveBracketLifecycleStatus(
     supabaseAdmin,
     match.bracket_id,
@@ -389,6 +410,7 @@ export async function updateBracketMatch(formData: FormData) {
   }
 
   revalidatePath("/admin")
+  revalidatePath("/")
   redirect("/admin?matchSuccess=bracket-match-updated#matches")
 }
 
@@ -473,6 +495,193 @@ type BracketPropagationMatch = {
 type BracketPropagationResult =
   | { ok: true }
   | { ok: false; error: string }
+
+type BracketResultSyncMatch = {
+  id: string
+  tournamentId: string
+  participantType: "team" | "player"
+  participant1Id: string | null
+  participant2Id: string | null
+  team1: string | null
+  team2: string | null
+  nextMatchId: string | null
+  status: "upcoming" | "live" | "finished"
+  score1: number | null
+  score2: number | null
+  winnerParticipantId: string | null
+}
+
+type SyncedBracketResultRow = {
+  tournament_id: string
+  team: string
+  placement: 1 | 2
+  label: string
+  mvp: string | null
+  scoreline: string | null
+  note: string
+  participant_type: "team" | "player"
+  participant_id: string
+}
+
+async function syncFinalBracketResults(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  match: BracketResultSyncMatch,
+): Promise<BracketPropagationResult> {
+  const note = getBracketFinalResultNote(match.id)
+
+  if (match.nextMatchId) {
+    return { ok: true }
+  }
+
+  if (match.status !== "finished" || !match.winnerParticipantId) {
+    return deleteSyncedFinalResults(supabaseAdmin, {
+      tournamentId: match.tournamentId,
+      note,
+    })
+  }
+
+  if (
+    match.winnerParticipantId !== match.participant1Id &&
+    match.winnerParticipantId !== match.participant2Id
+  ) {
+    return { ok: false, error: "invalid-winner" }
+  }
+
+  const loserParticipantId =
+    match.winnerParticipantId === match.participant1Id
+      ? match.participant2Id
+      : match.participant1Id
+  const winnerName =
+    match.winnerParticipantId === match.participant1Id ? match.team1 : match.team2
+  const loserName =
+    match.winnerParticipantId === match.participant1Id ? match.team2 : match.team1
+
+  if (!loserParticipantId || !winnerName || !loserName) {
+    return { ok: false, error: "invalid-winner" }
+  }
+
+  const scoreline =
+    match.score1 !== null && match.score2 !== null
+      ? `${match.score1}-${match.score2}`
+      : null
+
+  const syncedResults: SyncedBracketResultRow[] = [
+    {
+      tournament_id: match.tournamentId,
+      team: winnerName,
+      placement: 1,
+      label: "Bracket final",
+      mvp: null,
+      scoreline,
+      note,
+      participant_type: match.participantType,
+      participant_id: match.winnerParticipantId,
+    },
+    {
+      tournament_id: match.tournamentId,
+      team: loserName,
+      placement: 2,
+      label: "Bracket final",
+      mvp: null,
+      scoreline,
+      note,
+      participant_type: match.participantType,
+      participant_id: loserParticipantId,
+    },
+  ]
+
+  const { data: existingResults, error: fetchError } = await supabaseAdmin
+    .from("results")
+    .select("id, placement")
+    .eq("tournament_id", match.tournamentId)
+    .eq("note", note)
+
+  if (fetchError) {
+    logMutationError("fetch synced bracket final results", fetchError)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  const existingByPlacement = new Map(
+    (existingResults ?? [])
+      .filter((result) => result.placement === 1 || result.placement === 2)
+      .map((result) => [result.placement as 1 | 2, result.id as string]),
+  )
+  const expectedPlacements = new Set([1, 2])
+  const staleIds = (existingResults ?? [])
+    .filter((result) => !expectedPlacements.has(Number(result.placement)))
+    .map((result) => result.id)
+    .filter((id): id is string => typeof id === "string")
+
+  if (staleIds.length > 0) {
+    const { error: deleteStaleError } = await runSupabaseMutation(
+      "delete stale synced bracket final results",
+      () => supabaseAdmin.from("results").delete().in("id", staleIds),
+    )
+
+    if (deleteStaleError) {
+      logMutationError("delete stale synced bracket final results", deleteStaleError)
+      return { ok: false, error: "mutation-failed" }
+    }
+  }
+
+  for (const result of syncedResults) {
+    const existingId = existingByPlacement.get(result.placement)
+
+    if (existingId) {
+      const { error } = await runSupabaseMutation("update synced bracket final result", () =>
+        supabaseAdmin.from("results").update(result).eq("id", existingId),
+      )
+
+      if (error) {
+        logMutationError("update synced bracket final result", error)
+        return { ok: false, error: "mutation-failed" }
+      }
+
+      continue
+    }
+
+    const { error } = await runSupabaseMutation("create synced bracket final result", () =>
+      supabaseAdmin.from("results").insert(result),
+    )
+
+    if (error) {
+      logMutationError("create synced bracket final result", error)
+      return { ok: false, error: "mutation-failed" }
+    }
+  }
+
+  return { ok: true }
+}
+
+async function deleteSyncedFinalResults(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  {
+    tournamentId,
+    note,
+  }: {
+    tournamentId: string
+    note: string
+  },
+): Promise<BracketPropagationResult> {
+  const { error } = await runSupabaseMutation("delete synced bracket final results", () =>
+    supabaseAdmin
+      .from("results")
+      .delete()
+      .eq("tournament_id", tournamentId)
+      .eq("note", note),
+  )
+
+  if (error) {
+    logMutationError("delete synced bracket final results", error)
+    return { ok: false, error: "mutation-failed" }
+  }
+
+  return { ok: true }
+}
+
+function getBracketFinalResultNote(matchId: string) {
+  return `${BRACKET_FINAL_RESULT_NOTE_PREFIX}${matchId}`
+}
 
 async function syncBracketWinnerPropagation(
   supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,

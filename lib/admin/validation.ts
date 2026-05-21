@@ -48,6 +48,7 @@ export const playerSchema = z.object({
   tournament_id: requiredString(),
   name: requiredString(),
   nickname: optionalString(),
+  region: optionalString(),
   seed: optionalPositiveInteger(),
   wins: nonNegativeInteger(),
   losses: nonNegativeInteger(),

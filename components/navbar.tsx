@@ -6,16 +6,22 @@ import Image from "next/image"
 
 type NavbarProps = {
   participantLabel?: "Teams" | "Players"
+  homeHref?: string
+  navHrefPrefix?: string
 }
 
-export function Navbar({ participantLabel = "Teams" }: NavbarProps) {
+export function Navbar({
+  participantLabel = "Teams",
+  homeHref = "#",
+  navHrefPrefix = "",
+}: NavbarProps) {
   const [open, setOpen] = useState(false)
   const participantHref = participantLabel === "Players" ? "#players" : "#teams"
   const navLinks = [
-    { href: "#tournament", label: "Tournament" },
-    { href: participantHref, label: participantLabel },
-    { href: "#schedule", label: "Schedule" },
-    { href: "#results", label: "Results" },
+    { href: `${navHrefPrefix}#tournament`, label: "Tournament" },
+    { href: `${navHrefPrefix}${participantHref}`, label: participantLabel },
+    { href: `${navHrefPrefix}#schedule`, label: "Schedule" },
+    { href: `${navHrefPrefix}#results`, label: "Results" },
   ]
 
   return (
@@ -35,7 +41,7 @@ export function Navbar({ participantLabel = "Teams" }: NavbarProps) {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           {/* Logo */}
-          <a href="#" className="flex items-center gap-2">
+          <a href={homeHref} className="flex items-center gap-2">
             <Image
               src="/images/logo.png"
               alt="Eclyps logo"
