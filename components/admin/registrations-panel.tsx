@@ -117,6 +117,10 @@ function RegistrationRecord({
         <span className={pillClassName}>{formatStatus(registration.status)}</span>
       </div>
 
+      {registration.participant_type === "team" && registration.roster.length > 0 ? (
+        <RegistrationRoster roster={registration.roster} />
+      ) : null}
+
       {showActions ? (
         <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-2">
           <RegistrationDecisionForm
@@ -132,6 +136,61 @@ function RegistrationRecord({
           />
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function RegistrationRoster({
+  roster,
+}: {
+  roster: AdminRegistration["roster"]
+}) {
+  const mainPlayers = roster.filter((entry) => entry.roster_role === "main")
+  const substitutes = roster.filter((entry) => entry.roster_role === "substitute")
+  const captain = roster.find((entry) => entry.is_captain)
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-medium uppercase tracking-[0.18em] text-primary/80">
+          Roster
+        </span>
+        {captain ? (
+          <span className={pillClassName}>Captain: {captain.nickname}</span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <RosterGroup title="Main players" entries={mainPlayers} />
+        <RosterGroup title="Substitutes" entries={substitutes} emptyLabel="No substitutes" />
+      </div>
+    </div>
+  )
+}
+
+function RosterGroup({
+  title,
+  entries,
+  emptyLabel,
+}: {
+  title: string
+  entries: AdminRegistration["roster"]
+  emptyLabel?: string
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.18em] text-white/45">{title}</p>
+      {entries.length === 0 ? (
+        <p className="mt-2 text-sm text-white/45">{emptyLabel ?? "No entries"}</p>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {entries.map((entry) => (
+            <span key={entry.id} className={pillClassName}>
+              {entry.nickname}
+              {entry.is_captain ? " (C)" : ""}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

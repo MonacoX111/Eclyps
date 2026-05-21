@@ -46,33 +46,52 @@ type PublicBracketProps = {
 }
 
 export function PublicBracket({ bracket }: PublicBracketProps) {
-  if (!bracket || bracket.rounds.length === 0) return null
+  const hasBracket = Boolean(bracket && bracket.rounds.length > 0)
+  const labels = bracket?.labels ?? {
+    title: "Live Bracket",
+    subtitle: "Tournament Tree",
+  }
 
   const finalOnly =
-    bracket.rounds.length === 1 && bracket.rounds[0]?.matches.length === 1
-  const finalMatch = bracket.rounds.at(-1)?.matches.at(-1) ?? null
+    hasBracket && bracket!.rounds.length === 1 && bracket!.rounds[0]?.matches.length === 1
+  const finalMatch = hasBracket ? bracket!.rounds.at(-1)?.matches.at(-1) ?? null : null
 
   return (
     <section className="relative z-10 px-4 py-24" id="bracket">
       <div className="mx-auto max-w-7xl">
-        <SectionHeading eyebrow={bracket.labels.subtitle} title={bracket.labels.title} />
+        <SectionHeading eyebrow={labels.subtitle} title={labels.title} />
 
         <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-black/30 px-4 py-6 shadow-[0_0_60px_oklch(0.78_0.18_165_/_0.06)] md:px-6 md:py-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165_/_0.10),transparent_36%)]" />
 
-          {finalOnly && finalMatch ? (
+          {!hasBracket ? (
+            <BracketEmptyState />
+          ) : finalOnly && finalMatch ? (
             <FinalOnlyBracket
               match={finalMatch}
-              champion={bracket.champion}
-              labels={bracket.labels}
+              champion={bracket!.champion}
+              labels={bracket!.labels}
             />
           ) : (
-            <MultiRoundBracket bracket={bracket} finalMatch={finalMatch} />
+            <MultiRoundBracket bracket={bracket!} finalMatch={finalMatch} />
           )}
         </div>
       </div>
     </section>
+  )
+}
+
+function BracketEmptyState() {
+  return (
+    <div className="relative z-10 mx-auto max-w-xl rounded-xl border border-white/10 bg-black/25 px-5 py-8 text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary/80">
+        Bracket is not generated yet.
+      </p>
+      <p className="mt-3 text-sm leading-6 text-white/60">
+        Check back after the tournament bracket is created.
+      </p>
+    </div>
   )
 }
 

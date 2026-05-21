@@ -39,6 +39,20 @@ export type TournamentRegistrationRecord = {
   source_player_id: string | null
   reviewed_at: string | null
   created_at: string | null
+  roster: TournamentRegistrationRosterEntry[]
+}
+
+export type TournamentRegistrationRosterEntry = {
+  id: string
+  registration_id: string
+  tournament_id: string
+  team_participant_id: string | null
+  source_player_id: string | null
+  nickname: string
+  roster_role: "main" | "substitute"
+  roster_order: number
+  is_captain: boolean
+  created_at: string | null
 }
 
 const REGISTRATION_SELECT =
@@ -214,6 +228,7 @@ export function normalizeRegistration(
     source_player_id: readStringId(row.source_player_id),
     reviewed_at: readNullableString(row.reviewed_at),
     created_at: readNullableString(row.created_at),
+    roster: [],
   }
 }
 
@@ -235,4 +250,34 @@ function readRegistrationStatus(value: unknown): RegistrationStatus {
   }
 
   return "pending"
+}
+
+export function normalizeRegistrationRosterEntry(
+  row: Record<string, unknown>,
+): TournamentRegistrationRosterEntry | null {
+  const id = readStringId(row.id)
+  const registrationId = readStringId(row.registration_id)
+  const tournamentId = readStringId(row.tournament_id)
+  const nickname = readNullableString(row.nickname)
+  const rosterOrder =
+    typeof row.roster_order === "number" && Number.isInteger(row.roster_order)
+      ? row.roster_order
+      : null
+
+  if (!id || !registrationId || !tournamentId || !nickname || rosterOrder === null) {
+    return null
+  }
+
+  return {
+    id,
+    registration_id: registrationId,
+    tournament_id: tournamentId,
+    team_participant_id: readStringId(row.team_participant_id),
+    source_player_id: readStringId(row.source_player_id),
+    nickname,
+    roster_role: row.roster_role === "substitute" ? "substitute" : "main",
+    roster_order: rosterOrder,
+    is_captain: row.is_captain === true,
+    created_at: readNullableString(row.created_at),
+  }
 }

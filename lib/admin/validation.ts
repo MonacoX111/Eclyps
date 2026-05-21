@@ -144,6 +144,52 @@ export const publicRegistrationSchema = z.object({
   region: optionalString(),
 })
 
+const teamRosterSchema = z
+  .object({
+    captain_nickname: requiredString(),
+    main_players: z.array(requiredString()).length(5),
+    substitutes: z.array(optionalString()).max(2),
+  })
+  .superRefine((value, context) => {
+    const substitutes = value.substitutes.filter(
+      (nickname): nickname is string => Boolean(nickname),
+    )
+    const roster = [...value.main_players, ...substitutes]
+    const normalizedRoster = roster.map(normalizeRosterNickname)
+
+    if (roster.length < 5) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid-roster-minimum",
+        path: ["main_players"],
+      })
+    }
+
+    if (roster.length > 7) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid-roster-maximum",
+        path: ["substitutes"],
+      })
+    }
+
+    if (new Set(normalizedRoster).size !== normalizedRoster.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "duplicate-roster-player",
+        path: ["main_players"],
+      })
+    }
+
+    if (!normalizedRoster.includes(normalizeRosterNickname(value.captain_nickname))) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid-roster-captain",
+        path: ["captain_nickname"],
+      })
+    }
+  })
+
 export const registrationDecisionSchema = z.object({
   id: requiredString(),
   status: z.enum(registrationStatuses),
@@ -160,7 +206,10 @@ export type BracketTemplateInput = z.infer<typeof bracketTemplateSchema>
 export type BracketSlotAssignmentInput = z.infer<typeof bracketSlotAssignmentSchema>
 export type BracketStatusInput = z.infer<typeof bracketStatusSchema>
 export type BracketMatchUpdateInput = z.infer<typeof bracketMatchUpdateSchema>
-export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema>
+export type TeamRosterInput = z.infer<typeof teamRosterSchema>
+export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema> & {
+  roster: TeamRosterInput | null
+}
 export type RegistrationDecisionInput = z.infer<typeof registrationDecisionSchema>
 
 export function parseLoginFormData(formData: FormData): ParseResult<AdminLoginInput> {
@@ -291,12 +340,48 @@ export function parseBracketMatchUpdateFormData(
 export function parsePublicRegistrationFormData(
   formData: FormData,
 ): ParseResult<PublicRegistrationInput> {
-  return parseFormData(publicRegistrationSchema, formData, {
+  const registrationResult = parseFormData(publicRegistrationSchema, formData, {
     tournament_id: "invalid-tournament-id",
     participant_type: "invalid-participant-type",
     display_name: "invalid-display-name",
     contact_email: "invalid-contact-email",
   })
+
+  if (!registrationResult.ok) return registrationResult
+
+  if (registrationResult.data.participant_type !== "team") {
+    return { ok: true, data: { ...registrationResult.data, roster: null } }
+  }
+
+  const rosterResult = teamRosterSchema.safeParse({
+    captain_nickname: formData.get("captain_nickname"),
+    main_players: [1, 2, 3, 4, 5].map((index) =>
+      formData.get(`roster_main_${index}`),
+    ),
+    substitutes: [1, 2].map((index) => formData.get(`roster_sub_${index}`)),
+  })
+
+  if (!rosterResult.success) {
+    const issue = rosterResult.error.issues[0]
+    return {
+      ok: false,
+      error: issue?.message || "invalid-roster",
+    }
+  }
+
+  return {
+    ok: true,
+    data: {
+      ...registrationResult.data,
+      roster: {
+        captain_nickname: rosterResult.data.captain_nickname,
+        main_players: rosterResult.data.main_players,
+        substitutes: rosterResult.data.substitutes.filter(
+          (nickname): nickname is string => Boolean(nickname),
+        ),
+      },
+    },
+  }
 }
 
 export function parseRegistrationDecisionFormData(
@@ -481,6 +566,10 @@ function timezoneSchema() {
     },
     z.string().refine((value) => normalizeTimeZone(value) === value),
   )
+}
+
+function normalizeRosterNickname(value: string) {
+  return value.trim().toLowerCase()
 }
 
 function checkboxBoolean() {

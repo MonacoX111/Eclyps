@@ -111,12 +111,19 @@ export async function reviewRegistration(formData: FormData) {
     redirect("/admin?registrationError=mutation-failed#registrations")
   }
 
-  const participantId = await findApprovedParticipantId(
-    supabaseAdmin,
-    registration.tournament_id,
-    registration.participant_type,
-    source.sourceId,
-  )
+  const participantId = source.participantId
+
+  if (registration.participant_type === "team") {
+    const rosterResult = await approveTeamRegistrationRoster(supabaseAdmin, {
+      registrationId: registration.id,
+      tournamentId: registration.tournament_id,
+      teamParticipantId: participantId,
+    })
+
+    if (!rosterResult) {
+      redirect("/admin?registrationError=mutation-failed#registrations")
+    }
+  }
 
   const { error } = await supabaseAdmin
     .from("tournament_registrations")
@@ -178,7 +185,7 @@ async function approveTeamRegistration(
     seed,
   })
 
-  return participantId ? { sourceId } : null
+  return participantId ? { sourceId, participantId } : null
 }
 
 async function approvePlayerRegistration(
@@ -227,7 +234,70 @@ async function approvePlayerRegistration(
     seed,
   })
 
-  return participantId ? { sourceId } : null
+  return participantId ? { sourceId, participantId } : null
+}
+
+async function approveTeamRegistrationRoster(
+  supabaseAdmin: SupabaseClient,
+  {
+    registrationId,
+    tournamentId,
+    teamParticipantId,
+  }: {
+    registrationId: string
+    tournamentId: string
+    teamParticipantId: string | null
+  },
+) {
+  if (!teamParticipantId) return false
+
+  const { data, error } = await supabaseAdmin
+    .from("tournament_registration_roster_entries")
+    .select("id, nickname, roster_order")
+    .eq("registration_id", registrationId)
+    .order("roster_order", { ascending: true })
+
+  if (error) {
+    logMutationError("fetch team registration roster", error)
+    return false
+  }
+
+  const rosterEntries = Array.isArray(data)
+    ? (data as { id: string; nickname: string; roster_order: number }[])
+    : []
+
+  if (rosterEntries.length < 5 || rosterEntries.length > 7) return false
+
+  for (const entry of rosterEntries) {
+    const playerId =
+      (await findExistingPlayerProfile(supabaseAdmin, {
+        displayName: entry.nickname,
+      }))?.id ??
+      (await createPlayerProfile(supabaseAdmin, {
+        tournamentId,
+        displayName: entry.nickname,
+        region: null,
+        seed: null,
+      }))
+
+    if (!playerId) return false
+
+    const { error: updateError } = await supabaseAdmin
+      .from("tournament_registration_roster_entries")
+      .update({
+        source_player_id: playerId,
+        team_participant_id: teamParticipantId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", entry.id)
+
+    if (updateError) {
+      logMutationError("link team registration roster player", updateError)
+      return false
+    }
+  }
+
+  return true
 }
 
 async function createTeamProfile(
@@ -273,7 +343,7 @@ async function createPlayerProfile(
     tournamentId: string
     displayName: string
     region: string | null
-    seed: number
+    seed: number | null
   },
 ) {
   const insertPayload = {
@@ -539,30 +609,6 @@ async function hasApprovedParticipantSource(
   }
 
   return Boolean(data)
-}
-
-async function findApprovedParticipantId(
-  supabaseAdmin: SupabaseClient,
-  tournamentId: string,
-  participantType: "team" | "player",
-  sourceId: string,
-) {
-  const sourceColumn =
-    participantType === "team" ? "source_team_id" : "source_player_id"
-  const { data, error } = await supabaseAdmin
-    .from("participants")
-    .select("id")
-    .eq("tournament_id", tournamentId)
-    .eq("participant_type", participantType)
-    .eq(sourceColumn, sourceId)
-    .maybeSingle()
-
-  if (error) {
-    logMutationError("resolve approved participant", error)
-    return null
-  }
-
-  return typeof data?.id === "string" ? data.id : null
 }
 
 function revalidateRegistrationPaths() {

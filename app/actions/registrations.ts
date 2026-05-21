@@ -98,10 +98,11 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
   }
 
-  const { error } = await supabaseAdmin.from("tournament_registrations").insert({
-    ...parsed.data,
+  const { roster, ...registrationPayload } = parsed.data
+  const { data: createdRegistration, error } = await supabaseAdmin.from("tournament_registrations").insert({
+    ...registrationPayload,
     status: "pending",
-  })
+  }).select("id").maybeSingle()
 
   if (error) {
     if (error.code === "23505") {
@@ -111,6 +112,56 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
   }
 
+  if (parsed.data.participant_type === "team") {
+    if (!roster || typeof createdRegistration?.id !== "string") {
+      redirect(`/?registrationError=invalid-roster&${registrationTypeQuery}#registration`)
+    }
+
+    const rosterRows = [
+      ...roster.main_players.map((nickname, index) => ({
+        nickname,
+        roster_role: "main",
+        roster_order: index + 1,
+        is_captain:
+          normalizeRosterNickname(nickname) ===
+          normalizeRosterNickname(roster.captain_nickname),
+      })),
+      ...roster.substitutes
+        .filter((nickname): nickname is string => Boolean(nickname))
+        .map((nickname, index) => ({
+        nickname,
+        roster_role: "substitute",
+        roster_order: roster.main_players.length + index + 1,
+        is_captain:
+          normalizeRosterNickname(nickname) ===
+          normalizeRosterNickname(roster.captain_nickname),
+      })),
+    ]
+
+    const { error: rosterError } = await supabaseAdmin
+      .from("tournament_registration_roster_entries")
+      .insert(
+        rosterRows.map((row) => ({
+          registration_id: createdRegistration.id,
+          tournament_id: parsed.data.tournament_id,
+          ...row,
+        })),
+      )
+
+    if (rosterError) {
+      await supabaseAdmin
+        .from("tournament_registrations")
+        .delete()
+        .eq("id", createdRegistration.id)
+
+      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+    }
+  }
+
   revalidatePath("/")
   redirect(`/?registrationSuccess=submitted&${registrationTypeQuery}#registration`)
+}
+
+function normalizeRosterNickname(value: string) {
+  return value.trim().toLowerCase()
 }

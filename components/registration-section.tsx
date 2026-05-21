@@ -109,6 +109,17 @@ export function RegistrationSection({
                   placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
                 />
               </RegistrationField>
+              {summary.participantType === "team" ? (
+                <RegistrationField label="Captain nickname">
+                  <input
+                    name="captain_nickname"
+                    required
+                    disabled={isDisabled}
+                    className={inputClassName}
+                    placeholder="Captain in-game name"
+                  />
+                </RegistrationField>
+              ) : null}
               <RegistrationField label="Contact email">
                 <input
                   name="contact_email"
@@ -134,6 +145,9 @@ export function RegistrationSection({
                   placeholder="Ukraine, EU, North America"
                 />
               </RegistrationField>
+              {summary.participantType === "team" ? (
+                <TeamRosterFields disabled={isDisabled} />
+              ) : null}
             </div>
             <div className="sm:col-span-2">
               <button
@@ -163,6 +177,44 @@ function RegistrationField({
       <span className="block">{label}</span>
       {children}
     </label>
+  )
+}
+
+function TeamRosterFields({ disabled }: { disabled: boolean }) {
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-3">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
+          Team roster
+        </p>
+        <p className="text-sm text-white/55">
+          Submit 5 main players and up to 2 substitutes.
+        </p>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {[1, 2, 3, 4, 5].map((index) => (
+          <RegistrationField key={index} label={`Main player ${index}`}>
+            <input
+              name={`roster_main_${index}`}
+              required
+              disabled={disabled}
+              className={inputClassName}
+              placeholder={`Player ${index} nickname`}
+            />
+          </RegistrationField>
+        ))}
+        {[1, 2].map((index) => (
+          <RegistrationField key={index} label={`Substitute ${index}`}>
+            <input
+              name={`roster_sub_${index}`}
+              disabled={disabled}
+              className={inputClassName}
+              placeholder="Optional nickname"
+            />
+          </RegistrationField>
+        ))}
+      </div>
+    </div>
   )
 }
 

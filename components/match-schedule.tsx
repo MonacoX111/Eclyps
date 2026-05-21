@@ -20,8 +20,6 @@ type MatchScheduleProps = {
 }
 
 export function MatchSchedule({ matches = [] }: MatchScheduleProps) {
-  if (matches.length === 0) return null
-
   const schedule = groupMatchesByRound(matches)
 
   return (
@@ -29,8 +27,11 @@ export function MatchSchedule({ matches = [] }: MatchScheduleProps) {
       <div className="mx-auto max-w-4xl">
         <SectionHeading eyebrow="Battle Calendar" title="Match Schedule" />
 
-        <div className="space-y-12">
-          {schedule.map((round, ri) => (
+        {schedule.length === 0 ? (
+          <ScheduleEmptyState />
+        ) : (
+          <div className="space-y-12">
+            {schedule.map((round, ri) => (
             <m.div
               key={round.round}
               initial={{ opacity: 0, y: 30 }}
@@ -96,10 +97,24 @@ export function MatchSchedule({ matches = [] }: MatchScheduleProps) {
                 ))}
               </div>
             </m.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
+  )
+}
+
+function ScheduleEmptyState() {
+  return (
+    <div className="glass-card mx-auto max-w-xl rounded-xl px-5 py-8 text-center">
+      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary/80">
+        Schedule is not available yet.
+      </p>
+      <p className="mt-3 text-sm leading-6 text-white/60">
+        Match times will appear here once they are announced.
+      </p>
+    </div>
   )
 }
 
