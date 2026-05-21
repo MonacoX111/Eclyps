@@ -276,7 +276,7 @@ async function fetchAllEclypsPlayers(): Promise<HomepagePlayer[]> {
     const { data, error } = await supabase
       .from("players")
       .select("id, tournament_id, name, nickname, seed, wins, losses")
-      .not("owner_user_id", "is", null)
+      .order("seed", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
 
     if (error) {
