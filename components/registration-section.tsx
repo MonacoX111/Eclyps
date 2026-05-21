@@ -1,6 +1,5 @@
 import type React from "react"
 import Image from "next/image"
-import { submitPlayerApplication } from "@/app/actions/player-applications"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
@@ -99,6 +98,9 @@ export function RegistrationSection({
           </div>
 
           <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
+            {userProfile && !approvedPlayer ? (
+              <PlayerApplicationState status={applicationStatus} />
+            ) : null}
             {isDisabled ? (
               <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
                 <p className="text-sm font-semibold text-red-100">
@@ -146,12 +148,6 @@ export function RegistrationSection({
                   </p>
                 </div>
               </div>
-            ) : null}
-            {!isDisabled && userProfile && !approvedPlayer ? (
-              <PlayerApplicationPrompt
-                status={applicationStatus}
-                defaultNickname={userProfile.display_name}
-              />
             ) : null}
             {!isDisabled && approvedPlayer ? (
               <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
@@ -248,7 +244,7 @@ export function RegistrationSection({
                     : userProfile
                       ? applicationStatus === "pending"
                         ? "Player application pending"
-                        : "Apply as Player to register"
+                        : "Player approval required"
                       : "Login with Discord to register"}
               </button>
             </div>
@@ -259,12 +255,10 @@ export function RegistrationSection({
   )
 }
 
-function PlayerApplicationPrompt({
+function PlayerApplicationState({
   status,
-  defaultNickname,
 }: {
   status: "pending" | "approved" | "rejected" | null
-  defaultNickname: string
 }) {
   if (status === "pending") {
     return (
@@ -281,43 +275,20 @@ function PlayerApplicationPrompt({
   }
 
   return (
-    <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4">
-      <p className="text-sm font-semibold text-primary">
-        Apply as an Eclyps player
+    <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
+      <p className="text-sm font-semibold text-amber-100">
+        Player application not found
       </p>
       <p className="mt-2 text-sm leading-6 text-white/70">
-        Discord login lets you browse. Player approval is required before you
-        can enter tournaments.
+        Your Discord account is connected, but no player application was found.
+        Log out and use Login with Discord again, then choose Yes to create the
+        application automatically.
       </p>
       {status === "rejected" ? (
         <p className="mt-2 text-sm text-red-100">
-          Your previous application was rejected. You can submit a new one.
+          Your previous player application was rejected.
         </p>
       ) : null}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <RegistrationField label="Player nickname">
-          <input
-            name="requested_nickname"
-            required
-            defaultValue={defaultNickname}
-            className={inputClassName}
-          />
-        </RegistrationField>
-        <RegistrationField label="Region">
-          <input
-            name="requested_region"
-            className={inputClassName}
-            placeholder="Ukraine, EU, North America"
-          />
-        </RegistrationField>
-      </div>
-      <button
-        type="submit"
-        formAction={submitPlayerApplication}
-        className="mt-4 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
-      >
-        Apply as Player
-      </button>
     </div>
   )
 }

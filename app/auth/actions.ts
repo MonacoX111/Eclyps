@@ -1,13 +1,22 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getPublicEnv } from "@/lib/env/public"
 
 export async function loginWithDiscord() {
   const supabase = await createSupabaseServerClient()
   const origin = await getSiteOrigin()
+  const cookieStore = await cookies()
+
+  cookieStore.set("eclyps_player_application_intent", "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: origin.startsWith("https://"),
+    path: "/",
+    maxAge: 60 * 10,
+  })
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "discord",
