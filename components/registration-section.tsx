@@ -6,6 +6,7 @@ import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
 type RegistrationSectionProps = {
   summary: TournamentRegistrationSummary | null
   participantLabel: "Teams" | "Players"
+  tournamentName?: string | null
   feedback?: RegistrationFeedback | null
 }
 
@@ -20,17 +21,28 @@ const inputClassName =
 export function RegistrationSection({
   summary,
   participantLabel,
+  tournamentName,
   feedback,
 }: RegistrationSectionProps) {
   if (!summary) return null
 
   const isDisabled = summary.isClosed || summary.isFull
   const typeLabel = summary.participantType === "player" ? "Player" : "Team"
+  const typeLabelPlural = summary.participantType === "player" ? "players" : "teams"
+  const visibleTournamentName = tournamentName?.trim() || "Active tournament"
+  const disabledTitle = summary.isFull ? "Registration is full." : "Registration is closed."
+  const disabledMessage = summary.isFull
+    ? `This tournament has reached the maximum number of ${typeLabelPlural}.`
+    : `Registration is closed for this ${typeLabelPlural} tournament.`
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
       <div className="mx-auto max-w-4xl">
-        <SectionHeading eyebrow="Registration" title={`Join the ${participantLabel}`} />
+        <SectionHeading eyebrow="Registration" title={visibleTournamentName}>
+          <span className="glass-card mt-4 inline-flex max-w-full break-words rounded-full px-4 py-1.5 text-center text-sm font-medium uppercase tracking-widest text-primary">
+            Join the {participantLabel}
+          </span>
+        </SectionHeading>
 
         <div className="glass-card mx-auto grid gap-6 rounded-2xl p-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:p-8">
           <div className="flex flex-col justify-between gap-6">
@@ -69,42 +81,60 @@ export function RegistrationSection({
           </div>
 
           <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
+            {isDisabled ? (
+              <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
+                <p className="text-sm font-semibold text-red-100">
+                  {disabledTitle}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/70">
+                  {disabledMessage}
+                </p>
+              </div>
+            ) : null}
             <input type="hidden" name="tournament_id" value={summary.tournamentId} />
             <input type="hidden" name="participant_type" value={summary.participantType} />
-            <RegistrationField label={`${typeLabel} name`}>
-              <input
-                name="display_name"
-                required
-                disabled={isDisabled}
-                className={inputClassName}
-                placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
-              />
-            </RegistrationField>
-            <RegistrationField label="Contact email">
-              <input
-                name="contact_email"
-                type="email"
-                disabled={isDisabled}
-                className={inputClassName}
-                placeholder="captain@example.com"
-              />
-            </RegistrationField>
-            <RegistrationField label="Discord / Telegram">
-              <input
-                name="contact_handle"
-                disabled={isDisabled}
-                className={inputClassName}
-                placeholder="@handle"
-              />
-            </RegistrationField>
-            <RegistrationField label="Region">
-              <input
-                name="region"
-                disabled={isDisabled}
-                className={inputClassName}
-                placeholder="Ukraine, EU, North America"
-              />
-            </RegistrationField>
+            <div
+              className={`grid gap-3 sm:col-span-2 sm:grid-cols-2 ${
+                isDisabled
+                  ? "rounded-xl border border-white/10 bg-black/20 p-3 opacity-60"
+                  : ""
+              }`}
+            >
+              <RegistrationField label={`${typeLabel} name`}>
+                <input
+                  name="display_name"
+                  required
+                  disabled={isDisabled}
+                  className={inputClassName}
+                  placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
+                />
+              </RegistrationField>
+              <RegistrationField label="Contact email">
+                <input
+                  name="contact_email"
+                  type="email"
+                  disabled={isDisabled}
+                  className={inputClassName}
+                  placeholder="captain@example.com"
+                />
+              </RegistrationField>
+              <RegistrationField label="Discord / Telegram">
+                <input
+                  name="contact_handle"
+                  disabled={isDisabled}
+                  className={inputClassName}
+                  placeholder="@handle"
+                />
+              </RegistrationField>
+              <RegistrationField label="Region">
+                <input
+                  name="region"
+                  disabled={isDisabled}
+                  className={inputClassName}
+                  placeholder="Ukraine, EU, North America"
+                />
+              </RegistrationField>
+            </div>
             <div className="sm:col-span-2">
               <button
                 type="submit"

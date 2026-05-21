@@ -20,6 +20,7 @@ export function Navbar({
   const navLinks = [
     { href: `${navHrefPrefix}#tournament`, label: "Tournament" },
     { href: `${navHrefPrefix}${participantHref}`, label: participantLabel },
+    { href: `${navHrefPrefix}#registration`, label: "Registration" },
     { href: `${navHrefPrefix}#schedule`, label: "Schedule" },
     { href: `${navHrefPrefix}#results`, label: "Results" },
   ]

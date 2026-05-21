@@ -117,6 +117,11 @@ async function ActiveTournamentRegistration({
     <RegistrationSection
       summary={homepageData.registrationSummary}
       participantLabel={homepageData.participantLabel}
+      tournamentName={
+        homepageData.tournament?.name ??
+        homepageData.tournament?.display_name ??
+        homepageData.tournament?.title
+      }
       feedback={feedback}
     />
   )
