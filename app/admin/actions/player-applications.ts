@@ -147,8 +147,8 @@ async function getNextEclypsPlayerSeed(): Promise<number> {
   const { data } = await supabaseAdmin
     .from("players")
     .select("seed")
-    .not("owner_user_id", "is", null)
-    .order("seed", { ascending: false, nullsFirst: false })
+    .not("seed", "is", null)
+    .order("seed", { ascending: false })
     .limit(1)
     .maybeSingle()
 
