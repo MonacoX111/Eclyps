@@ -5,16 +5,32 @@ import { TournamentInfo } from "@/components/tournament-info"
 import { TeamsGrid } from "@/components/teams-grid"
 import { MatchSchedule } from "@/components/match-schedule"
 import { PublicBracket } from "@/components/public-bracket"
+import {
+  RegistrationSection,
+  type RegistrationFeedback,
+} from "@/components/registration-section"
 import { Results } from "@/components/results"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
+import type { RegistrationParticipantType } from "@/lib/data/registrations"
 
 export const dynamic = "force-dynamic"
 
-export default function Page() {
+type PageProps = {
+  searchParams?: Promise<{
+    registrationError?: string
+    registrationSuccess?: string
+    registrationType?: string
+  }>
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams
+  const registrationFeedback = getRegistrationFeedback(resolvedSearchParams)
+
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <AdminShortcut />
@@ -29,6 +45,13 @@ export default function Page() {
 
         <Suspense fallback={<CardsLoading />}>
           <ActiveTournamentTeams />
+        </Suspense>
+
+        <Suspense fallback={<RegistrationLoading />}>
+          <ActiveTournamentRegistration
+            feedback={registrationFeedback}
+            initialType={readRegistrationType(resolvedSearchParams?.registrationType)}
+          />
         </Suspense>
 
         <Suspense fallback={<BracketLoading />}>
@@ -84,6 +107,25 @@ async function ActiveTournamentTeams() {
     <TeamsGrid
       teams={homepageData.participantCards}
       participantLabel={homepageData.participantLabel}
+    />
+  )
+}
+
+async function ActiveTournamentRegistration({
+  feedback,
+  initialType,
+}: {
+  feedback: RegistrationFeedback | null
+  initialType?: RegistrationParticipantType
+}) {
+  const homepageData = await getHomepageData()
+
+  return (
+    <RegistrationSection
+      summaries={homepageData.registrationSummaries}
+      participantLabel={homepageData.participantLabel}
+      initialType={initialType}
+      feedback={feedback}
     />
   )
 }
@@ -221,6 +263,52 @@ function CardsLoading() {
       </div>
     </section>
   )
+}
+
+function RegistrationLoading() {
+  return (
+    <section className="relative z-10 px-4 py-24">
+      <div className="mx-auto max-w-4xl">
+        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
+        <div className="glass-card h-80 animate-pulse rounded-2xl" />
+      </div>
+    </section>
+  )
+}
+
+function getRegistrationFeedback(searchParams?: {
+  registrationError?: string
+  registrationSuccess?: string
+}): RegistrationFeedback | null {
+  if (searchParams?.registrationSuccess === "submitted") {
+    return {
+      tone: "success",
+      message: "Registration submitted. An admin will review it before it appears in the tournament.",
+    }
+  }
+
+  if (!searchParams?.registrationError) return null
+
+  const message =
+    {
+      "invalid-tournament-id": "Tournament is not available for registration.",
+      "invalid-participant-type": "Registration type must be team or player.",
+      "invalid-display-name": "Name must not be empty.",
+      "invalid-contact-email": "Contact email must be valid or left empty.",
+      "registration-closed": "Registration is closed for this tournament.",
+      "registration-full": "This tournament is full.",
+      "duplicate-registration": "This team or player is already registered or awaiting review.",
+      "admin-client-unavailable": "Registration service is not configured.",
+      "mutation-failed": "Registration could not be submitted. Please try again.",
+    }[searchParams.registrationError] ?? "Registration could not be submitted."
+
+  return { tone: "error", message }
+}
+
+function readRegistrationType(
+  value: string | undefined,
+): RegistrationParticipantType | undefined {
+  return value === "team" || value === "player" ? value : undefined
 }
 
 function ScheduleLoading() {

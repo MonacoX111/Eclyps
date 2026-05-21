@@ -152,7 +152,7 @@ async function upsertParticipant(
   const conflictTarget =
     participant.participant_type === "team" ? "source_team_id" : "source_player_id"
 
-  const { error } = await supabaseAdmin
+  const result = await supabaseAdmin
     .from("participants")
     .upsert(
       {
@@ -162,8 +162,27 @@ async function upsertParticipant(
       { onConflict: conflictTarget },
     )
 
-  if (error) {
-    console.error("Failed to sync participant:", error)
+  if (result.error && isMissingColumnError(result.error)) {
+    const { region: _region, ...participantWithoutRegion } = participant
+    const fallbackResult = await supabaseAdmin
+      .from("participants")
+      .upsert(
+        {
+          ...participantWithoutRegion,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: conflictTarget },
+      )
+
+    if (fallbackResult.error) {
+      console.error("Failed to sync participant:", fallbackResult.error)
+    }
+
+    return
+  }
+
+  if (result.error) {
+    console.error("Failed to sync participant:", result.error)
   }
 }
 
@@ -204,4 +223,8 @@ function normalizeParticipant(row: Record<string, unknown>): AdminParticipant | 
     source_player_id: readStringId(row.source_player_id),
     created_at: readNullableString(row.created_at),
   }
+}
+
+function isMissingColumnError(error: { code?: string }) {
+  return error.code === "42703" || error.code === "PGRST204"
 }

@@ -29,6 +29,10 @@ import {
 } from "@/lib/data/participants"
 import { normalizeRows } from "@/lib/data/query"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import {
+  getTournamentRegistrationSummary,
+  type TournamentRegistrationSummary,
+} from "@/lib/data/registrations"
 
 const BRACKET_FINAL_RESULT_NOTE_PREFIX = "synced:bracket-final:"
 
@@ -158,6 +162,8 @@ export type HomepageData = {
   publicBracket: PublicBracketData | null
   matchScheduleItems: MatchScheduleItem[]
   resultCards: ResultCard[]
+  registrationSummary: TournamentRegistrationSummary | null
+  registrationSummaries: TournamentRegistrationSummary[]
 }
 
 export const getHomepageData = cache(async (): Promise<HomepageData> => {
@@ -165,7 +171,7 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
 
   const tournament = await fetchHomepageTournament()
   if (!tournament) {
-    return createHomepageData({
+    return await createHomepageData({
       tournament: null,
       teams: [],
       players: [],
@@ -183,7 +189,7 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
     fetchHomepageResults(tournament.id),
   ])
 
-  return createHomepageData({
+  return await createHomepageData({
     tournament,
     teams,
     players,
@@ -384,7 +390,7 @@ async function fetchHomepageResults(tournamentId: string): Promise<HomepageResul
   }
 }
 
-function createHomepageData({
+async function createHomepageData({
   tournament,
   teams,
   players,
@@ -398,7 +404,7 @@ function createHomepageData({
   participants: HomepageParticipant[]
   matches: HomepageMatch[]
   results: HomepageResult[]
-}): HomepageData {
+}): Promise<HomepageData> {
   const participantType = getParticipantType(participants, matches, results)
   const participantLabel = participantType === "player" ? "Players" : "Teams"
   const participantCards =
@@ -410,6 +416,26 @@ function createHomepageData({
     participantType === "player"
       ? getPlayerCount(players, participants)
       : players.length
+  const registrationSummaries = tournament
+    ? await Promise.all([
+        getTournamentRegistrationSummary({
+          tournamentId: tournament.id,
+          participantType: "team",
+          capacity: tournament.team_count,
+          tournamentStatus: tournament.status,
+        }),
+        getTournamentRegistrationSummary({
+          tournamentId: tournament.id,
+          participantType: "player",
+          capacity: tournament.team_count,
+          tournamentStatus: tournament.status,
+        }),
+      ])
+    : []
+  const registrationSummary =
+    registrationSummaries.find(
+      (summary) => summary.participantType === participantType,
+    ) ?? null
 
   return {
     tournament,
@@ -427,6 +453,8 @@ function createHomepageData({
     publicBracket: getPublicBracketData(bracketMatches, tournament),
     matchScheduleItems: getMatchScheduleItems(normalMatches),
     resultCards: getResultCards(results, tournament),
+    registrationSummary,
+    registrationSummaries,
   }
 }
 

@@ -8,6 +8,8 @@ export {
   parseBracketTemplateFormData,
   parseMatchFormData,
   parsePlayerFormData,
+  parsePublicRegistrationFormData,
+  parseRegistrationDecisionFormData,
   parseRequiredIdFormData,
   parseResultFormData,
   parseTeamFormData,

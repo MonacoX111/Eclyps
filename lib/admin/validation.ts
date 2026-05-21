@@ -6,6 +6,7 @@ import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
 import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedule"
 
 const participantTypes = ["team", "player"] as const
+const registrationStatuses = ["approved", "rejected"] as const
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -133,6 +134,20 @@ export const bracketMatchUpdateSchema = z.object({
   winner_selection: winnerSelectionSchema(),
 })
 
+export const publicRegistrationSchema = z.object({
+  tournament_id: requiredString(),
+  participant_type: participantTypeSchema(),
+  display_name: requiredString(),
+  contact_email: optionalEmailString(),
+  contact_handle: optionalString(),
+  region: optionalString(),
+})
+
+export const registrationDecisionSchema = z.object({
+  id: requiredString(),
+  status: z.enum(registrationStatuses),
+})
+
 export type AdminLoginInput = z.infer<typeof loginPasswordSchema>
 export type ActiveTournamentInput = z.infer<typeof activeTournamentSchema>
 export type TournamentInput = z.infer<typeof tournamentSchema>
@@ -144,6 +159,8 @@ export type BracketTemplateInput = z.infer<typeof bracketTemplateSchema>
 export type BracketSlotAssignmentInput = z.infer<typeof bracketSlotAssignmentSchema>
 export type BracketStatusInput = z.infer<typeof bracketStatusSchema>
 export type BracketMatchUpdateInput = z.infer<typeof bracketMatchUpdateSchema>
+export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema>
+export type RegistrationDecisionInput = z.infer<typeof registrationDecisionSchema>
 
 export function parseLoginFormData(formData: FormData): ParseResult<AdminLoginInput> {
   return parseFormData(loginPasswordSchema, formData, {
@@ -269,6 +286,26 @@ export function parseBracketMatchUpdateFormData(
   })
 }
 
+export function parsePublicRegistrationFormData(
+  formData: FormData,
+): ParseResult<PublicRegistrationInput> {
+  return parseFormData(publicRegistrationSchema, formData, {
+    tournament_id: "invalid-tournament-id",
+    participant_type: "invalid-participant-type",
+    display_name: "invalid-display-name",
+    contact_email: "invalid-contact-email",
+  })
+}
+
+export function parseRegistrationDecisionFormData(
+  formData: FormData,
+): ParseResult<RegistrationDecisionInput> {
+  return parseFormData(registrationDecisionSchema, formData, {
+    id: "missing-id",
+    status: "invalid-status",
+  })
+}
+
 function parseFormData<T extends z.ZodTypeAny>(
   schema: T,
   formData: FormData,
@@ -314,6 +351,18 @@ function optionalString() {
       return trimmedValue.length > 0 ? trimmedValue : null
     },
     z.string().nullable(),
+  )
+}
+
+function optionalEmailString() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : null
+    },
+    z.string().email().nullable(),
   )
 }
 

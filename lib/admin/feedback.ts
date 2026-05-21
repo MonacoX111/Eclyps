@@ -165,3 +165,25 @@ export function getResultFeedback(searchParams?: Pick<AdminSearchParams, "result
 
   return { tone: "error", message }
 }
+
+export function getRegistrationFeedback(searchParams?: Pick<AdminSearchParams, "registrationError" | "registrationSuccess">): AdminFeedback | null {
+  if (searchParams?.registrationSuccess === "approved") return { tone: "success", message: "Registration approved and added to participants." }
+  if (searchParams?.registrationSuccess === "rejected") return { tone: "success", message: "Registration rejected." }
+  if (!searchParams?.registrationError) return null
+
+  const message =
+    {
+      "missing-id": "Registration id is missing.",
+      "invalid-status": "Registration decision must be approve or reject.",
+      "already-reviewed": "This registration has already been reviewed.",
+      "invalid-tournament-id": "Registration tournament could not be found.",
+      "registration-closed": "This tournament is closed.",
+      "registration-full": "This tournament is full.",
+      "duplicate-registration": "This participant is already approved for the tournament.",
+      "admin-client-unavailable":
+        "Registration review requires a server-only Supabase admin client.",
+      "mutation-failed": "Registration review could not be saved. Please try again.",
+    }[searchParams.registrationError] ?? "Registration review could not be saved."
+
+  return { tone: "error", message }
+}
