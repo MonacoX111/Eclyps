@@ -3,17 +3,21 @@
 import { useState } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
+import { loginWithDiscord, logoutDiscord } from "@/app/auth/actions"
+import type { UserProfile } from "@/lib/auth/user-profile"
 
 type NavbarProps = {
   participantLabel?: "Teams" | "Players"
   homeHref?: string
   navHrefPrefix?: string
+  userProfile?: UserProfile | null
 }
 
 export function Navbar({
   participantLabel = "Teams",
   homeHref = "#",
   navHrefPrefix = "",
+  userProfile = null,
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const participantHref = participantLabel === "Players" ? "#players" : "#teams"
@@ -69,36 +73,39 @@ export function Navbar({
                 {link.label}
               </a>
             ))}
+            <AuthControl userProfile={userProfile} />
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="flex flex-col gap-1.5 md:hidden"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle menu"
-          >
-            <span
-              className="block h-0.5 w-5 transition-all duration-200"
-              style={{
-                background: "oklch(0.78 0.18 165)",
-                transform: open ? "rotate(45deg) translate(2px, 3px)" : "none",
-              }}
-            />
-            <span
-              className="block h-0.5 w-5 transition-all duration-200"
-              style={{
-                background: "oklch(0.78 0.18 165)",
-                opacity: open ? 0 : 1,
-              }}
-            />
-            <span
-              className="block h-0.5 w-5 transition-all duration-200"
-              style={{
-                background: "oklch(0.78 0.18 165)",
-                transform: open ? "rotate(-45deg) translate(2px, -3px)" : "none",
-              }}
-            />
-          </button>
+          <div className="flex items-center gap-3 md:hidden">
+            <MobileAuthAvatar userProfile={userProfile} />
+            <button
+              className="flex flex-col gap-1.5"
+              onClick={() => setOpen(!open)}
+              aria-label="Toggle menu"
+            >
+              <span
+                className="block h-0.5 w-5 transition-all duration-200"
+                style={{
+                  background: "oklch(0.78 0.18 165)",
+                  transform: open ? "rotate(45deg) translate(2px, 3px)" : "none",
+                }}
+              />
+              <span
+                className="block h-0.5 w-5 transition-all duration-200"
+                style={{
+                  background: "oklch(0.78 0.18 165)",
+                  opacity: open ? 0 : 1,
+                }}
+              />
+              <span
+                className="block h-0.5 w-5 transition-all duration-200"
+                style={{
+                  background: "oklch(0.78 0.18 165)",
+                  transform: open ? "rotate(-45deg) translate(2px, -3px)" : "none",
+                }}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -126,9 +133,79 @@ export function Navbar({
                 {link.label}
               </a>
             ))}
+            <AuthControl userProfile={userProfile} mobile />
           </div>
         </m.div>
       )}
     </m.nav>
+  )
+}
+
+function AuthControl({
+  userProfile,
+  mobile = false,
+}: {
+  userProfile: UserProfile | null
+  mobile?: boolean
+}) {
+  if (!userProfile) {
+    return (
+      <form action={loginWithDiscord}>
+        <button
+          type="submit"
+          className={`rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/60 hover:bg-primary/15 ${
+            mobile ? "w-full" : ""
+          }`}
+        >
+          Login with Discord
+        </button>
+      </form>
+    )
+  }
+
+  return (
+    <form
+      action={logoutDiscord}
+      className={`flex items-center gap-3 ${mobile ? "justify-between" : ""}`}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <Avatar userProfile={userProfile} />
+        <span className="max-w-36 truncate text-sm font-medium text-white/80">
+          {userProfile.discord_username}
+        </span>
+      </div>
+      <button
+        type="submit"
+        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-primary/40 hover:text-primary"
+      >
+        Logout
+      </button>
+    </form>
+  )
+}
+
+function MobileAuthAvatar({ userProfile }: { userProfile: UserProfile | null }) {
+  if (!userProfile) return null
+
+  return <Avatar userProfile={userProfile} />
+}
+
+function Avatar({ userProfile }: { userProfile: UserProfile }) {
+  if (userProfile.avatar_url) {
+    return (
+      <Image
+        src={userProfile.avatar_url}
+        alt=""
+        width={28}
+        height={28}
+        className="h-7 w-7 rounded-full border border-primary/30 object-cover"
+      />
+    )
+  }
+
+  return (
+    <span className="grid h-7 w-7 place-items-center rounded-full border border-primary/30 bg-primary/10 text-xs font-semibold text-primary">
+      {userProfile.discord_username.slice(0, 1).toUpperCase()}
+    </span>
   )
 }

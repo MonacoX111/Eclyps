@@ -14,6 +14,7 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
+import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
 
 export const dynamic = "force-dynamic"
@@ -90,9 +91,17 @@ async function ActiveTournamentBlocks() {
 }
 
 async function ActiveNavbar() {
-  const homepageData = await getHomepageData()
+  const [homepageData, userProfile] = await Promise.all([
+    getHomepageData(),
+    getCurrentUserProfile(),
+  ])
 
-  return <Navbar participantLabel={homepageData.participantLabel} />
+  return (
+    <Navbar
+      participantLabel={homepageData.participantLabel}
+      userProfile={userProfile}
+    />
+  )
 }
 
 async function ActiveTournamentTeams() {
@@ -111,7 +120,10 @@ async function ActiveTournamentRegistration({
 }: {
   feedback: RegistrationFeedback | null
 }) {
-  const homepageData = await getHomepageData()
+  const [homepageData, userProfile] = await Promise.all([
+    getHomepageData(),
+    getCurrentUserProfile(),
+  ])
 
   return (
     <RegistrationSection
@@ -123,6 +135,7 @@ async function ActiveTournamentRegistration({
         homepageData.tournament?.title
       }
       feedback={feedback}
+      userProfile={userProfile}
     />
   )
 }
@@ -301,6 +314,9 @@ function getRegistrationFeedback(searchParams?: {
       "registration-closed": "Registration is closed for this tournament.",
       "registration-full": "This tournament is full.",
       "duplicate-registration": "This team or player is already registered or awaiting review.",
+      "discord-login-required": "Please log in with Discord before registering.",
+      "discord-profile-unavailable": "Discord profile could not be synced. Please log out and try again.",
+      "discord-login-failed": "Discord login could not be completed. Please try again.",
       "admin-client-unavailable": "Registration service is not configured.",
       "mutation-failed": "Registration could not be submitted. Please try again.",
     }[searchParams.registrationError] ?? "Registration could not be submitted."

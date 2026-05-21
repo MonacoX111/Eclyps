@@ -29,7 +29,7 @@ export async function reviewRegistration(formData: FormData) {
 
   const { data: registration, error: registrationError } = await supabaseAdmin
     .from("tournament_registrations")
-    .select("id, tournament_id, participant_type, display_name, contact_email, contact_handle, region, status")
+    .select("id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, source_player_id, source_team_id")
     .eq("id", parsed.data.id)
     .maybeSingle()
 
@@ -151,19 +151,25 @@ async function approveTeamRegistration(
   registration: {
     tournament_id: string
     display_name: string
+    user_profile_id: string | null
+    source_team_id?: string | null
   },
   seed: number,
 ) {
-  const existingTeam = await findExistingTeamProfile(
-    supabaseAdmin,
-    registration.display_name,
-  )
+  const existingTeam =
+    registration.source_team_id
+      ? { id: registration.source_team_id }
+      : await findExistingTeamProfile(supabaseAdmin, {
+          displayName: registration.display_name,
+          ownerUserId: registration.user_profile_id,
+        })
   const sourceId =
     existingTeam?.id ??
     (await createTeamProfile(supabaseAdmin, {
       tournamentId: registration.tournament_id,
       displayName: registration.display_name,
       seed,
+      ownerUserId: registration.user_profile_id,
     }))
 
   if (!sourceId) return null
@@ -194,12 +200,18 @@ async function approvePlayerRegistration(
     tournament_id: string
     display_name: string
     region: string | null
+    user_profile_id: string | null
+    source_player_id?: string | null
   },
   seed: number,
 ) {
-  const existingPlayer = await findExistingPlayerProfile(supabaseAdmin, {
-    displayName: registration.display_name,
-  })
+  const existingPlayer =
+    registration.source_player_id
+      ? await findExistingPlayerProfileById(supabaseAdmin, registration.source_player_id)
+      : await findExistingPlayerProfile(supabaseAdmin, {
+          displayName: registration.display_name,
+          ownerUserId: registration.user_profile_id,
+        })
   const sourceId =
     existingPlayer?.id ??
     (await createPlayerProfile(supabaseAdmin, {
@@ -207,6 +219,7 @@ async function approvePlayerRegistration(
       displayName: registration.display_name,
       region: registration.region,
       seed,
+      ownerUserId: registration.user_profile_id,
     }))
 
   if (!sourceId) return null
@@ -272,12 +285,14 @@ async function approveTeamRegistrationRoster(
     const playerId =
       (await findExistingPlayerProfile(supabaseAdmin, {
         displayName: entry.nickname,
+        ownerUserId: null,
       }))?.id ??
       (await createPlayerProfile(supabaseAdmin, {
         tournamentId,
         displayName: entry.nickname,
         region: null,
         seed: null,
+        ownerUserId: null,
       }))
 
     if (!playerId) return false
@@ -306,10 +321,12 @@ async function createTeamProfile(
     tournamentId,
     displayName,
     seed,
+    ownerUserId,
   }: {
     tournamentId: string
     displayName: string
     seed: number
+    ownerUserId: string | null
   },
 ) {
   const { data, error } = await supabaseAdmin
@@ -320,6 +337,8 @@ async function createTeamProfile(
       seed,
       wins: 0,
       losses: 0,
+      owner_user_id: ownerUserId,
+      captain_user_id: ownerUserId,
     })
     .select("id")
     .maybeSingle()
@@ -339,11 +358,13 @@ async function createPlayerProfile(
     displayName,
     region,
     seed,
+    ownerUserId,
   }: {
     tournamentId: string
     displayName: string
     region: string | null
     seed: number | null
+    ownerUserId: string | null
   },
 ) {
   const insertPayload = {
@@ -354,6 +375,7 @@ async function createPlayerProfile(
     seed,
     wins: 0,
     losses: 0,
+    owner_user_id: ownerUserId,
   }
   const result = await supabaseAdmin
     .from("players")
@@ -387,14 +409,26 @@ async function createPlayerProfile(
 
 async function findExistingTeamProfile(
   supabaseAdmin: SupabaseClient,
-  displayName: string,
+  {
+    displayName,
+    ownerUserId,
+  }: {
+    displayName: string
+    ownerUserId: string | null
+  },
 ) {
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("teams")
     .select("id")
     .ilike("name", displayName)
     .order("created_at", { ascending: true })
     .limit(1)
+
+  if (ownerUserId) {
+    query = query.eq("owner_user_id", ownerUserId)
+  }
+
+  const { data, error } = await query
     .maybeSingle()
 
   if (error) {
@@ -409,8 +443,10 @@ async function findExistingPlayerProfile(
   supabaseAdmin: SupabaseClient,
   {
     displayName,
+    ownerUserId,
   }: {
     displayName: string
+    ownerUserId: string | null
   },
 ) {
   return (
@@ -418,26 +454,59 @@ async function findExistingPlayerProfile(
       supabaseAdmin,
       "name",
       displayName,
+      ownerUserId,
     )) ??
     (await findExistingPlayerProfileByColumn(
       supabaseAdmin,
       "nickname",
       displayName,
+      ownerUserId,
     ))
   )
+}
+
+async function findExistingPlayerProfileById(
+  supabaseAdmin: SupabaseClient,
+  id: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, nickname, region")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("find source player profile for registration", error)
+    return null
+  }
+
+  return typeof data?.id === "string"
+    ? {
+        id: data.id,
+        nickname: typeof data.nickname === "string" ? data.nickname : null,
+        region: typeof data.region === "string" ? data.region : null,
+      }
+    : null
 }
 
 async function findExistingPlayerProfileByColumn(
   supabaseAdmin: SupabaseClient,
   column: "name" | "nickname",
   displayName: string,
+  ownerUserId: string | null,
 ) {
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("players")
     .select("id, nickname, region")
     .ilike(column, displayName)
     .order("created_at", { ascending: true })
     .limit(1)
+
+  if (ownerUserId) {
+    query = query.eq("owner_user_id", ownerUserId)
+  }
+
+  const { data, error } = await query
     .maybeSingle()
 
   if (error && isMissingColumnError(error)) {

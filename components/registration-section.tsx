@@ -1,6 +1,9 @@
 import type React from "react"
+import Image from "next/image"
+import { loginWithDiscord } from "@/app/auth/actions"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { SectionHeading } from "@/components/section-heading"
+import type { UserProfile } from "@/lib/auth/user-profile"
 import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
 
 type RegistrationSectionProps = {
@@ -8,6 +11,7 @@ type RegistrationSectionProps = {
   participantLabel: "Teams" | "Players"
   tournamentName?: string | null
   feedback?: RegistrationFeedback | null
+  userProfile?: UserProfile | null
 }
 
 export type RegistrationFeedback = {
@@ -23,6 +27,7 @@ export function RegistrationSection({
   participantLabel,
   tournamentName,
   feedback,
+  userProfile = null,
 }: RegistrationSectionProps) {
   if (!summary) return null
 
@@ -34,6 +39,7 @@ export function RegistrationSection({
   const disabledMessage = summary.isFull
     ? `This tournament has reached the maximum number of ${typeLabelPlural}.`
     : `Registration is closed for this ${typeLabelPlural} tournament.`
+  const canSubmit = !isDisabled && Boolean(userProfile)
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
@@ -91,11 +97,49 @@ export function RegistrationSection({
                 </p>
               </div>
             ) : null}
+            {!isDisabled && !userProfile ? (
+              <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 shadow-[0_0_32px_rgba(0,200,150,0.12)]">
+                <p className="text-sm font-semibold text-primary">
+                  Discord login required
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/70">
+                  Registrations are tied to Discord accounts for ownership and check-in.
+                </p>
+                <div className="mt-4">
+                  <LoginButton />
+                </div>
+              </div>
+            ) : null}
+            {userProfile ? (
+              <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+                {userProfile.avatar_url ? (
+                  <Image
+                    src={userProfile.avatar_url}
+                    alt=""
+                    width={36}
+                    height={36}
+                    className="h-9 w-9 rounded-full border border-primary/30 object-cover"
+                  />
+                ) : (
+                  <span className="grid h-9 w-9 place-items-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
+                    {userProfile.discord_username.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.18em] text-primary/70">
+                    Registering as
+                  </p>
+                  <p className="truncate text-sm font-medium text-white/80">
+                    {userProfile.discord_username}
+                  </p>
+                </div>
+              </div>
+            ) : null}
             <input type="hidden" name="tournament_id" value={summary.tournamentId} />
             <input type="hidden" name="participant_type" value={summary.participantType} />
             <div
               className={`grid gap-3 sm:col-span-2 sm:grid-cols-2 ${
-                isDisabled
+                !canSubmit
                   ? "rounded-xl border border-white/10 bg-black/20 p-3 opacity-60"
                   : ""
               }`}
@@ -104,7 +148,7 @@ export function RegistrationSection({
                 <input
                   name="display_name"
                   required
-                  disabled={isDisabled}
+                  disabled={!canSubmit}
                   className={inputClassName}
                   placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
                 />
@@ -114,7 +158,7 @@ export function RegistrationSection({
                   <input
                     name="captain_nickname"
                     required
-                    disabled={isDisabled}
+                    disabled={!canSubmit}
                     className={inputClassName}
                     placeholder="Captain in-game name"
                   />
@@ -124,7 +168,7 @@ export function RegistrationSection({
                 <input
                   name="contact_email"
                   type="email"
-                  disabled={isDisabled}
+                  disabled={!canSubmit}
                   className={inputClassName}
                   placeholder="captain@example.com"
                 />
@@ -132,7 +176,7 @@ export function RegistrationSection({
               <RegistrationField label="Discord / Telegram">
                 <input
                   name="contact_handle"
-                  disabled={isDisabled}
+                  disabled={!canSubmit}
                   className={inputClassName}
                   placeholder="@handle"
                 />
@@ -140,28 +184,44 @@ export function RegistrationSection({
               <RegistrationField label="Region">
                 <input
                   name="region"
-                  disabled={isDisabled}
+                  disabled={!canSubmit}
                   className={inputClassName}
                   placeholder="Ukraine, EU, North America"
                 />
               </RegistrationField>
               {summary.participantType === "team" ? (
-                <TeamRosterFields disabled={isDisabled} />
+                <TeamRosterFields disabled={!canSubmit} />
               ) : null}
             </div>
             <div className="sm:col-span-2">
               <button
                 type="submit"
-                disabled={isDisabled}
+                disabled={!canSubmit}
                 className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-black transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
               >
-                {isDisabled ? summary.statusLabel : `Register ${typeLabel}`}
+                {isDisabled
+                  ? summary.statusLabel
+                  : userProfile
+                    ? `Register ${typeLabel}`
+                    : "Login with Discord to register"}
               </button>
             </div>
           </form>
         </div>
       </div>
     </section>
+  )
+}
+
+function LoginButton() {
+  return (
+    <button
+      type="submit"
+      formAction={loginWithDiscord}
+      className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+    >
+      Login with Discord
+    </button>
   )
 }
 

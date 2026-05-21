@@ -1,4 +1,5 @@
 import { reviewRegistration } from "@/app/admin/actions"
+import Image from "next/image"
 import type { AdminRegistration } from "@/lib/admin/registrations"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback } from "@/lib/admin/types"
@@ -103,6 +104,20 @@ function RegistrationRecord({
             {tournamentName} {"\u2022"} {formatType(registration.participant_type)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {registration.owner_profile ? (
+              <span className={`${pillClassName} inline-flex items-center gap-2`}>
+                {registration.owner_profile.avatar_url ? (
+                  <Image
+                    src={registration.owner_profile.avatar_url}
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="h-[18px] w-[18px] rounded-full object-cover"
+                  />
+                ) : null}
+                Discord: {registration.owner_profile.discord_username}
+              </span>
+            ) : null}
             {registration.region ? (
               <span className={pillClassName}>{registration.region}</span>
             ) : null}

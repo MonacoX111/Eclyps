@@ -1,7 +1,9 @@
 "use server"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import {
   countApprovedParticipants,
   findActiveRegistrationByName,
@@ -17,6 +19,11 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=${parsed.error}#registration`)
   }
   const registrationTypeQuery = `registrationType=${parsed.data.participant_type}`
+  const userProfile = await getCurrentUserProfile()
+
+  if (!userProfile) {
+    redirect(`/?registrationError=discord-login-required&${registrationTypeQuery}#registration`)
+  }
 
   const supabaseAdmin = createSupabaseAdminClient()
 
@@ -98,9 +105,25 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
   }
 
+  const sourcePlayerId =
+    parsed.data.participant_type === "player"
+      ? await findOrCreateOwnedPlayerProfile(supabaseAdmin, {
+          userProfileId: userProfile.id,
+          tournamentId: parsed.data.tournament_id,
+          displayName: parsed.data.display_name,
+          region: parsed.data.region,
+        })
+      : null
+
+  if (parsed.data.participant_type === "player" && !sourcePlayerId) {
+    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+  }
+
   const { roster, ...registrationPayload } = parsed.data
   const { data: createdRegistration, error } = await supabaseAdmin.from("tournament_registrations").insert({
     ...registrationPayload,
+    user_profile_id: userProfile.id,
+    source_player_id: sourcePlayerId,
     status: "pending",
   }).select("id").maybeSingle()
 
@@ -164,4 +187,103 @@ export async function submitTournamentRegistration(formData: FormData) {
 
 function normalizeRosterNickname(value: string) {
   return value.trim().toLowerCase()
+}
+
+async function findOrCreateOwnedPlayerProfile(
+  supabaseAdmin: SupabaseClient,
+  {
+    userProfileId,
+    tournamentId,
+    displayName,
+    region,
+  }: {
+    userProfileId: string
+    tournamentId: string
+    displayName: string
+    region: string | null
+  },
+) {
+  const existingPlayer =
+    (await findOwnedPlayerByColumn(supabaseAdmin, {
+      userProfileId,
+      column: "name",
+      displayName,
+    })) ??
+    (await findOwnedPlayerByColumn(supabaseAdmin, {
+      userProfileId,
+      column: "nickname",
+      displayName,
+    }))
+
+  if (existingPlayer) {
+    if (region && typeof existingPlayer.region !== "string") {
+      await supabaseAdmin
+        .from("players")
+        .update({ region, updated_at: new Date().toISOString() })
+        .eq("id", existingPlayer.id)
+    }
+
+    return existingPlayer.id
+  }
+
+  const insertPayload = {
+    tournament_id: tournamentId,
+    name: displayName,
+    nickname: null,
+    region,
+    seed: null,
+    wins: 0,
+    losses: 0,
+    owner_user_id: userProfileId,
+  }
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .insert(insertPayload)
+    .select("id")
+    .maybeSingle()
+
+  if (error || typeof data?.id !== "string") {
+    console.error("Failed to create owned player profile for registration:", error)
+    return null
+  }
+
+  return data.id
+}
+
+async function findOwnedPlayerByColumn(
+  supabaseAdmin: SupabaseClient,
+  {
+    userProfileId,
+    column,
+    displayName,
+  }: {
+    userProfileId: string
+    column: "name" | "nickname"
+    displayName: string
+  },
+) {
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, region")
+    .eq("owner_user_id", userProfileId)
+    .ilike(column, displayName)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (error && !isMissingOwnershipColumnError(error)) {
+    console.error("Failed to find owned player profile for registration:", error)
+    return null
+  }
+
+  return typeof data?.id === "string"
+    ? {
+        id: data.id,
+        region: typeof data.region === "string" ? data.region : null,
+      }
+    : null
+}
+
+function isMissingOwnershipColumnError(error: { code?: string }) {
+  return error.code === "42703" || error.code === "PGRST204"
 }

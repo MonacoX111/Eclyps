@@ -29,6 +29,7 @@ export type TournamentRegistrationRecord = {
   id: string
   tournament_id: string
   participant_type: RegistrationParticipantType
+  user_profile_id: string | null
   display_name: string
   contact_email: string | null
   contact_handle: string | null
@@ -40,6 +41,14 @@ export type TournamentRegistrationRecord = {
   reviewed_at: string | null
   created_at: string | null
   roster: TournamentRegistrationRosterEntry[]
+  owner_profile: TournamentRegistrationOwnerProfile | null
+}
+
+export type TournamentRegistrationOwnerProfile = {
+  id: string
+  discord_username: string
+  display_name: string
+  avatar_url: string | null
 }
 
 export type TournamentRegistrationRosterEntry = {
@@ -56,7 +65,7 @@ export type TournamentRegistrationRosterEntry = {
 }
 
 const REGISTRATION_SELECT =
-  "id, tournament_id, participant_type, display_name, contact_email, contact_handle, region, status, participant_id, source_team_id, source_player_id, reviewed_at, created_at"
+  "id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, participant_id, source_team_id, source_player_id, reviewed_at, created_at, owner_profile:user_profiles!tournament_registrations_user_profile_id_fkey(id, discord_username, display_name, avatar_url)"
 
 export async function getTournamentRegistrationSummary({
   tournamentId,
@@ -218,6 +227,7 @@ export function normalizeRegistration(
     id,
     tournament_id: tournamentId,
     participant_type: readParticipantType(row.participant_type),
+    user_profile_id: readStringId(row.user_profile_id),
     display_name: displayName,
     contact_email: readNullableString(row.contact_email),
     contact_handle: readNullableString(row.contact_handle),
@@ -229,11 +239,33 @@ export function normalizeRegistration(
     reviewed_at: readNullableString(row.reviewed_at),
     created_at: readNullableString(row.created_at),
     roster: [],
+    owner_profile: normalizeRegistrationOwnerProfile(row.owner_profile),
   }
 }
 
 export function getRegistrationSelect() {
   return REGISTRATION_SELECT
+}
+
+function normalizeRegistrationOwnerProfile(
+  value: unknown,
+): TournamentRegistrationOwnerProfile | null {
+  const row = Array.isArray(value) ? value[0] : value
+  if (!row || typeof row !== "object") return null
+
+  const record = row as Record<string, unknown>
+  const id = readStringId(record.id)
+  const discordUsername = readNullableString(record.discord_username)
+  const displayName = readNullableString(record.display_name)
+
+  if (!id || !discordUsername || !displayName) return null
+
+  return {
+    id,
+    discord_username: discordUsername,
+    display_name: displayName,
+    avatar_url: readNullableString(record.avatar_url),
+  }
 }
 
 export function isMissingRegistrationTableError(error: { code?: string }) {
