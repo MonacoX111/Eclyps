@@ -71,7 +71,7 @@ export type HomepageTeam = {
 
 export type HomepagePlayer = {
   id: string
-  tournament_id: string
+  tournament_id: string | null
   name: string
   nickname: string | null
   real_name: string | null
@@ -183,7 +183,7 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
 
   const [teams, players, participants, matches, results] = await Promise.all([
     fetchHomepageTeams(tournament.id),
-    fetchHomepagePlayers(tournament.id),
+    fetchAllEclypsPlayers(),
     fetchHomepageParticipants(tournament.id),
     fetchHomepageMatches(tournament.id),
     fetchHomepageResults(tournament.id),
@@ -266,9 +266,9 @@ async function fetchHomepageTeams(tournamentId: string): Promise<HomepageTeam[]>
   }
 }
 
-async function fetchHomepagePlayers(tournamentId: string): Promise<HomepagePlayer[]> {
+async function fetchAllEclypsPlayers(): Promise<HomepagePlayer[]> {
   if (!supabase) {
-    console.warn("Skipping homepage players query because Supabase is not configured.")
+    console.warn("Skipping Eclyps players query because Supabase is not configured.")
     return []
   }
 
@@ -276,17 +276,17 @@ async function fetchHomepagePlayers(tournamentId: string): Promise<HomepagePlaye
     const { data, error } = await supabase
       .from("players")
       .select("id, tournament_id, name, nickname, seed, wins, losses")
-      .eq("tournament_id", tournamentId)
-      .order("seed", { ascending: true, nullsFirst: false })
+      .not("owner_user_id", "is", null)
+      .order("name", { ascending: true })
 
     if (error) {
-      console.error("Failed to fetch homepage players:", error)
+      console.error("Failed to fetch all Eclyps players:", error)
       return []
     }
 
     return normalizeRows(data, normalizeHomepagePlayer)
   } catch (error) {
-    console.error("Unexpected error while fetching homepage players:", error)
+    console.error("Unexpected error while fetching all Eclyps players:", error)
     return []
   }
 }
@@ -509,18 +509,17 @@ function normalizeHomepageTeam(row: Record<string, unknown>): HomepageTeam | nul
 
 function normalizeHomepagePlayer(row: Record<string, unknown>): HomepagePlayer | null {
   const id = readStringId(row.id)
-  const tournamentId = readStringId(row.tournament_id)
   const name = readNullableString(row.name)
   const nickname = readNullableString(row.nickname)
 
-  if (!id || !tournamentId || !name) {
+  if (!id || !name) {
     console.error("Skipping malformed homepage player row:", row)
     return null
   }
 
   return {
     id,
-    tournament_id: tournamentId,
+    tournament_id: readStringId(row.tournament_id),
     name,
     nickname,
     real_name: name,
