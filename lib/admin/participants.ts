@@ -18,6 +18,7 @@ export type AdminParticipant = {
   tournament_id: string
   participant_type: ParticipantType
   display_name: string
+  region: string | null
   seed: number | null
   logo_url: string | null
   avatar_url: string | null
@@ -43,7 +44,7 @@ export async function getAdminParticipants(): Promise<AdminParticipantQueryResul
   const { rows, error } = await runAdminRowsQuery("participants", () =>
     supabase
       .from("participants")
-      .select("id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id, created_at")
+      .select("id, tournament_id, participant_type, display_name, region, seed, logo_url, avatar_url, source_team_id, source_player_id, created_at")
       .order("seed", { ascending: true, nullsFirst: false })
       .order("display_name", { ascending: true }),
     normalizeParticipant,
@@ -78,6 +79,7 @@ export async function upsertPlayerParticipant(
     tournament_id: string
     name: string
     nickname: string | null
+    region: string | null
     seed: number | null
   },
 ) {
@@ -85,6 +87,7 @@ export async function upsertPlayerParticipant(
     tournament_id: player.tournament_id,
     participant_type: "player",
     display_name: player.nickname || player.name,
+    region: player.region,
     seed: player.seed,
     source_team_id: null,
     source_player_id: player.id,
@@ -140,6 +143,7 @@ async function upsertParticipant(
     tournament_id: string
     participant_type: ParticipantType
     display_name: string
+    region?: string | null
     seed: number | null
     source_team_id: string | null
     source_player_id: string | null
@@ -192,6 +196,7 @@ function normalizeParticipant(row: Record<string, unknown>): AdminParticipant | 
     tournament_id: tournamentId,
     participant_type: readParticipantType(row.participant_type),
     display_name: displayName,
+    region: readNullableString(row.region),
     seed: readNullableInteger(row.seed),
     logo_url: readNullableString(row.logo_url),
     avatar_url: readNullableString(row.avatar_url),

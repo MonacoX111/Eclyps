@@ -16,6 +16,8 @@ type PublicProfilePageProps = {
 export function PublicProfilePage({ data }: PublicProfilePageProps) {
   const { profile } = data
   const isTeam = profile.kind === "team"
+  const rating = getProfileRating(data)
+  const rankPosition = getProfileRankPosition(data)
   const connectionsTitle = isTeam ? "Connected Players" : "Team Connection"
   const emptyConnections = isTeam
     ? "No connected players are available for this team yet."
@@ -66,6 +68,12 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
                       label="Seed"
                       value={profile.seed ? `#${profile.seed}` : null}
                       empty="Seed TBA"
+                    />
+                    <MetaPill label="Rating" value={String(rating)} />
+                    <MetaPill
+                      label="Rank"
+                      value={rankPosition ? `#${rankPosition}` : null}
+                      empty="Unranked"
                     />
                     <MetaPill label="Record" value={`${data.stats.wins}W / ${data.stats.losses}L`} />
                   </div>
@@ -139,6 +147,8 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
 
 function StatsSection({ data }: { data: PublicProfileData }) {
   const { stats } = data
+  const rating = getProfileRating(data)
+  const rankPosition = getProfileRankPosition(data)
   const streakLabel =
     stats.currentStreak.result && stats.currentStreak.count > 0
       ? `${stats.currentStreak.count}${stats.currentStreak.result === "win" ? "W" : "L"}`
@@ -149,7 +159,9 @@ function StatsSection({ data }: { data: PublicProfileData }) {
       <div className="mx-auto max-w-5xl">
         <SectionHeading eyebrow="Combat Stats" title="Performance" />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Rating" value={String(rating)} />
+          <StatCard label="Rank" value={rankPosition ? `#${rankPosition}` : "Unranked"} />
           <StatCard label="Wins" value={String(stats.wins)} />
           <StatCard label="Losses" value={String(stats.losses)} />
           <StatCard label="Matches" value={String(stats.totalMatches)} />
@@ -208,6 +220,14 @@ function StatsSection({ data }: { data: PublicProfileData }) {
       </div>
     </section>
   )
+}
+
+function getProfileRating(data: PublicProfileData) {
+  return data.ranking?.rating ?? data.profile.rating ?? 1000
+}
+
+function getProfileRankPosition(data: PublicProfileData) {
+  return data.ranking?.rankPosition ?? data.profile.rank_position
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { MatchScheduleItem } from "@/components/match-schedule"
 import type { ResultCard } from "@/components/results"
 import { formatEventMonthYear } from "@/lib/date-format"
@@ -14,6 +15,12 @@ import {
 } from "@/lib/data/normalize"
 import { getResultsForTournament, type TournamentResult } from "@/lib/data/results"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import {
+  calculateEloRankings,
+  findRankingRow,
+  type RankingParticipant,
+  type RankingRow,
+} from "@/lib/rankings/elo"
 import {
   calculateParticipantStats,
   filterDuplicateBracketMatches,
@@ -34,6 +41,9 @@ export type PublicProfileRecord = {
   region: string | null
   image_url: string | null
   seed: number | null
+  rating: number | null
+  rating_matches_played: number | null
+  rank_position: number | null
   wins: number
   losses: number
   participant_id: string | null
@@ -51,6 +61,7 @@ export type PublicProfileData = {
   tournamentName: string | null
   connections: PublicProfileConnection[]
   stats: ParticipantStats
+  ranking: RankingRow | null
   matches: MatchScheduleItem[]
   results: ResultCard[]
 }
@@ -60,6 +71,7 @@ type ProfileParticipant = {
   tournament_id: string
   participant_type: PublicProfileKind
   display_name: string
+  region: string | null
   seed: number | null
   logo_url: string | null
   avatar_url: string | null
@@ -78,6 +90,9 @@ type ProfileTeam = {
   tournament_id: string
   name: string
   seed: number | null
+  rating: number | null
+  rating_matches_played: number | null
+  rank_position: number | null
   wins: number
   losses: number
 }
@@ -90,14 +105,26 @@ type ProfilePlayer = {
   region: string | null
   display_name: string
   seed: number | null
+  rating: number | null
+  rating_matches_played: number | null
+  rank_position: number | null
   wins: number
   losses: number
 }
 
 const PLAYER_SELECT_WITH_REGION =
+  "id, tournament_id, name, nickname, region, seed, rating, rating_matches_played, rank_position, wins, losses"
+const PLAYER_SELECT_WITH_REGION_NO_RATING =
   "id, tournament_id, name, nickname, region, seed, wins, losses"
 const PLAYER_SELECT_FALLBACK =
   "id, tournament_id, name, nickname, seed, wins, losses"
+const TEAM_SELECT_WITH_RATING =
+  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses"
+const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses"
+const PARTICIPANT_SELECT_WITH_REGION =
+  "id, tournament_id, participant_type, display_name, region, seed, logo_url, avatar_url, source_team_id, source_player_id"
+const PARTICIPANT_SELECT_FALLBACK =
+  "id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id"
 
 export async function getPublicTeamProfile(
   id: string,
@@ -146,10 +173,11 @@ async function getPublicProfile(
       ? await findParticipantBySource(kind, source.id)
       : null)
 
-  const [tournament, matches, results] = await Promise.all([
+  const [tournament, matches, results, rankingParticipants] = await Promise.all([
     findTournament(tournamentId),
     getMatchesForTournament(tournamentId),
     getResultsForTournament(tournamentId),
+    fetchRankingParticipants(tournamentId, kind),
   ])
 
   const profile = toPublicProfileRecord({
@@ -171,6 +199,15 @@ async function getPublicProfile(
         nickname: profile.nickname,
       },
     }),
+    ranking: findRankingRow(
+      calculateEloRankings({
+        participants: rankingParticipants,
+        matches,
+        participantType: kind,
+      }),
+      profile.participant_id,
+      profile.display_name,
+    ),
     matches: getProfileMatches(matches, profile),
     results: getProfileResults(results, tournament, profile),
   }
@@ -185,21 +222,39 @@ async function findParticipant(kind: PublicProfileKind, id: string) {
 
 async function findParticipantById(kind: PublicProfileKind, id: string) {
   try {
-    const { data, error } = await supabase!
+    const result = await supabase!
       .from("participants")
-      .select("id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id")
+      .select(PARTICIPANT_SELECT_WITH_REGION)
       .eq("id", id)
       .eq("participant_type", kind)
       .maybeSingle()
 
-    if (error) {
-      if (!isMissingRelationError(error)) {
-        console.error("Failed to fetch public participant by id:", error)
+    if (result.error && isMissingColumnError(result.error)) {
+      const fallbackResult = await supabase!
+        .from("participants")
+        .select(PARTICIPANT_SELECT_FALLBACK)
+        .eq("id", id)
+        .eq("participant_type", kind)
+        .maybeSingle()
+
+      if (fallbackResult.error) {
+        if (!isMissingRelationError(fallbackResult.error)) {
+          console.error("Failed to fetch public participant by id:", fallbackResult.error)
+        }
+        return null
+      }
+
+      return fallbackResult.data ? normalizeParticipant(fallbackResult.data) : null
+    }
+
+    if (result.error) {
+      if (!isMissingRelationError(result.error)) {
+        console.error("Failed to fetch public participant by id:", result.error)
       }
       return null
     }
 
-    return data ? normalizeParticipant(data) : null
+    return result.data ? normalizeParticipant(result.data) : null
   } catch (error) {
     console.error("Unexpected error while fetching public participant by id:", error)
     return null
@@ -210,21 +265,39 @@ async function findParticipantBySource(kind: PublicProfileKind, id: string) {
   const sourceColumn = kind === "team" ? "source_team_id" : "source_player_id"
 
   try {
-    const { data, error } = await supabase!
+    const result = await supabase!
       .from("participants")
-      .select("id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id")
+      .select(PARTICIPANT_SELECT_WITH_REGION)
       .eq(sourceColumn, id)
       .eq("participant_type", kind)
       .maybeSingle()
 
-    if (error) {
-      if (!isMissingRelationError(error)) {
-        console.error("Failed to fetch public participant by source:", error)
+    if (result.error && isMissingColumnError(result.error)) {
+      const fallbackResult = await supabase!
+        .from("participants")
+        .select(PARTICIPANT_SELECT_FALLBACK)
+        .eq(sourceColumn, id)
+        .eq("participant_type", kind)
+        .maybeSingle()
+
+      if (fallbackResult.error) {
+        if (!isMissingRelationError(fallbackResult.error)) {
+          console.error("Failed to fetch public participant by source:", fallbackResult.error)
+        }
+        return null
+      }
+
+      return fallbackResult.data ? normalizeParticipant(fallbackResult.data) : null
+    }
+
+    if (result.error) {
+      if (!isMissingRelationError(result.error)) {
+        console.error("Failed to fetch public participant by source:", result.error)
       }
       return null
     }
 
-    return data ? normalizeParticipant(data) : null
+    return result.data ? normalizeParticipant(result.data) : null
   } catch (error) {
     console.error("Unexpected error while fetching public participant by source:", error)
     return null
@@ -233,20 +306,36 @@ async function findParticipantBySource(kind: PublicProfileKind, id: string) {
 
 async function findTeam(id: string | null): Promise<ProfileTeam | null> {
   if (!id) return null
+  const profileClient = createProfileReadClient()
 
   try {
-    const { data, error } = await supabase!
+    const result = await profileClient
       .from("teams")
-      .select("id, tournament_id, name, seed, wins, losses")
+      .select(TEAM_SELECT_WITH_RATING)
       .eq("id", id)
       .maybeSingle()
 
-    if (error) {
-      console.error("Failed to fetch public team profile:", error)
+    if (result.error && isMissingColumnError(result.error)) {
+      const fallbackResult = await profileClient
+        .from("teams")
+        .select(TEAM_SELECT_FALLBACK)
+        .eq("id", id)
+        .maybeSingle()
+
+      if (fallbackResult.error) {
+        console.error("Failed to fetch public team profile:", fallbackResult.error)
+        return null
+      }
+
+      return fallbackResult.data ? normalizeTeam(fallbackResult.data) : null
+    }
+
+    if (result.error) {
+      console.error("Failed to fetch public team profile:", result.error)
       return null
     }
 
-    return data ? normalizeTeam(data) : null
+    return result.data ? normalizeTeam(result.data) : null
   } catch (error) {
     console.error("Unexpected error while fetching public team profile:", error)
     return null
@@ -265,18 +354,7 @@ async function findPlayer(id: string | null): Promise<ProfilePlayer | null> {
       .maybeSingle()
 
     if (result.error && isMissingColumnError(result.error)) {
-      const fallbackResult = await profileClient
-        .from("players")
-        .select(PLAYER_SELECT_FALLBACK)
-        .eq("id", id)
-        .maybeSingle()
-
-      if (fallbackResult.error) {
-        console.error("Failed to fetch public player profile:", fallbackResult.error)
-        return null
-      }
-
-      return fallbackResult.data ? normalizePlayer(fallbackResult.data) : null
+      return findPlayerWithFallbackSelect(profileClient, id)
     }
 
     if (result.error) {
@@ -293,6 +371,47 @@ async function findPlayer(id: string | null): Promise<ProfilePlayer | null> {
     console.error("Unexpected error while fetching public player profile:", error)
     return null
   }
+}
+
+async function findPlayerWithFallbackSelect(
+  profileClient: SupabaseClient,
+  id: string,
+): Promise<ProfilePlayer | null> {
+  const result = await profileClient
+    .from("players")
+    .select(PLAYER_SELECT_WITH_REGION_NO_RATING)
+    .eq("id", id)
+    .maybeSingle()
+
+  if (result.error && isMissingColumnError(result.error)) {
+    const fallbackResult = await profileClient
+      .from("players")
+      .select(PLAYER_SELECT_FALLBACK)
+      .eq("id", id)
+      .maybeSingle()
+
+    if (fallbackResult.error) {
+      console.error("Failed to fetch public player profile:", fallbackResult.error)
+      return null
+    }
+
+    const player = fallbackResult.data ? normalizePlayer(fallbackResult.data) : null
+    if (!player || player.region) return player
+
+    const country = await findPlayerCountry(id)
+    return country ? { ...player, region: country } : player
+  }
+
+  if (result.error) {
+    console.error("Failed to fetch public player profile:", result.error)
+    return null
+  }
+
+  const player = result.data ? normalizePlayer(result.data) : null
+  if (!player || player.region) return player
+
+  const country = await findPlayerCountry(id)
+  return country ? { ...player, region: country } : player
 }
 
 async function findPlayerForProfile({
@@ -325,17 +444,10 @@ async function findPlayerByParticipant(
       .eq("tournament_id", participant.tournament_id)
 
     if (result.error && isMissingColumnError(result.error)) {
-      const fallbackResult = await profileClient
-        .from("players")
-        .select(PLAYER_SELECT_FALLBACK)
-        .eq("tournament_id", participant.tournament_id)
-
-      if (fallbackResult.error) {
-        console.error("Failed to fetch public players by participant:", fallbackResult.error)
-        return null
-      }
-
-      return resolvePlayerByParticipant(fallbackResult.data, participant)
+      return findPlayerByParticipantWithFallbackSelect(
+        profileClient,
+        participant,
+      )
     }
 
     if (result.error) {
@@ -352,6 +464,45 @@ async function findPlayerByParticipant(
     console.error("Unexpected error while fetching public players by participant:", error)
     return null
   }
+}
+
+async function findPlayerByParticipantWithFallbackSelect(
+  profileClient: SupabaseClient,
+  participant: ProfileParticipant,
+): Promise<ProfilePlayer | null> {
+  const result = await profileClient
+    .from("players")
+    .select(PLAYER_SELECT_WITH_REGION_NO_RATING)
+    .eq("tournament_id", participant.tournament_id)
+
+  if (result.error && isMissingColumnError(result.error)) {
+    const fallbackResult = await profileClient
+      .from("players")
+      .select(PLAYER_SELECT_FALLBACK)
+      .eq("tournament_id", participant.tournament_id)
+
+    if (fallbackResult.error) {
+      console.error("Failed to fetch public players by participant:", fallbackResult.error)
+      return null
+    }
+
+    const player = resolvePlayerByParticipant(fallbackResult.data, participant)
+    if (!player || player.region) return player
+
+    const country = await findPlayerCountry(player.id)
+    return country ? { ...player, region: country } : player
+  }
+
+  if (result.error) {
+    console.error("Failed to fetch public players by participant:", result.error)
+    return null
+  }
+
+  const player = resolvePlayerByParticipant(result.data, participant)
+  if (!player || player.region) return player
+
+  const country = await findPlayerCountry(player.id)
+  return country ? { ...player, region: country } : player
 }
 
 async function findPlayerCountry(id: string) {
@@ -417,12 +568,15 @@ function toPublicProfileRecord({
     name: source?.name ?? displayName,
     display_name: displayName,
     nickname: source && "nickname" in source ? source.nickname : null,
-    region: source && "region" in source ? source.region : null,
+    region: source && "region" in source ? source.region ?? participant?.region ?? null : participant?.region ?? null,
     image_url:
       kind === "team"
         ? participant?.logo_url ?? participant?.avatar_url ?? null
         : participant?.avatar_url ?? participant?.logo_url ?? null,
     seed: participant?.seed ?? source?.seed ?? null,
+    rating: source?.rating ?? null,
+    rating_matches_played: source?.rating_matches_played ?? null,
+    rank_position: source?.rank_position ?? null,
     wins: source?.wins ?? 0,
     losses: source?.losses ?? 0,
     participant_id: participant?.id ?? null,
@@ -540,6 +694,158 @@ function resolvePlayerByParticipant(
   )
 }
 
+async function fetchRankingParticipants(
+  tournamentId: string,
+  kind: PublicProfileKind,
+): Promise<RankingParticipant[]> {
+  try {
+    const result = await supabase!
+      .from("participants")
+      .select(PARTICIPANT_SELECT_WITH_REGION)
+      .eq("tournament_id", tournamentId)
+      .eq("participant_type", kind)
+      .order("seed", { ascending: true, nullsFirst: false })
+      .order("display_name", { ascending: true })
+
+    if (result.error && isMissingColumnError(result.error)) {
+      const fallbackResult = await supabase!
+        .from("participants")
+        .select(PARTICIPANT_SELECT_FALLBACK)
+        .eq("tournament_id", tournamentId)
+        .eq("participant_type", kind)
+        .order("seed", { ascending: true, nullsFirst: false })
+        .order("display_name", { ascending: true })
+
+      if (fallbackResult.error) {
+        console.error("Failed to fetch ranking participants:", fallbackResult.error)
+        return []
+      }
+
+      return createRankingParticipants(fallbackResult.data, kind)
+    }
+
+    if (result.error) {
+      console.error("Failed to fetch ranking participants:", result.error)
+      return []
+    }
+
+    return createRankingParticipants(result.data, kind)
+  } catch (error) {
+    console.error("Unexpected error while fetching ranking participants:", error)
+    return []
+  }
+}
+
+async function createRankingParticipants(
+  rows: Record<string, unknown>[] | null,
+  kind: PublicProfileKind,
+) {
+  const participants = (rows ?? [])
+    .map(normalizeParticipant)
+    .filter((participant): participant is ProfileParticipant => participant !== null)
+  const startingRatings = await fetchParticipantStartingRatings(participants, kind)
+
+  return participants.map((participant) => ({
+    id: participant.id,
+    displayName: participant.display_name,
+    participantType: kind,
+    startingRating: startingRatings.get(participant.id) ?? null,
+  }))
+}
+
+async function fetchParticipantStartingRatings(
+  participants: ProfileParticipant[],
+  kind: PublicProfileKind,
+) {
+  const sourceIds = participants
+    .map((participant) =>
+      kind === "team" ? participant.source_team_id : participant.source_player_id,
+    )
+    .filter((id): id is string => Boolean(id))
+
+  if (sourceIds.length === 0) return new Map<string, number>()
+
+  const ratingsBySourceId =
+    kind === "team"
+      ? await fetchTeamRatings(sourceIds)
+      : await fetchPlayerRatings(sourceIds)
+
+  return new Map(
+    participants
+      .map((participant) => {
+        const sourceId =
+          kind === "team" ? participant.source_team_id : participant.source_player_id
+        const rating = sourceId ? ratingsBySourceId.get(sourceId) : null
+
+        return rating ? ([participant.id, rating] as const) : null
+      })
+      .filter((entry): entry is readonly [string, number] => entry !== null),
+  )
+}
+
+async function fetchTeamRatings(ids: string[]) {
+  const profileClient = createProfileReadClient()
+
+  try {
+    const result = await profileClient
+      .from("teams")
+      .select("id, rating")
+      .in("id", ids)
+
+    if (result.error && isMissingColumnError(result.error)) {
+      return new Map<string, number>()
+    }
+
+    if (result.error) {
+      console.error("Failed to fetch team ratings:", result.error)
+      return new Map<string, number>()
+    }
+
+    return readRatingMap(result.data)
+  } catch (error) {
+    console.error("Unexpected error while fetching team ratings:", error)
+    return new Map<string, number>()
+  }
+}
+
+async function fetchPlayerRatings(ids: string[]) {
+  const profileClient = createProfileReadClient()
+
+  try {
+    const result = await profileClient
+      .from("players")
+      .select("id, rating")
+      .in("id", ids)
+
+    if (result.error && isMissingColumnError(result.error)) {
+      return new Map<string, number>()
+    }
+
+    if (result.error) {
+      console.error("Failed to fetch player ratings:", result.error)
+      return new Map<string, number>()
+    }
+
+    return readRatingMap(result.data)
+  } catch (error) {
+    console.error("Unexpected error while fetching player ratings:", error)
+    return new Map<string, number>()
+  }
+}
+
+function readRatingMap(rows: Record<string, unknown>[] | null) {
+  return new Map(
+    (rows ?? [])
+      .map((row) => {
+        const id = readStringId(row.id)
+        const rating = readNullableInteger(row.rating)
+
+        return id && rating ? ([id, rating] as const) : null
+      })
+      .filter((entry): entry is readonly [string, number] => entry !== null),
+  )
+}
+
 function normalizeParticipant(
   row: Record<string, unknown>,
 ): ProfileParticipant | null {
@@ -555,6 +861,7 @@ function normalizeParticipant(
     tournament_id: tournamentId,
     participant_type: participantType,
     display_name: displayName,
+    region: readNullableString(row.region),
     seed: readNullableInteger(row.seed),
     logo_url: readNullableString(row.logo_url),
     avatar_url: readNullableString(row.avatar_url),
@@ -575,6 +882,9 @@ function normalizeTeam(row: Record<string, unknown>): ProfileTeam | null {
     tournament_id: tournamentId,
     name,
     seed: readNullableInteger(row.seed),
+    rating: readNullableInteger(row.rating),
+    rating_matches_played: readNullableInteger(row.rating_matches_played),
+    rank_position: readNullableInteger(row.rank_position),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
   }
@@ -597,6 +907,9 @@ function normalizePlayer(row: Record<string, unknown>): ProfilePlayer | null {
     region,
     display_name: nickname ?? name,
     seed: readNullableInteger(row.seed),
+    rating: readNullableInteger(row.rating),
+    rating_matches_played: readNullableInteger(row.rating_matches_played),
+    rank_position: readNullableInteger(row.rank_position),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
   }
