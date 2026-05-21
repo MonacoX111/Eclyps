@@ -62,7 +62,7 @@ export async function upsertTeamParticipant(
     seed: number
   },
 ) {
-  await upsertParticipant(supabaseAdmin, {
+  return upsertParticipant(supabaseAdmin, {
     tournament_id: team.tournament_id,
     participant_type: "team",
     display_name: team.name,
@@ -83,7 +83,7 @@ export async function upsertPlayerParticipant(
     seed: number | null
   },
 ) {
-  await upsertParticipant(supabaseAdmin, {
+  return upsertParticipant(supabaseAdmin, {
     tournament_id: player.tournament_id,
     participant_type: "player",
     display_name: player.nickname || player.name,
@@ -149,41 +149,100 @@ async function upsertParticipant(
     source_player_id: string | null
   },
 ) {
-  const conflictTarget =
+  const sourceColumn =
     participant.participant_type === "team" ? "source_team_id" : "source_player_id"
+  const sourceId = participant[sourceColumn]
 
-  const result = await supabaseAdmin
-    .from("participants")
-    .upsert(
-      {
-        ...participant,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: conflictTarget },
-    )
+  if (!sourceId) return null
+
+  const existing = await findParticipantByTournamentSource(supabaseAdmin, {
+    tournamentId: participant.tournament_id,
+    participantType: participant.participant_type,
+    sourceColumn,
+    sourceId,
+  })
+
+  const payload = {
+    ...participant,
+    updated_at: new Date().toISOString(),
+  }
+
+  const result = existing
+    ? await supabaseAdmin
+        .from("participants")
+        .update(payload)
+        .eq("id", existing.id)
+        .select("id")
+        .maybeSingle()
+    : await supabaseAdmin
+        .from("participants")
+        .insert(payload)
+        .select("id")
+        .maybeSingle()
 
   if (result.error && isMissingColumnError(result.error)) {
     const { region: _region, ...participantWithoutRegion } = participant
-    const fallbackResult = await supabaseAdmin
-      .from("participants")
-      .upsert(
-        {
-          ...participantWithoutRegion,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: conflictTarget },
-      )
+    const fallbackPayload = {
+      ...participantWithoutRegion,
+      updated_at: new Date().toISOString(),
+    }
+    const fallbackResult = existing
+      ? await supabaseAdmin
+          .from("participants")
+          .update(fallbackPayload)
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle()
+      : await supabaseAdmin
+          .from("participants")
+          .insert(fallbackPayload)
+          .select("id")
+          .maybeSingle()
 
     if (fallbackResult.error) {
       console.error("Failed to sync participant:", fallbackResult.error)
     }
 
-    return
+    return typeof fallbackResult.data?.id === "string" ? fallbackResult.data.id : existing?.id ?? null
   }
 
   if (result.error) {
     console.error("Failed to sync participant:", result.error)
+    return existing?.id ?? null
   }
+
+  return typeof result.data?.id === "string" ? result.data.id : existing?.id ?? null
+}
+
+async function findParticipantByTournamentSource(
+  supabaseAdmin: SupabaseAdminClient,
+  {
+    tournamentId,
+    participantType,
+    sourceColumn,
+    sourceId,
+  }: {
+    tournamentId: string
+    participantType: ParticipantType
+    sourceColumn: "source_team_id" | "source_player_id"
+    sourceId: string
+  },
+) {
+  const { data, error } = await supabaseAdmin
+    .from("participants")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("participant_type", participantType)
+    .eq(sourceColumn, sourceId)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error("Failed to resolve participant by source:", error)
+    return null
+  }
+
+  return typeof data?.id === "string" ? { id: data.id } : null
 }
 
 async function deleteParticipantBySource(

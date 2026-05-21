@@ -103,14 +103,19 @@ export async function reviewRegistration(formData: FormData) {
       ? await approvePlayerRegistration(supabaseAdmin, registration, seed)
       : await approveTeamRegistration(supabaseAdmin, registration, seed)
 
+  if (source?.duplicate) {
+    redirect("/admin?registrationError=duplicate-registration#registrations")
+  }
+
   if (!source) {
     redirect("/admin?registrationError=mutation-failed#registrations")
   }
 
   const participantId = await findApprovedParticipantId(
     supabaseAdmin,
+    registration.tournament_id,
     registration.participant_type,
-    source.id,
+    source.sourceId,
   )
 
   const { error } = await supabaseAdmin
@@ -118,8 +123,8 @@ export async function reviewRegistration(formData: FormData) {
     .update({
       status: "approved",
       participant_id: participantId,
-      source_team_id: registration.participant_type === "team" ? source.id : null,
-      source_player_id: registration.participant_type === "player" ? source.id : null,
+      source_team_id: registration.participant_type === "team" ? source.sourceId : null,
+      source_player_id: registration.participant_type === "player" ? source.sourceId : null,
       reviewed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -142,31 +147,38 @@ async function approveTeamRegistration(
   },
   seed: number,
 ) {
-  const { data, error } = await supabaseAdmin
-    .from("teams")
-    .insert({
-      tournament_id: registration.tournament_id,
-      name: registration.display_name,
+  const existingTeam = await findExistingTeamProfile(
+    supabaseAdmin,
+    registration.display_name,
+  )
+  const sourceId =
+    existingTeam?.id ??
+    (await createTeamProfile(supabaseAdmin, {
+      tournamentId: registration.tournament_id,
+      displayName: registration.display_name,
       seed,
-      wins: 0,
-      losses: 0,
-    })
-    .select("id")
-    .maybeSingle()
+    }))
 
-  if (error || typeof data?.id !== "string") {
-    logMutationError("approve team registration", error)
-    return null
+  if (!sourceId) return null
+
+  if (
+    await hasApprovedParticipantSource(supabaseAdmin, {
+      tournamentId: registration.tournament_id,
+      participantType: "team",
+      sourceId,
+    })
+  ) {
+    return { duplicate: true as const }
   }
 
-  await upsertTeamParticipant(supabaseAdmin, {
-    id: data.id,
+  const participantId = await upsertTeamParticipant(supabaseAdmin, {
+    id: sourceId,
     tournament_id: registration.tournament_id,
     name: registration.display_name,
     seed,
   })
 
-  return { id: data.id }
+  return participantId ? { sourceId } : null
 }
 
 async function approvePlayerRegistration(
@@ -178,11 +190,97 @@ async function approvePlayerRegistration(
   },
   seed: number,
 ) {
-  const insertPayload = {
+  const existingPlayer = await findExistingPlayerProfile(supabaseAdmin, {
+    displayName: registration.display_name,
+  })
+  const sourceId =
+    existingPlayer?.id ??
+    (await createPlayerProfile(supabaseAdmin, {
+      tournamentId: registration.tournament_id,
+      displayName: registration.display_name,
+      region: registration.region,
+      seed,
+    }))
+
+  if (!sourceId) return null
+
+  if (
+    await hasApprovedParticipantSource(supabaseAdmin, {
+      tournamentId: registration.tournament_id,
+      participantType: "player",
+      sourceId,
+    })
+  ) {
+    return { duplicate: true as const }
+  }
+
+  if (existingPlayer && registration.region && !existingPlayer.region) {
+    await updateExistingPlayerRegion(supabaseAdmin, sourceId, registration.region)
+  }
+
+  const participantId = await upsertPlayerParticipant(supabaseAdmin, {
+    id: sourceId,
     tournament_id: registration.tournament_id,
     name: registration.display_name,
+    nickname: existingPlayer?.nickname ?? null,
+    region: registration.region ?? existingPlayer?.region ?? null,
+    seed,
+  })
+
+  return participantId ? { sourceId } : null
+}
+
+async function createTeamProfile(
+  supabaseAdmin: SupabaseClient,
+  {
+    tournamentId,
+    displayName,
+    seed,
+  }: {
+    tournamentId: string
+    displayName: string
+    seed: number
+  },
+) {
+  const { data, error } = await supabaseAdmin
+    .from("teams")
+    .insert({
+      tournament_id: tournamentId,
+      name: displayName,
+      seed,
+      wins: 0,
+      losses: 0,
+    })
+    .select("id")
+    .maybeSingle()
+
+  if (error || typeof data?.id !== "string") {
+    logMutationError("create team profile for registration", error)
+    return null
+  }
+
+  return data.id
+}
+
+async function createPlayerProfile(
+  supabaseAdmin: SupabaseClient,
+  {
+    tournamentId,
+    displayName,
+    region,
+    seed,
+  }: {
+    tournamentId: string
+    displayName: string
+    region: string | null
+    seed: number
+  },
+) {
+  const insertPayload = {
+    tournament_id: tournamentId,
+    name: displayName,
     nickname: null,
-    region: registration.region,
+    region,
     seed,
     wins: 0,
     losses: 0,
@@ -202,37 +300,129 @@ async function approvePlayerRegistration(
       .maybeSingle()
 
     if (fallbackResult.error || typeof fallbackResult.data?.id !== "string") {
-      logMutationError("approve player registration", fallbackResult.error)
+      logMutationError("create player profile for registration", fallbackResult.error)
       return null
     }
 
-    await upsertPlayerParticipant(supabaseAdmin, {
-      id: fallbackResult.data.id,
-      tournament_id: registration.tournament_id,
-      name: registration.display_name,
-      nickname: null,
-      region: registration.region,
-      seed,
-    })
-
-    return { id: fallbackResult.data.id }
+    return fallbackResult.data.id
   }
 
   if (result.error || typeof result.data?.id !== "string") {
-    logMutationError("approve player registration", result.error)
+    logMutationError("create player profile for registration", result.error)
     return null
   }
 
-  await upsertPlayerParticipant(supabaseAdmin, {
-    id: result.data.id,
-    tournament_id: registration.tournament_id,
-    name: registration.display_name,
-    nickname: null,
-    region: registration.region,
-    seed,
-  })
+  return result.data.id
+}
 
-  return { id: result.data.id }
+async function findExistingTeamProfile(
+  supabaseAdmin: SupabaseClient,
+  displayName: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("teams")
+    .select("id")
+    .ilike("name", displayName)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("find existing team profile for registration", error)
+    return null
+  }
+
+  return typeof data?.id === "string" ? { id: data.id } : null
+}
+
+async function findExistingPlayerProfile(
+  supabaseAdmin: SupabaseClient,
+  {
+    displayName,
+  }: {
+    displayName: string
+  },
+) {
+  return (
+    (await findExistingPlayerProfileByColumn(
+      supabaseAdmin,
+      "name",
+      displayName,
+    )) ??
+    (await findExistingPlayerProfileByColumn(
+      supabaseAdmin,
+      "nickname",
+      displayName,
+    ))
+  )
+}
+
+async function findExistingPlayerProfileByColumn(
+  supabaseAdmin: SupabaseClient,
+  column: "name" | "nickname",
+  displayName: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, nickname, region")
+    .ilike(column, displayName)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (error && isMissingColumnError(error)) {
+    const fallbackResult = await supabaseAdmin
+      .from("players")
+      .select("id, nickname")
+      .ilike(column, displayName)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (fallbackResult.error) {
+      logMutationError("find existing player profile for registration", fallbackResult.error)
+      return null
+    }
+
+    return typeof fallbackResult.data?.id === "string"
+      ? {
+          id: fallbackResult.data.id,
+          nickname:
+            typeof fallbackResult.data.nickname === "string"
+              ? fallbackResult.data.nickname
+              : null,
+          region: null,
+        }
+      : null
+  }
+
+  if (error) {
+    logMutationError("find existing player profile for registration", error)
+    return null
+  }
+
+  return typeof data?.id === "string"
+    ? {
+        id: data.id,
+        nickname: typeof data.nickname === "string" ? data.nickname : null,
+        region: typeof data.region === "string" ? data.region : null,
+      }
+    : null
+}
+
+async function updateExistingPlayerRegion(
+  supabaseAdmin: SupabaseClient,
+  id: string,
+  region: string,
+) {
+  const { error } = await supabaseAdmin
+    .from("players")
+    .update({ region })
+    .eq("id", id)
+
+  if (error && !isMissingColumnError(error)) {
+    logMutationError("update reused player region", error)
+  }
 }
 
 async function updateRegistrationStatus(
@@ -320,8 +510,40 @@ async function hasApprovedParticipantName(
   return Boolean(data)
 }
 
+async function hasApprovedParticipantSource(
+  supabaseAdmin: SupabaseClient,
+  {
+    tournamentId,
+    participantType,
+    sourceId,
+  }: {
+    tournamentId: string
+    participantType: "team" | "player"
+    sourceId: string
+  },
+) {
+  const sourceColumn =
+    participantType === "team" ? "source_team_id" : "source_player_id"
+  const { data, error } = await supabaseAdmin
+    .from("participants")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("participant_type", participantType)
+    .eq(sourceColumn, sourceId)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("check duplicate approved participant source", error)
+    return false
+  }
+
+  return Boolean(data)
+}
+
 async function findApprovedParticipantId(
   supabaseAdmin: SupabaseClient,
+  tournamentId: string,
   participantType: "team" | "player",
   sourceId: string,
 ) {
@@ -330,6 +552,8 @@ async function findApprovedParticipantId(
   const { data, error } = await supabaseAdmin
     .from("participants")
     .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("participant_type", participantType)
     .eq(sourceColumn, sourceId)
     .maybeSingle()
 

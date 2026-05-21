@@ -164,7 +164,7 @@ async function getPublicProfile(
 
   if (!source && !participant) return null
 
-  const tournamentId = source?.tournament_id ?? participant?.tournament_id
+  const tournamentId = participant?.tournament_id ?? source?.tournament_id
   if (!tournamentId) return null
 
   const sourceParticipant =
@@ -270,6 +270,8 @@ async function findParticipantBySource(kind: PublicProfileKind, id: string) {
       .select(PARTICIPANT_SELECT_WITH_REGION)
       .eq(sourceColumn, id)
       .eq("participant_type", kind)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     if (result.error && isMissingColumnError(result.error)) {
@@ -278,6 +280,8 @@ async function findParticipantBySource(kind: PublicProfileKind, id: string) {
         .select(PARTICIPANT_SELECT_FALLBACK)
         .eq(sourceColumn, id)
         .eq("participant_type", kind)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (fallbackResult.error) {
