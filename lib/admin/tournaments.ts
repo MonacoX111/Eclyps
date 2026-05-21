@@ -6,6 +6,7 @@ import { runAdminRowsQuery } from "@/lib/admin/query"
 import {
   readNullableInteger,
   readNullableString,
+  readParticipantType,
   readPositiveInteger,
   readStringArray,
   readStringId,
@@ -15,6 +16,7 @@ export type AdminTournament = {
   id: string
   name: string | null
   game: string | null
+  participant_type: "team" | "player"
   event_date: string | null
   format: string | null
   team_count: number | null
@@ -48,11 +50,21 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
     }
   }
 
-  const { rows, error } = await runAdminRowsQuery("tournaments", () =>
-    supabase
+  const { rows, error } = await runAdminRowsQuery("tournaments", async () => {
+    const result = await supabase
       .from("tournaments")
-      .select("id, name, game, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, is_active, created_at")
-      .order("created_at", { ascending: false }),
+      .select("id, name, game, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, is_active, created_at")
+      .order("created_at", { ascending: false })
+
+    if (result.error && isMissingColumnError(result.error)) {
+      return supabase
+        .from("tournaments")
+        .select("id, name, game, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, is_active, created_at")
+        .order("created_at", { ascending: false })
+    }
+
+    return result
+  },
     normalizeTournament,
   )
 
@@ -67,6 +79,7 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     id,
     name: readNullableString(row.name),
     game: readNullableString(row.game),
+    participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),
     team_count: readNullableInteger(row.team_count),
@@ -84,4 +97,12 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     is_active: row.is_active === true,
     created_at: readNullableString(row.created_at),
   }
+}
+
+function readTournamentParticipantType(value: unknown): "team" | "player" {
+  return value === "team" || value === "player" ? readParticipantType(value) : "player"
+}
+
+function isMissingColumnError(error: { code?: string }) {
+  return error.code === "42703" || error.code === "PGRST204"
 }

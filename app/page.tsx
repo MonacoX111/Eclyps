@@ -15,7 +15,6 @@ import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
-import type { RegistrationParticipantType } from "@/lib/data/registrations"
 
 export const dynamic = "force-dynamic"
 
@@ -23,7 +22,6 @@ type PageProps = {
   searchParams?: Promise<{
     registrationError?: string
     registrationSuccess?: string
-    registrationType?: string
   }>
 }
 
@@ -48,10 +46,7 @@ export default async function Page({ searchParams }: PageProps) {
         </Suspense>
 
         <Suspense fallback={<RegistrationLoading />}>
-          <ActiveTournamentRegistration
-            feedback={registrationFeedback}
-            initialType={readRegistrationType(resolvedSearchParams?.registrationType)}
-          />
+          <ActiveTournamentRegistration feedback={registrationFeedback} />
         </Suspense>
 
         <Suspense fallback={<BracketLoading />}>
@@ -113,18 +108,15 @@ async function ActiveTournamentTeams() {
 
 async function ActiveTournamentRegistration({
   feedback,
-  initialType,
 }: {
   feedback: RegistrationFeedback | null
-  initialType?: RegistrationParticipantType
 }) {
   const homepageData = await getHomepageData()
 
   return (
     <RegistrationSection
-      summaries={homepageData.registrationSummaries}
+      summary={homepageData.registrationSummary}
       participantLabel={homepageData.participantLabel}
-      initialType={initialType}
       feedback={feedback}
     />
   )
@@ -293,6 +285,7 @@ function getRegistrationFeedback(searchParams?: {
     {
       "invalid-tournament-id": "Tournament is not available for registration.",
       "invalid-participant-type": "Registration type must be team or player.",
+      "wrong-participant-type": "This tournament does not accept that registration type.",
       "invalid-display-name": "Name must not be empty.",
       "invalid-contact-email": "Contact email must be valid or left empty.",
       "registration-closed": "Registration is closed for this tournament.",
@@ -305,11 +298,6 @@ function getRegistrationFeedback(searchParams?: {
   return { tone: "error", message }
 }
 
-function readRegistrationType(
-  value: string | undefined,
-): RegistrationParticipantType | undefined {
-  return value === "team" || value === "player" ? value : undefined
-}
 
 function ScheduleLoading() {
   return (

@@ -10,6 +10,7 @@ export function getTournamentFeedback(searchParams?: Pick<AdminSearchParams, "cr
     {
       "invalid-name": "Name must not be empty.",
       "invalid-game": "Game must not be empty.",
+      "invalid-participant-type": "Participant type must be player or team.",
       "invalid-team-count": "Team count must be a number greater than 0.",
       "invalid-match-days": "Match days must be a number greater than 0.",
       "invalid-status": "Status must be upcoming, live, or finished.",
@@ -176,6 +177,8 @@ export function getRegistrationFeedback(searchParams?: Pick<AdminSearchParams, "
       "missing-id": "Registration id is missing.",
       "invalid-status": "Registration decision must be approve or reject.",
       "already-reviewed": "This registration has already been reviewed.",
+      "invalid-participant-type": "Tournament participant type is invalid.",
+      "wrong-participant-type": "This registration does not match the tournament participant type.",
       "invalid-tournament-id": "Registration tournament could not be found.",
       "registration-closed": "This tournament is closed.",
       "registration-full": "This tournament is full.",

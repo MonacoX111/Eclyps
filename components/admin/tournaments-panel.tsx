@@ -83,8 +83,12 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
             <dd className="mt-1">{formatDisplayDateTime(tournament.created_at)}</dd>
           </div>
           <div>
-            <dt className="text-white/35">Current team count</dt>
+            <dt className="text-white/35">Participant slots</dt>
             <dd className="mt-1">{tournament.team_count ?? "???"}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">Participant type</dt>
+            <dd className="mt-1">{formatParticipantType(tournament.participant_type)}</dd>
           </div>
           <div>
             <dt className="text-white/35">Match days</dt>
@@ -134,7 +138,18 @@ function TournamentForm({
         <input name="format" defaultValue={tournament?.format ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label="Team count">
+      <AdminField label="Participant type">
+        <select
+          name="participant_type"
+          defaultValue={tournament?.participant_type ?? "player"}
+          className={inputClassName}
+        >
+          <option value="player">Player tournament</option>
+          <option value="team">Team tournament</option>
+        </select>
+      </AdminField>
+
+      <AdminField label="Participant slots">
         <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} required className={inputClassName} />
       </AdminField>
 
@@ -194,4 +209,8 @@ function TournamentForm({
       <SubmitButton label={submitLabel} />
     </form>
   )
+}
+
+function formatParticipantType(type: AdminTournament["participant_type"]) {
+  return type === "team" ? "Team tournament" : "Player tournament"
 }

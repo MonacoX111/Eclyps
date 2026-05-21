@@ -1,18 +1,11 @@
-"use client"
-
 import type React from "react"
-import { useMemo, useState } from "react"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { SectionHeading } from "@/components/section-heading"
-import type {
-  RegistrationParticipantType,
-  TournamentRegistrationSummary,
-} from "@/lib/data/registrations"
+import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
 
 type RegistrationSectionProps = {
-  summaries: TournamentRegistrationSummary[]
+  summary: TournamentRegistrationSummary | null
   participantLabel: "Teams" | "Players"
-  initialType?: RegistrationParticipantType
   feedback?: RegistrationFeedback | null
 }
 
@@ -25,24 +18,14 @@ const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-white outline-none transition focus:border-primary/60"
 
 export function RegistrationSection({
-  summaries,
+  summary,
   participantLabel,
-  initialType,
   feedback,
 }: RegistrationSectionProps) {
-  const defaultType = initialType ?? (participantLabel === "Players" ? "player" : "team")
-  const [participantType, setParticipantType] =
-    useState<RegistrationParticipantType>(defaultType)
-  const summaryByType = useMemo(
-    () => new Map(summaries.map((summary) => [summary.participantType, summary])),
-    [summaries],
-  )
-  const summary = summaryByType.get(participantType) ?? summaries[0] ?? null
-
   if (!summary) return null
 
   const isDisabled = summary.isClosed || summary.isFull
-  const typeLabel = participantType === "player" ? "Player" : "Team"
+  const typeLabel = summary.participantType === "player" ? "Player" : "Team"
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
@@ -55,10 +38,9 @@ export function RegistrationSection({
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
                 {summary.statusLabel}
               </p>
-              <RegistrationTypeControl
-                value={participantType}
-                onChange={setParticipantType}
-              />
+              <p className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/65">
+                {typeLabel} tournament
+              </p>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <RegistrationStat label="Approved" value={String(summary.approvedCount)} />
                 <RegistrationStat label="Pending" value={String(summary.pendingCount)} />
@@ -88,14 +70,14 @@ export function RegistrationSection({
 
           <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="tournament_id" value={summary.tournamentId} />
-            <input type="hidden" name="participant_type" value={participantType} />
+            <input type="hidden" name="participant_type" value={summary.participantType} />
             <RegistrationField label={`${typeLabel} name`}>
               <input
                 name="display_name"
                 required
                 disabled={isDisabled}
                 className={inputClassName}
-                placeholder={participantType === "player" ? "Nickname or real name" : "Team name"}
+                placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
               />
             </RegistrationField>
             <RegistrationField label="Contact email">
@@ -136,33 +118,6 @@ export function RegistrationSection({
         </div>
       </div>
     </section>
-  )
-}
-
-function RegistrationTypeControl({
-  value,
-  onChange,
-}: {
-  value: RegistrationParticipantType
-  onChange: (value: RegistrationParticipantType) => void
-}) {
-  return (
-    <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/20 p-1">
-      {(["team", "player"] as const).map((type) => (
-        <button
-          key={type}
-          type="button"
-          onClick={() => onChange(type)}
-          className={`rounded-lg px-3 py-2 text-sm transition ${
-            value === type
-              ? "bg-primary text-black"
-              : "text-white/65 hover:bg-white/[0.04] hover:text-white"
-          }`}
-        >
-          {type === "team" ? "Team" : "Player"}
-        </button>
-      ))}
-    </div>
   )
 }
 

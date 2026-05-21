@@ -21,6 +21,7 @@ export const activeTournamentSchema = z.object({
 export const tournamentSchema = z.object({
   name: requiredString(),
   game: requiredString(),
+  participant_type: participantTypeSchema(),
   event_date: optionalString(),
   format: optionalString(),
   team_count: positiveInteger(),
@@ -191,6 +192,7 @@ export function parseTournamentFormData(
   return parseFormData(tournamentSchema, formData, {
     name: "invalid-name",
     game: "invalid-game",
+    participant_type: "invalid-participant-type",
     team_count: "invalid-team-count",
     match_days: "invalid-match-days",
     status: "invalid-status",

@@ -49,7 +49,7 @@ export async function reviewRegistration(formData: FormData) {
 
   const { data: tournament, error: tournamentError } = await supabaseAdmin
     .from("tournaments")
-    .select("id, team_count, status")
+    .select("id, team_count, status, participant_type")
     .eq("id", registration.tournament_id)
     .maybeSingle()
 
@@ -59,6 +59,17 @@ export async function reviewRegistration(formData: FormData) {
 
   if (tournament.status !== "upcoming") {
     redirect("/admin?registrationError=registration-closed#registrations")
+  }
+
+  if (
+    tournament.participant_type !== "team" &&
+    tournament.participant_type !== "player"
+  ) {
+    redirect("/admin?registrationError=invalid-participant-type#registrations")
+  }
+
+  if (registration.participant_type !== tournament.participant_type) {
+    redirect("/admin?registrationError=wrong-participant-type#registrations")
   }
 
   const approvedCount = await countApprovedParticipants(

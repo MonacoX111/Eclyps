@@ -42,6 +42,7 @@ export type HomepageTournament = {
   title: string | null
   display_name: string | null
   game: string | null
+  participant_type: "team" | "player" | null
   event_date: string | null
   format: string | null
   team_count: number | null
@@ -163,7 +164,6 @@ export type HomepageData = {
   matchScheduleItems: MatchScheduleItem[]
   resultCards: ResultCard[]
   registrationSummary: TournamentRegistrationSummary | null
-  registrationSummaries: TournamentRegistrationSummary[]
 }
 
 export const getHomepageData = cache(async (): Promise<HomepageData> => {
@@ -405,7 +405,8 @@ async function createHomepageData({
   matches: HomepageMatch[]
   results: HomepageResult[]
 }): Promise<HomepageData> {
-  const participantType = getParticipantType(participants, matches, results)
+  const participantType =
+    tournament?.participant_type ?? getParticipantType(participants, matches, results)
   const participantLabel = participantType === "player" ? "Players" : "Teams"
   const participantCards =
     participantType === "player"
@@ -416,26 +417,14 @@ async function createHomepageData({
     participantType === "player"
       ? getPlayerCount(players, participants)
       : players.length
-  const registrationSummaries = tournament
-    ? await Promise.all([
-        getTournamentRegistrationSummary({
-          tournamentId: tournament.id,
-          participantType: "team",
-          capacity: tournament.team_count,
-          tournamentStatus: tournament.status,
-        }),
-        getTournamentRegistrationSummary({
-          tournamentId: tournament.id,
-          participantType: "player",
-          capacity: tournament.team_count,
-          tournamentStatus: tournament.status,
-        }),
-      ])
-    : []
-  const registrationSummary =
-    registrationSummaries.find(
-      (summary) => summary.participantType === participantType,
-    ) ?? null
+  const registrationSummary = tournament
+    ? await getTournamentRegistrationSummary({
+        tournamentId: tournament.id,
+        participantType,
+        capacity: tournament.team_count,
+        tournamentStatus: tournament.status,
+      })
+    : null
 
   return {
     tournament,
@@ -454,7 +443,6 @@ async function createHomepageData({
     matchScheduleItems: getMatchScheduleItems(normalMatches),
     resultCards: getResultCards(results, tournament),
     registrationSummary,
-    registrationSummaries,
   }
 }
 
@@ -473,6 +461,7 @@ function normalizeHomepageTournament(
     title: readNullableString(row.title),
     display_name: readNullableString(row.display_name),
     game: readNullableString(row.game),
+    participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),
     team_count: readNullableInteger(row.team_count),
@@ -492,6 +481,10 @@ function normalizeHomepageTournament(
     bracket_arena_label: readNullableString(row.bracket_arena_label),
     is_active: row.is_active === true,
   }
+}
+
+function readTournamentParticipantType(value: unknown): "team" | "player" | null {
+  return value === "team" || value === "player" ? value : null
 }
 
 function normalizeHomepageTeam(row: Record<string, unknown>): HomepageTeam | null {
