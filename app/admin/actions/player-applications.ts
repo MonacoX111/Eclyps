@@ -111,7 +111,10 @@ async function findOrCreateApprovedPlayer({
     return existingPlayer.id
   }
 
-  const tournamentId = await getPlayerProfileAnchorTournamentId()
+  const [tournamentId, nextSeed] = await Promise.all([
+    getPlayerProfileAnchorTournamentId(),
+    getNextEclypsPlayerSeed(),
+  ])
   if (!tournamentId) return null
 
   const { data, error } = await supabaseAdmin
@@ -121,7 +124,7 @@ async function findOrCreateApprovedPlayer({
       name: nickname,
       nickname,
       region,
-      seed: null,
+      seed: nextSeed,
       wins: 0,
       losses: 0,
       owner_user_id: userProfileId,
@@ -135,6 +138,22 @@ async function findOrCreateApprovedPlayer({
   }
 
   return data.id
+}
+
+async function getNextEclypsPlayerSeed(): Promise<number> {
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return 1
+
+  const { data } = await supabaseAdmin
+    .from("players")
+    .select("seed")
+    .not("owner_user_id", "is", null)
+    .order("seed", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+
+  const maxSeed = typeof data?.seed === "number" ? data.seed : 0
+  return maxSeed + 1
 }
 
 async function getPlayerProfileAnchorTournamentId() {
