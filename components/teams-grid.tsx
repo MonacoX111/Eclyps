@@ -1,6 +1,7 @@
 "use client"
 
 import { m } from "framer-motion"
+import Image from "next/image"
 import Link from "next/link"
 import { Shield } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
@@ -14,6 +15,8 @@ export type TeamCard = {
   losses: number
   rank: number
   profileHref?: string
+  avatarUrl?: string | null
+  avatarAlt?: string | null
 }
 
 type TeamsGridProps = {
@@ -69,13 +72,7 @@ function TeamCardContent({ team }: { team: TeamCard }) {
         {team.rank}
       </div>
 
-      {/* Team icon */}
-      <div
-        className="flex h-16 w-16 items-center justify-center rounded-xl transition-shadow duration-300 group-hover:shadow-[var(--glow)]"
-        style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
-      >
-        <Shield className="h-8 w-8 text-primary" />
-      </div>
+      <CardAvatar team={team} />
 
       <div className="text-center">
         <h3 className="break-words text-lg font-bold text-foreground">
@@ -108,5 +105,33 @@ function TeamCardContent({ team }: { team: TeamCard }) {
     >
       {content}
     </Link>
+  )
+}
+
+function CardAvatar({ team }: { team: TeamCard }) {
+  if (team.avatarUrl) {
+    return (
+      <div
+        className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-primary/25 transition-shadow duration-300 group-hover:shadow-[var(--glow)]"
+        style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
+      >
+        <Image
+          src={team.avatarUrl}
+          alt={team.avatarAlt ? `${team.avatarAlt} Discord avatar` : ""}
+          width={64}
+          height={64}
+          className="h-full w-full rounded-xl object-cover"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="flex h-16 w-16 items-center justify-center rounded-xl transition-shadow duration-300 group-hover:shadow-[var(--glow)]"
+      style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
+    >
+      <Shield className="h-8 w-8 text-primary" />
+    </div>
   )
 }

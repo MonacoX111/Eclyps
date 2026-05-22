@@ -79,6 +79,13 @@ export type HomepagePlayer = {
   seed: number | null
   wins: number
   losses: number
+  owner_profile: HomepagePlayerOwnerProfile | null
+}
+
+export type HomepagePlayerOwnerProfile = {
+  avatar_url: string | null
+  discord_username: string | null
+  display_name: string | null
 }
 
 export type HomepageParticipant = {
@@ -275,7 +282,7 @@ async function fetchAllEclypsPlayers(): Promise<HomepagePlayer[]> {
   try {
     const { data, error } = await supabase
       .from("players")
-      .select("id, tournament_id, name, nickname, seed, wins, losses")
+      .select("id, tournament_id, name, nickname, seed, wins, losses, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)")
       .order("seed", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
 
@@ -527,6 +534,27 @@ function normalizeHomepagePlayer(row: Record<string, unknown>): HomepagePlayer |
     seed: readNullableInteger(row.seed),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
+    owner_profile: normalizeHomepagePlayerOwnerProfile(row.owner_profile),
+  }
+}
+
+function normalizeHomepagePlayerOwnerProfile(
+  value: unknown,
+): HomepagePlayerOwnerProfile | null {
+  const row = Array.isArray(value) ? value[0] : value
+  if (!row || typeof row !== "object") return null
+
+  const record = row as Record<string, unknown>
+  const avatarUrl = readNullableString(record.avatar_url)
+  const discordUsername = readNullableString(record.discord_username)
+  const displayName = readNullableString(record.display_name)
+
+  if (!avatarUrl && !discordUsername && !displayName) return null
+
+  return {
+    avatar_url: avatarUrl,
+    discord_username: discordUsername,
+    display_name: displayName,
   }
 }
 
@@ -724,7 +752,12 @@ function getPlayerCards(
         wins: player.wins,
         losses: player.losses,
         rank: participant?.seed ?? player.seed ?? index + 1,
-        profileHref: `/players/${participant?.id ?? player.id}`,
+        profileHref: `/players/${player.id}`,
+        avatarUrl: player.owner_profile?.avatar_url ?? null,
+        avatarAlt:
+          player.owner_profile?.discord_username ??
+          player.owner_profile?.display_name ??
+          player.display_name,
       }
     })
   }

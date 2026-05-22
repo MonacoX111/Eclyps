@@ -62,7 +62,11 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
                     </p>
                   ) : null}
                   <div className="mt-6 flex flex-wrap gap-3 text-sm">
-                    <MetaPill label="Tournament" value={data.tournamentName} />
+                    <MetaPill
+                      label="Tournament"
+                      value={data.tournamentName}
+                      empty={isTeam ? "Tournament TBA" : "Not registered"}
+                    />
                     <MetaPill label="Region" value={profile.region} empty="Region TBA" />
                     <MetaPill
                       label="Seed"
