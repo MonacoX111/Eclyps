@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getCheckInWindowStateUtc } from "@/lib/check-ins/time"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export async function checkInTournament(formData: FormData) {
@@ -69,7 +70,7 @@ export async function checkInTournament(formData: FormData) {
     redirect("/?checkInError=ownership-required#registration")
   }
 
-  const windowState = getCheckInWindowState({
+  const windowState = getCheckInWindowStateUtc({
     opensAt: tournament.check_in_opens_at,
     closesAt: tournament.check_in_closes_at,
   })
@@ -169,31 +170,6 @@ async function verifyOwnership({
   }
 
   return Boolean(data)
-}
-
-function getCheckInWindowState({
-  opensAt,
-  closesAt,
-}: {
-  opensAt: unknown
-  closesAt: unknown
-}) {
-  const now = Date.now()
-  const openTime = readTime(opensAt)
-  const closeTime = readTime(closesAt)
-
-  if (!openTime || !closeTime || closeTime <= openTime) return "closed"
-  if (now < openTime) return "soon"
-  if (now > closeTime) return "closed"
-
-  return "open"
-}
-
-function readTime(value: unknown) {
-  if (typeof value !== "string") return null
-
-  const timestamp = new Date(value).getTime()
-  return Number.isFinite(timestamp) ? timestamp : null
 }
 
 function readFormString(value: FormDataEntryValue | null) {

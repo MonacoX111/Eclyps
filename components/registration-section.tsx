@@ -5,6 +5,10 @@ import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
 import type { PlatformUserState } from "@/lib/auth/player-state"
+import {
+  formatLocalCheckInDate,
+  getCheckInWindowStateUtc,
+} from "@/lib/check-ins/time"
 import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
 
 type RegistrationSectionProps = {
@@ -312,7 +316,7 @@ function CheckInCard({
           <p className="mt-2 text-sm leading-6 text-white/68">{state.message}</p>
           {state.checkedInAt ? (
             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/70">
-              Confirmed {formatCheckInDate(state.checkedInAt)}
+              Confirmed {formatLocalCheckInDate(state.checkedInAt)}
             </p>
           ) : null}
         </div>
@@ -400,7 +404,7 @@ function getCheckInState({
   if (windowState === "soon") {
     return {
       label: "Check-In Opens Soon",
-      message: `Check-in opens ${formatCheckInDate(summary.checkInOpensAt)}.`,
+      message: `Check-in opens ${formatLocalCheckInDate(summary.checkInOpensAt)}.`,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -411,7 +415,7 @@ function getCheckInState({
     return {
       label: "Check-In Closed",
       message: summary.checkInClosesAt
-        ? `Check-in closed ${formatCheckInDate(summary.checkInClosesAt)}.`
+        ? `Check-in closed ${formatLocalCheckInDate(summary.checkInClosesAt)}.`
         : "The check-in window has not been configured for this tournament.",
       tone: "locked",
       canCheckIn: false,
@@ -429,15 +433,10 @@ function getCheckInState({
 }
 
 function getCheckInWindowState(summary: TournamentRegistrationSummary) {
-  const opensAt = readTime(summary.checkInOpensAt)
-  const closesAt = readTime(summary.checkInClosesAt)
-  const now = Date.now()
-
-  if (!opensAt || !closesAt || closesAt <= opensAt) return "closed"
-  if (now < opensAt) return "soon"
-  if (now > closesAt) return "closed"
-
-  return "open"
+  return getCheckInWindowStateUtc({
+    opensAt: summary.checkInOpensAt,
+    closesAt: summary.checkInClosesAt,
+  })
 }
 
 function getCheckInCardClassName(tone: CheckInState["tone"]) {
@@ -456,26 +455,6 @@ function getCheckInCardClassName(tone: CheckInState["tone"]) {
   return "border-white/10 bg-black/25"
 }
 
-function formatCheckInDate(value: string | null) {
-  if (!value) return "soon"
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date)
-}
-
-function readTime(value: string | null) {
-  if (!value) return null
-
-  const timestamp = new Date(value).getTime()
-  return Number.isFinite(timestamp) ? timestamp : null
-}
 
 function PlayerApplicationState({
   status,

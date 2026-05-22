@@ -2,6 +2,7 @@ import "server-only"
 
 import { z } from "zod"
 import { BRACKET_SIZES } from "@/lib/brackets/template"
+import { parseUtcDateTimeInput } from "@/lib/check-ins/time"
 import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
 import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedule"
 
@@ -560,18 +561,10 @@ function optionalTimeInput() {
 
 function optionalDateTimeInput() {
   return z.preprocess(
-    (value) => {
-      if (typeof value !== "string") return null
-
-      const trimmedValue = value.trim()
-      if (trimmedValue.length === 0) return null
-
-      const date = new Date(trimmedValue)
-      return Number.isNaN(date.getTime()) ? trimmedValue : date.toISOString()
-    },
+    parseUtcDateTimeInput,
     z
       .string()
-      .refine((value) => !Number.isNaN(new Date(value).getTime()))
+      .refine((value) => parseUtcDateTimeInput(value) !== null)
       .nullable(),
   )
 }

@@ -4,6 +4,7 @@ import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/ad
 import { createTournament, deleteTournament, updateTournament } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton } from "@/components/admin/admin-form-fields"
+import { formatUtcDateTimeInput } from "@/lib/check-ins/time"
 
 export function TournamentsPanel({
   tournaments,
@@ -169,20 +170,20 @@ function TournamentForm({
         <input name="prize_pool" defaultValue={tournament?.prize_pool ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label="Check-in opens">
+      <AdminField label="Check-in opens (UTC)">
         <input
           name="check_in_opens_at"
           type="datetime-local"
-          defaultValue={formatDateTimeInput(tournament?.check_in_opens_at)}
+          defaultValue={formatUtcDateTimeInput(tournament?.check_in_opens_at)}
           className={inputClassName}
         />
       </AdminField>
 
-      <AdminField label="Check-in closes">
+      <AdminField label="Check-in closes (UTC)">
         <input
           name="check_in_closes_at"
           type="datetime-local"
-          defaultValue={formatDateTimeInput(tournament?.check_in_closes_at)}
+          defaultValue={formatUtcDateTimeInput(tournament?.check_in_closes_at)}
           className={inputClassName}
         />
       </AdminField>
@@ -239,14 +240,4 @@ function TournamentForm({
 
 function formatParticipantType(type: AdminTournament["participant_type"]) {
   return type === "team" ? "Team tournament" : "Player tournament"
-}
-
-function formatDateTimeInput(value: string | null | undefined) {
-  if (!value) return ""
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ""
-
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return offsetDate.toISOString().slice(0, 16)
 }
