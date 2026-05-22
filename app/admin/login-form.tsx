@@ -2,14 +2,23 @@
 
 import { useState } from "react"
 import { useFormStatus } from "react-dom"
+import type { AdminAuthHealth } from "@/lib/admin/types"
 
 type AdminLoginFormProps = {
   action: (formData: FormData) => void | Promise<void>
   error?: string
+  health: AdminAuthHealth | null
+  retryAfter?: string
 }
 
-export function AdminLoginForm({ action, error }: AdminLoginFormProps) {
+export function AdminLoginForm({
+  action,
+  error,
+  health,
+  retryAfter,
+}: AdminLoginFormProps) {
   const [password, setPassword] = useState("")
+  const retryAfterLabel = formatRetryAfter(retryAfter)
 
   return (
     <form action={action} className="mt-6 space-y-4">
@@ -47,13 +56,61 @@ export function AdminLoginForm({ action, error }: AdminLoginFormProps) {
 
       {error === "rate-limited" && (
         <p className="text-sm text-red-300">
-          Too many attempts. Try again later.
+          Too many attempts. Try again
+          {retryAfterLabel ? ` in ${retryAfterLabel}` : " later"}.
         </p>
       )}
+
+      {health && <AdminAuthHealthPanel health={health} />}
 
       <AdminLoginButton />
     </form>
   )
+}
+
+function AdminAuthHealthPanel({ health }: { health: AdminAuthHealth }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-xs leading-5 text-white/55">
+      <p className="font-medium uppercase tracking-[0.2em] text-white/45">
+        Auth health
+      </p>
+      <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+        <dt>Env present</dt>
+        <dd className="text-white/70">
+          {yesNo(health.passwordHashPresent && health.sessionSecretPresent)}
+        </dd>
+        <dt>Hash format valid</dt>
+        <dd className="text-white/70">{yesNo(health.passwordHashFormatValid)}</dd>
+        <dt>Session secret valid</dt>
+        <dd className="text-white/70">
+          {yesNo(health.sessionSecretFormatValid)}
+        </dd>
+        <dt>Session cookie readable</dt>
+        <dd className="text-white/70">{yesNo(health.sessionCookieReadable)}</dd>
+        <dt>Escaped hash separators</dt>
+        <dd className="text-white/70">
+          {yesNo(health.passwordHashEscapedDollarSigns)}
+        </dd>
+      </dl>
+    </div>
+  )
+}
+
+function yesNo(value: boolean) {
+  return value ? "yes" : "no"
+}
+
+function formatRetryAfter(value: string | undefined) {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) return null
+
+  const roundedSeconds = Math.ceil(seconds)
+  if (roundedSeconds < 60) {
+    return `${roundedSeconds} second${roundedSeconds === 1 ? "" : "s"}`
+  }
+
+  const minutes = Math.ceil(roundedSeconds / 60)
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`
 }
 
 function AdminLoginButton() {

@@ -22,6 +22,14 @@ export type AdminEnv = {
   adminSessionSecret: string
 }
 
+export type AdminEnvDiagnostics = {
+  passwordHashPresent: boolean
+  sessionSecretPresent: boolean
+  passwordHashFormatValid: boolean
+  passwordHashEscapedDollarSigns: boolean
+  sessionSecretFormatValid: boolean
+}
+
 let cachedServerEnv: ServerEnv | null = null
 let cachedAdminEnv: AdminEnv | null = null
 
@@ -50,6 +58,15 @@ export function getAdminEnv() {
 
   if (publicEnv.isProduction && !adminPasswordHash) {
     throw new EnvValidationError("ADMIN_PASSWORD_HASH is required in production.")
+  }
+
+  if (
+    adminPasswordHash &&
+    !isValidAdminPasswordHashFormat(normalizeAdminPasswordHash(adminPasswordHash))
+  ) {
+    throw new EnvValidationError(
+      "ADMIN_PASSWORD_HASH must use pbkdf2_sha256$iterations$salt$base64url-hash format.",
+    )
   }
 
   if (publicEnv.isProduction && adminPassword) {
@@ -110,6 +127,28 @@ export function getOptionalAdminEnv() {
   }
 }
 
+export function getAdminEnvDiagnostics(): AdminEnvDiagnostics {
+  const adminPasswordHash = readOptionalEnv(process.env.ADMIN_PASSWORD_HASH)
+  const adminSessionSecret = readOptionalEnv(process.env.ADMIN_SESSION_SECRET)
+  const normalizedHash = adminPasswordHash
+    ? normalizeAdminPasswordHash(adminPasswordHash)
+    : null
+
+  return {
+    passwordHashPresent: Boolean(adminPasswordHash),
+    sessionSecretPresent: Boolean(adminSessionSecret),
+    passwordHashFormatValid: Boolean(
+      normalizedHash && isValidAdminPasswordHashFormat(normalizedHash),
+    ),
+    passwordHashEscapedDollarSigns: Boolean(
+      adminPasswordHash && adminPasswordHash.includes("\\$"),
+    ),
+    sessionSecretFormatValid: Boolean(
+      adminSessionSecret && adminSessionSecret.length >= 32,
+    ),
+  }
+}
+
 function readAdminCredential({
   adminPasswordHash,
   adminPassword,
@@ -120,7 +159,7 @@ function readAdminCredential({
   isProduction: boolean
 }): AdminCredential | null {
   if (adminPasswordHash) {
-    return { type: "hash", value: adminPasswordHash }
+    return { type: "hash", value: normalizeAdminPasswordHash(adminPasswordHash) }
   }
 
   if (!isProduction && adminPassword) {
@@ -128,4 +167,33 @@ function readAdminCredential({
   }
 
   return null
+}
+
+function normalizeAdminPasswordHash(value: string) {
+  return stripMatchingQuotes(value).replace(/\\\$/g, "$")
+}
+
+function stripMatchingQuotes(value: string) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1).trim()
+  }
+
+  return value
+}
+
+function isValidAdminPasswordHashFormat(value: string) {
+  const [algorithm, iterationsValue, salt, storedHash, extra] = value.split("$")
+  const iterations = Number(iterationsValue)
+
+  return (
+    algorithm === "pbkdf2_sha256" &&
+    Number.isInteger(iterations) &&
+    iterations >= 100000 &&
+    Boolean(salt) &&
+    /^[A-Za-z0-9_-]+$/.test(storedHash ?? "") &&
+    !extra
+  )
 }

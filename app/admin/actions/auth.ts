@@ -35,7 +35,7 @@ export async function loginAdmin(formData: FormData) {
   if (!rateLimit.allowed) {
     redirect(
       rateLimit.retryAfterSeconds
-        ? "/admin?error=rate-limited"
+        ? `/admin?error=rate-limited&retryAfter=${rateLimit.retryAfterSeconds}`
         : "/admin?error=unavailable",
     )
   }

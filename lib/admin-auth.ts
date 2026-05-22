@@ -8,8 +8,9 @@ import {
   timingSafeEqual,
 } from "node:crypto"
 import { getPublicEnv } from "@/lib/env/public"
-import { getOptionalAdminEnv } from "@/lib/env/server"
+import { getAdminEnvDiagnostics, getOptionalAdminEnv } from "@/lib/env/server"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import type { AdminAuthHealth } from "@/lib/admin/types"
 
 export const ADMIN_SESSION_COOKIE = "eclyps_admin_session"
 export const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
@@ -95,6 +96,19 @@ export async function getAdminAuthReadiness(): Promise<AdminAuthReadiness> {
   return { ok: true }
 }
 
+export function getAdminAuthHealth(sessionCookie: string | undefined): AdminAuthHealth {
+  const diagnostics = getAdminEnvDiagnostics()
+
+  return {
+    passwordHashPresent: diagnostics.passwordHashPresent,
+    sessionSecretPresent: diagnostics.sessionSecretPresent,
+    passwordHashFormatValid: diagnostics.passwordHashFormatValid,
+    sessionSecretFormatValid: diagnostics.sessionSecretFormatValid,
+    passwordHashEscapedDollarSigns: diagnostics.passwordHashEscapedDollarSigns,
+    sessionCookieReadable: Boolean(parseSessionToken(sessionCookie)),
+  }
+}
+
 export function getAdminSessionCookieOptions(maxAge = ADMIN_SESSION_MAX_AGE_SECONDS) {
   return {
     httpOnly: true,
@@ -173,8 +187,14 @@ export async function checkAdminLoginRateLimit(
     }
   }
 
+  const lockExpired = Boolean(lockedUntil && lockedUntil <= now)
   const windowStartedAt = readTime(data?.window_started_at)
-  if (!data || !windowStartedAt || now - windowStartedAt > LOGIN_WINDOW_SECONDS * 1000) {
+  if (
+    lockExpired ||
+    !data ||
+    !windowStartedAt ||
+    now - windowStartedAt >= LOGIN_WINDOW_SECONDS * 1000
+  ) {
     const { error: upsertError } = await supabaseAdmin
       .from("admin_login_attempts")
       .upsert({

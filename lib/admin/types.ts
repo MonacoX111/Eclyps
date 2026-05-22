@@ -3,8 +3,18 @@ export type AdminFeedback = {
   message: string
 }
 
+export type AdminAuthHealth = {
+  passwordHashPresent: boolean
+  sessionSecretPresent: boolean
+  passwordHashFormatValid: boolean
+  sessionSecretFormatValid: boolean
+  sessionCookieReadable: boolean
+  passwordHashEscapedDollarSigns: boolean
+}
+
 export type AdminSearchParams = {
   error?: string
+  retryAfter?: string
   crudError?: string
   crudSuccess?: string
   teamError?: string
