@@ -733,52 +733,34 @@ function getPlayerCards(
 ): TeamCard[] {
   const playerParticipants = getPlayerParticipants(participants)
 
-  if (players.length > 0) {
-    const participantsByPlayerId = new Map(
-      playerParticipants
-        .filter((participant) => participant.source_player_id)
-        .map((participant) => [participant.source_player_id, participant]),
-    )
+  const playersById = new Map(players.map((player) => [player.id, player]))
 
-    return players.map((player, index) => {
-      const participant = participantsByPlayerId.get(player.id)
+  return playerParticipants.map((participant, index) => {
+    const player = participant.source_player_id
+      ? playersById.get(participant.source_player_id)
+      : null
+    const displayName = participant.display_name
 
-      return {
-        id: participant?.id ?? player.id,
-        name: participant?.display_name ?? player.display_name,
-        subtitle: getPlayerCardSubtitle({
-          realName: player.real_name,
-          displayName: participant?.display_name ?? player.display_name,
-          seed: participant?.seed ?? player.seed,
-        }),
-        tag: createTeamTag(participant?.display_name ?? player.display_name),
-        wins: player.wins,
-        losses: player.losses,
-        rank: participant?.seed ?? player.seed ?? index + 1,
-        profileHref: `/players/${player.id}`,
-        avatarUrl: player.owner_profile?.avatar_url ?? null,
-        avatarAlt:
-          player.owner_profile?.discord_username ??
-          player.owner_profile?.display_name ??
-          player.display_name,
-      }
-    })
-  }
-
-  return playerParticipants.map((participant, index) => ({
-    id: participant.id,
-    name: participant.display_name,
-    subtitle: getPlayerCardSubtitle({
-      realName: null,
-      displayName: participant.display_name,
-      seed: participant.seed,
-    }),
-    tag: createTeamTag(participant.display_name),
-    wins: 0,
-    losses: 0,
-    rank: participant.seed ?? index + 1,
-    profileHref: `/players/${participant.id}`,
-  }))
+    return {
+      id: participant.id,
+      name: displayName,
+      subtitle: getPlayerCardSubtitle({
+        realName: player?.real_name ?? null,
+        displayName,
+        seed: participant.seed,
+      }),
+      tag: createTeamTag(displayName),
+      wins: player?.wins ?? 0,
+      losses: player?.losses ?? 0,
+      rank: participant.seed ?? index + 1,
+      profileHref: `/players/${player?.id ?? participant.id}`,
+      avatarUrl: player?.owner_profile?.avatar_url ?? null,
+      avatarAlt:
+        player?.owner_profile?.discord_username ??
+        player?.owner_profile?.display_name ??
+        displayName,
+    }
+  })
 }
 
 function getParticipantType(

@@ -14,6 +14,7 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
+import { RoleOnboarding } from "@/components/role-onboarding"
 import { getPlatformUserState } from "@/lib/auth/player-state"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getUserMatchDisputes } from "@/lib/data/disputes"
@@ -221,6 +222,8 @@ function TournamentBlocks({
         registrationStatus={status}
       />
 
+      <RoleOnboarding />
+
       {/* Divider glow line */}
       <div
         className="mx-auto h-px max-w-xl"
@@ -292,6 +295,7 @@ function TournamentUnavailable() {
           </p>
         </div>
       </section>
+      <RoleOnboarding />
       <div className="mx-auto h-px max-w-xl bg-white/10" />
     </>
   )
