@@ -10,6 +10,9 @@ type DiscordLoginOnboardingProps = {
   label?: string
 }
 
+const advisoryClassName =
+  "mt-4 rounded-xl border border-red-300/25 border-l-red-300/60 bg-red-400/[0.08] px-4 py-3 text-sm leading-6 text-red-50/88 shadow-[0_0_34px_rgba(248,113,113,0.14)]"
+
 export function DiscordLoginOnboarding({
   className,
   label = "Login with Discord",
@@ -49,7 +52,7 @@ export function DiscordLoginOnboarding({
                 <h2 className="mt-3 text-3xl font-semibold text-white">
                   Become an Eclyps Player?
                 </h2>
-                <p className="mt-4 text-sm leading-6 text-white/68">
+                <p className={advisoryClassName}>
                   You do not need to become a player to browse tournaments,
                   matches, rankings, and results. Continue to Discord only if you
                   want to start the player application path.
