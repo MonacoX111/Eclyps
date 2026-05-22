@@ -94,6 +94,14 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
             <dt className="text-white/35">Match days</dt>
             <dd className="mt-1">{tournament.match_days ?? "???"}</dd>
           </div>
+          <div>
+            <dt className="text-white/35">Check-in opens</dt>
+            <dd className="mt-1">{formatDisplayDateTime(tournament.check_in_opens_at)}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">Check-in closes</dt>
+            <dd className="mt-1">{formatDisplayDateTime(tournament.check_in_closes_at)}</dd>
+          </div>
         </dl>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
@@ -161,6 +169,24 @@ function TournamentForm({
         <input name="prize_pool" defaultValue={tournament?.prize_pool ?? ""} className={inputClassName} />
       </AdminField>
 
+      <AdminField label="Check-in opens">
+        <input
+          name="check_in_opens_at"
+          type="datetime-local"
+          defaultValue={formatDateTimeInput(tournament?.check_in_opens_at)}
+          className={inputClassName}
+        />
+      </AdminField>
+
+      <AdminField label="Check-in closes">
+        <input
+          name="check_in_closes_at"
+          type="datetime-local"
+          defaultValue={formatDateTimeInput(tournament?.check_in_closes_at)}
+          className={inputClassName}
+        />
+      </AdminField>
+
       <StatusSelect value={tournament?.status} />
 
       <AdminField label="Arena title">
@@ -213,4 +239,14 @@ function TournamentForm({
 
 function formatParticipantType(type: AdminTournament["participant_type"]) {
   return type === "team" ? "Team tournament" : "Player tournament"
+}
+
+function formatDateTimeInput(value: string | null | undefined) {
+  if (!value) return ""
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return offsetDate.toISOString().slice(0, 16)
 }

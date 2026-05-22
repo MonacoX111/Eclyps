@@ -24,12 +24,15 @@ type PageProps = {
   searchParams?: Promise<{
     registrationError?: string
     registrationSuccess?: string
+    checkInError?: string
+    checkInSuccess?: string
   }>
 }
 
 export default async function Page({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams
   const registrationFeedback = getRegistrationFeedback(resolvedSearchParams)
+  const checkInFeedback = getCheckInFeedback(resolvedSearchParams)
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">
@@ -48,7 +51,10 @@ export default async function Page({ searchParams }: PageProps) {
         </Suspense>
 
         <Suspense fallback={<RegistrationLoading />}>
-          <ActiveTournamentRegistration feedback={registrationFeedback} />
+          <ActiveTournamentRegistration
+            feedback={registrationFeedback}
+            checkInFeedback={checkInFeedback}
+          />
         </Suspense>
 
         <Suspense fallback={<BracketLoading />}>
@@ -118,8 +124,10 @@ async function ActiveTournamentTeams() {
 
 async function ActiveTournamentRegistration({
   feedback,
+  checkInFeedback,
 }: {
   feedback: RegistrationFeedback | null
+  checkInFeedback: RegistrationFeedback | null
 }) {
   const [homepageData, userProfile] = await Promise.all([
     getHomepageData(),
@@ -140,6 +148,7 @@ async function ActiveTournamentRegistration({
         homepageData.tournament?.title
       }
       feedback={feedback}
+      checkInFeedback={checkInFeedback}
       platformState={platformState}
     />
   )
@@ -350,6 +359,41 @@ function getRegistrationFeedback(searchParams?: {
       "admin-client-unavailable": "Registration service is not configured.",
       "mutation-failed": "Registration could not be submitted. Please try again.",
     }[searchParams.registrationError] ?? "Registration could not be submitted."
+
+  return { tone: "error", message }
+}
+
+function getCheckInFeedback(searchParams?: {
+  checkInError?: string
+  checkInSuccess?: string
+}): RegistrationFeedback | null {
+  if (searchParams?.checkInSuccess === "checked-in") {
+    return {
+      tone: "success",
+      message: "Check-in confirmed. Your tournament slot is locked.",
+    }
+  }
+
+  if (searchParams?.checkInSuccess === "already-checked-in") {
+    return {
+      tone: "success",
+      message: "You are already checked in for this tournament.",
+    }
+  }
+
+  if (!searchParams?.checkInError) return null
+
+  const message =
+    {
+      "invalid-tournament": "Tournament check-in is not available.",
+      "discord-login-required": "Please log in with Discord before checking in.",
+      "service-unavailable": "Check-in service is not configured.",
+      "registration-required": "Register for this tournament before checking in.",
+      "registration-pending": "Your tournament registration is waiting for admin approval.",
+      "check-in-not-open": "Check-in is not open yet.",
+      "check-in-closed": "Check-in is closed for this tournament.",
+      "ownership-required": "Only the approved player or team owner can check in.",
+    }[searchParams.checkInError] ?? "Check-in could not be completed."
 
   return { tone: "error", message }
 }

@@ -1,5 +1,6 @@
 import type React from "react"
 import Image from "next/image"
+import { checkInTournament } from "@/app/actions/check-ins"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
@@ -11,6 +12,7 @@ type RegistrationSectionProps = {
   participantLabel: "Teams" | "Players"
   tournamentName?: string | null
   feedback?: RegistrationFeedback | null
+  checkInFeedback?: RegistrationFeedback | null
   platformState?: PlatformUserState
 }
 
@@ -27,6 +29,7 @@ export function RegistrationSection({
   participantLabel,
   tournamentName,
   feedback,
+  checkInFeedback,
   platformState,
 }: RegistrationSectionProps) {
   if (!summary) return null
@@ -45,6 +48,12 @@ export function RegistrationSection({
     : `Registration is closed for this ${typeLabelPlural} tournament.`
   const isTournamentPending = tournamentRegistration?.status === "pending"
   const isTournamentApproved = tournamentRegistration?.status === "approved"
+  const checkInState = getCheckInState({
+    summary,
+    hasUser: Boolean(userProfile),
+    hasApprovedPlayer: Boolean(approvedPlayer),
+    registration: tournamentRegistration,
+  })
   const canSubmit =
     !isDisabled &&
     Boolean(approvedPlayer) &&
@@ -95,7 +104,26 @@ export function RegistrationSection({
                 {feedback.message}
               </div>
             ) : null}
+
+            {checkInFeedback ? (
+              <div
+                className={`rounded-xl border px-4 py-3 text-sm ${
+                  checkInFeedback.tone === "success"
+                    ? "border-primary/20 bg-primary/10 text-primary"
+                    : "border-red-300/20 bg-red-300/10 text-red-100"
+                }`}
+              >
+                {checkInFeedback.message}
+              </div>
+            ) : null}
           </div>
+
+          <div className="grid gap-5">
+          <CheckInCard
+            state={checkInState}
+            tournamentId={summary.tournamentId}
+            userProfile={userProfile}
+          />
 
           <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
             {userProfile && !approvedPlayer ? (
@@ -249,10 +277,204 @@ export function RegistrationSection({
               </button>
             </div>
           </form>
+          </div>
         </div>
       </div>
     </section>
   )
+}
+
+type CheckInState = {
+  label: string
+  message: string
+  tone: "locked" | "ready" | "success" | "warning"
+  canCheckIn: boolean
+  checkedInAt: string | null
+}
+
+function CheckInCard({
+  state,
+  tournamentId,
+  userProfile,
+}: {
+  state: CheckInState
+  tournamentId: string
+  userProfile: PlatformUserState["userProfile"]
+}) {
+  return (
+    <div className={`rounded-2xl border px-4 py-4 shadow-[0_0_42px_rgba(0,200,150,0.10)] ${getCheckInCardClassName(state.tone)}`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
+            Tournament Check-In
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-white">{state.label}</h3>
+          <p className="mt-2 text-sm leading-6 text-white/68">{state.message}</p>
+          {state.checkedInAt ? (
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/70">
+              Confirmed {formatCheckInDate(state.checkedInAt)}
+            </p>
+          ) : null}
+        </div>
+        {state.canCheckIn ? (
+          <form action={checkInTournament} className="shrink-0">
+            <input type="hidden" name="tournament_id" value={tournamentId} />
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-black shadow-[0_0_28px_rgba(0,200,150,0.22)] transition hover:bg-primary/90 sm:w-auto"
+            >
+              Check In
+            </button>
+          </form>
+        ) : !userProfile ? (
+          <LoginButton />
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function getCheckInState({
+  summary,
+  hasUser,
+  hasApprovedPlayer,
+  registration,
+}: {
+  summary: TournamentRegistrationSummary
+  hasUser: boolean
+  hasApprovedPlayer: boolean
+  registration: PlatformUserState["tournamentRegistration"]
+}): CheckInState {
+  if (!hasUser) {
+    return {
+      label: "Discord Login Required",
+      message: "Connect Discord so Eclyps can verify tournament ownership before check-in.",
+      tone: "locked",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  if (!hasApprovedPlayer) {
+    return {
+      label: "Player Approval Required",
+      message: "Your Discord account needs an approved Eclyps player profile before tournament check-in unlocks.",
+      tone: "warning",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  if (!registration) {
+    return {
+      label: "Tournament Registration Required",
+      message: "Register for this tournament and wait for admin approval before check-in.",
+      tone: "locked",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  if (registration.status === "pending") {
+    return {
+      label: "Registration Pending",
+      message: "Your tournament registration is waiting for admin approval.",
+      tone: "warning",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  if (registration.check_in_status === "checked_in") {
+    return {
+      label: "Checked In Successfully",
+      message: `${registration.display_name} is locked for tournament arrival.`,
+      tone: "success",
+      canCheckIn: false,
+      checkedInAt: registration.checked_in_at,
+    }
+  }
+
+  const windowState = getCheckInWindowState(summary)
+
+  if (windowState === "soon") {
+    return {
+      label: "Check-In Opens Soon",
+      message: `Check-in opens ${formatCheckInDate(summary.checkInOpensAt)}.`,
+      tone: "locked",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  if (windowState === "closed") {
+    return {
+      label: "Check-In Closed",
+      message: summary.checkInClosesAt
+        ? `Check-in closed ${formatCheckInDate(summary.checkInClosesAt)}.`
+        : "The check-in window has not been configured for this tournament.",
+      tone: "locked",
+      canCheckIn: false,
+      checkedInAt: null,
+    }
+  }
+
+  return {
+    label: "Ready to Check In",
+    message: `${registration.display_name} is approved. Confirm attendance before the bracket is prepared.`,
+    tone: "ready",
+    canCheckIn: true,
+    checkedInAt: null,
+  }
+}
+
+function getCheckInWindowState(summary: TournamentRegistrationSummary) {
+  const opensAt = readTime(summary.checkInOpensAt)
+  const closesAt = readTime(summary.checkInClosesAt)
+  const now = Date.now()
+
+  if (!opensAt || !closesAt || closesAt <= opensAt) return "closed"
+  if (now < opensAt) return "soon"
+  if (now > closesAt) return "closed"
+
+  return "open"
+}
+
+function getCheckInCardClassName(tone: CheckInState["tone"]) {
+  if (tone === "success") {
+    return "border-primary/35 bg-primary/10"
+  }
+
+  if (tone === "ready") {
+    return "border-primary/30 bg-black/30"
+  }
+
+  if (tone === "warning") {
+    return "border-amber-300/25 bg-amber-300/10"
+  }
+
+  return "border-white/10 bg-black/25"
+}
+
+function formatCheckInDate(value: string | null) {
+  if (!value) return "soon"
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date)
+}
+
+function readTime(value: string | null) {
+  if (!value) return null
+
+  const timestamp = new Date(value).getTime()
+  return Number.isFinite(timestamp) ? timestamp : null
 }
 
 function PlayerApplicationState({

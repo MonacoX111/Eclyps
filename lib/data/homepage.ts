@@ -57,6 +57,8 @@ export type HomepageTournament = {
   bracket_stage_label: string | null
   bracket_participant_label: string | null
   bracket_arena_label: string | null
+  check_in_opens_at: string | null
+  check_in_closes_at: string | null
   is_active: boolean
 }
 
@@ -429,6 +431,8 @@ async function createHomepageData({
         tournamentId: tournament.id,
         participantType,
         capacity: tournament.team_count,
+        checkInOpensAt: tournament.check_in_opens_at,
+        checkInClosesAt: tournament.check_in_closes_at,
         tournamentStatus: tournament.status,
       })
     : null
@@ -486,6 +490,8 @@ function normalizeHomepageTournament(
     bracket_stage_label: readNullableString(row.bracket_stage_label),
     bracket_participant_label: readNullableString(row.bracket_participant_label),
     bracket_arena_label: readNullableString(row.bracket_arena_label),
+    check_in_opens_at: readNullableString(row.check_in_opens_at),
+    check_in_closes_at: readNullableString(row.check_in_closes_at),
     is_active: row.is_active === true,
   }
 }

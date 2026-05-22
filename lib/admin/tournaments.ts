@@ -31,6 +31,8 @@ export type AdminTournament = {
   bracket_stage_label: string | null
   bracket_participant_label: string | null
   bracket_arena_label: string | null
+  check_in_opens_at: string | null
+  check_in_closes_at: string | null
   is_active: boolean | null
   created_at: string | null
 }
@@ -53,7 +55,7 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
   const { rows, error } = await runAdminRowsQuery("tournaments", async () => {
     const result = await supabase
       .from("tournaments")
-      .select("id, name, game, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, is_active, created_at")
+      .select("id, name, game, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
       .order("created_at", { ascending: false })
 
     if (result.error && isMissingColumnError(result.error)) {
@@ -94,6 +96,8 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     bracket_stage_label: readNullableString(row.bracket_stage_label),
     bracket_participant_label: readNullableString(row.bracket_participant_label),
     bracket_arena_label: readNullableString(row.bracket_arena_label),
+    check_in_opens_at: readNullableString(row.check_in_opens_at),
+    check_in_closes_at: readNullableString(row.check_in_closes_at),
     is_active: row.is_active === true,
     created_at: readNullableString(row.created_at),
   }

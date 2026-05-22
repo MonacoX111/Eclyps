@@ -17,6 +17,8 @@ export type TournamentRegistrationSummary = {
   tournamentId: string
   participantType: RegistrationParticipantType
   capacity: number | null
+  checkInOpensAt: string | null
+  checkInClosesAt: string | null
   approvedCount: number
   pendingCount: number
   slotsLeft: number | null
@@ -35,6 +37,9 @@ export type TournamentRegistrationRecord = {
   contact_handle: string | null
   region: string | null
   status: RegistrationStatus
+  check_in_status: "not_checked_in" | "checked_in"
+  checked_in_at: string | null
+  checked_in_by_user_profile_id: string | null
   participant_id: string | null
   source_team_id: string | null
   source_player_id: string | null
@@ -65,17 +70,21 @@ export type TournamentRegistrationRosterEntry = {
 }
 
 const REGISTRATION_SELECT =
-  "id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, participant_id, source_team_id, source_player_id, reviewed_at, created_at, owner_profile:user_profiles!tournament_registrations_user_profile_id_fkey(id, discord_username, display_name, avatar_url)"
+  "id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, check_in_status, checked_in_at, checked_in_by_user_profile_id, participant_id, source_team_id, source_player_id, reviewed_at, created_at, owner_profile:user_profiles!tournament_registrations_user_profile_id_fkey(id, discord_username, display_name, avatar_url)"
 
 export async function getTournamentRegistrationSummary({
   tournamentId,
   participantType,
   capacity,
+  checkInOpensAt,
+  checkInClosesAt,
   tournamentStatus,
 }: {
   tournamentId: string
   participantType: RegistrationParticipantType
   capacity: number | null
+  checkInOpensAt?: string | null
+  checkInClosesAt?: string | null
   tournamentStatus: string | null
 }): Promise<TournamentRegistrationSummary> {
   const [approvedCount, pendingCount] = await Promise.all([
@@ -93,6 +102,8 @@ export async function getTournamentRegistrationSummary({
     tournamentId,
     participantType,
     capacity,
+    checkInOpensAt: checkInOpensAt ?? null,
+    checkInClosesAt: checkInClosesAt ?? null,
     approvedCount,
     pendingCount,
     slotsLeft,
@@ -233,6 +244,9 @@ export function normalizeRegistration(
     contact_handle: readNullableString(row.contact_handle),
     region: readNullableString(row.region),
     status: readRegistrationStatus(row.status),
+    check_in_status: readCheckInStatus(row.check_in_status),
+    checked_in_at: readNullableString(row.checked_in_at),
+    checked_in_by_user_profile_id: readStringId(row.checked_in_by_user_profile_id),
     participant_id: readStringId(row.participant_id),
     source_team_id: readStringId(row.source_team_id),
     source_player_id: readStringId(row.source_player_id),
@@ -282,6 +296,10 @@ function readRegistrationStatus(value: unknown): RegistrationStatus {
   }
 
   return "pending"
+}
+
+function readCheckInStatus(value: unknown): "not_checked_in" | "checked_in" {
+  return value === "checked_in" ? "checked_in" : "not_checked_in"
 }
 
 export function normalizeRegistrationRosterEntry(

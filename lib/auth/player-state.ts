@@ -25,7 +25,14 @@ export type ApprovedPlayerProfile = {
 
 export type CurrentTournamentRegistration = {
   id: string
+  display_name: string
+  participant_type: "team" | "player"
   status: "pending" | "approved" | "rejected" | "cancelled"
+  check_in_status: "not_checked_in" | "checked_in"
+  checked_in_at: string | null
+  participant_id: string | null
+  source_team_id: string | null
+  source_player_id: string | null
 }
 
 export type PlatformUserState = {
@@ -139,7 +146,7 @@ async function fetchTournamentRegistration({
 
   const { data, error } = await supabaseAdmin
     .from("tournament_registrations")
-    .select("id, status")
+    .select("id, display_name, participant_type, status, check_in_status, checked_in_at, participant_id, source_team_id, source_player_id")
     .eq("user_profile_id", userProfileId)
     .eq("tournament_id", tournamentId)
     .in("status", ["pending", "approved"])
@@ -152,9 +159,25 @@ async function fetchTournamentRegistration({
   }
 
   const id = readString(data?.id)
+  const displayName = readString(data?.display_name)
+  const participantType = readParticipantType(data?.participant_type)
   const status = readRegistrationStatus(data?.status)
 
-  return id && status ? { id, status } : null
+  const checkInStatus = readCheckInStatus(data?.check_in_status)
+
+  return id && displayName && participantType && status
+    ? {
+        id,
+        display_name: displayName,
+        participant_type: participantType,
+        status,
+        check_in_status: checkInStatus,
+        checked_in_at: readString(data?.checked_in_at),
+        participant_id: readString(data?.participant_id),
+        source_team_id: readString(data?.source_team_id),
+        source_player_id: readString(data?.source_player_id),
+      }
+    : null
 }
 
 function normalizePlayerApplication(row: unknown): PlayerApplication | null {
@@ -201,6 +224,14 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null
+}
+
+function readParticipantType(value: unknown): "team" | "player" | null {
+  return value === "team" || value === "player" ? value : null
+}
+
+function readCheckInStatus(value: unknown): "not_checked_in" | "checked_in" {
+  return value === "checked_in" ? "checked_in" : "not_checked_in"
 }
 
 function isMissingApplicationStorageError(error: { code?: string }) {

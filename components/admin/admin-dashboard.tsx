@@ -177,6 +177,7 @@ export async function AdminDashboard({
         tournaments={tournaments}
         fetchError={registrationError}
         feedback={getRegistrationFeedback(searchParams)}
+        filter={searchParams?.registrationFilter}
       />
 
       <MatchesPanel

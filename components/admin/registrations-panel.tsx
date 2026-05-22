@@ -17,17 +17,21 @@ export function RegistrationsPanel({
   tournaments,
   fetchError,
   feedback,
+  filter,
 }: {
   registrations: AdminRegistration[]
   tournaments: AdminTournament[]
   fetchError: string | null
   feedback: AdminFeedback | null
+  filter?: string
 }) {
   const tournamentNames = createTournamentNameMap(tournaments)
-  const pendingRegistrations = registrations.filter(
+  const activeFilter = normalizeRegistrationFilter(filter)
+  const filteredRegistrations = filterRegistrations(registrations, activeFilter)
+  const pendingRegistrations = filteredRegistrations.filter(
     (registration) => registration.status === "pending",
   )
-  const reviewedRegistrations = registrations
+  const reviewedRegistrations = filteredRegistrations
     .filter((registration) => registration.status !== "pending")
     .slice(0, 8)
 
@@ -40,6 +44,21 @@ export function RegistrationsPanel({
       fetchError={fetchError}
       fetchLabel="registrations"
     >
+      <div className="mt-5 flex flex-wrap gap-2 text-xs">
+        {registrationFilters.map((item) => (
+          <a
+            key={item.value}
+            href={`/admin?registrationFilter=${item.value}#registrations`}
+            className={`rounded-full border px-3 py-1.5 transition ${
+              item.value === activeFilter
+                ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+            }`}
+          >
+            {item.label}
+          </a>
+        ))}
+      </div>
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Pending registrations</h3>
@@ -116,6 +135,14 @@ function RegistrationRecord({
                   />
                 ) : null}
                 Discord: {registration.owner_profile.discord_username}
+              </span>
+            ) : null}
+            <span className={getCheckInPillClassName(registration.check_in_status)}>
+              {formatCheckInStatus(registration.check_in_status)}
+            </span>
+            {registration.checked_in_at ? (
+              <span className={pillClassName}>
+                Checked in {formatDateTime(registration.checked_in_at)}
               </span>
             ) : null}
             {registration.region ? (
@@ -245,4 +272,69 @@ function formatType(type: AdminRegistration["participant_type"]) {
 
 function formatStatus(status: AdminRegistration["status"]) {
   return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+const registrationFilters = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "checked-in", label: "Checked in" },
+  { value: "not-checked-in", label: "Not checked in" },
+] as const
+
+type RegistrationFilter = (typeof registrationFilters)[number]["value"]
+
+function normalizeRegistrationFilter(value: string | undefined): RegistrationFilter {
+  return registrationFilters.some((item) => item.value === value)
+    ? (value as RegistrationFilter)
+    : "all"
+}
+
+function filterRegistrations(
+  registrations: AdminRegistration[],
+  filter: RegistrationFilter,
+) {
+  if (filter === "pending") {
+    return registrations.filter((registration) => registration.status === "pending")
+  }
+
+  if (filter === "approved") {
+    return registrations.filter((registration) => registration.status === "approved")
+  }
+
+  if (filter === "checked-in") {
+    return registrations.filter((registration) => registration.check_in_status === "checked_in")
+  }
+
+  if (filter === "not-checked-in") {
+    return registrations.filter(
+      (registration) =>
+        registration.status === "approved" &&
+        registration.check_in_status !== "checked_in",
+    )
+  }
+
+  return registrations
+}
+
+function formatCheckInStatus(status: AdminRegistration["check_in_status"]) {
+  return status === "checked_in" ? "Checked in" : "Not checked in"
+}
+
+function getCheckInPillClassName(status: AdminRegistration["check_in_status"]) {
+  return status === "checked_in"
+    ? "rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-emerald-100"
+    : pillClassName
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date)
 }

@@ -36,6 +36,8 @@ export const tournamentSchema = z.object({
   bracket_stage_label: optionalString(),
   bracket_participant_label: optionalString(),
   bracket_arena_label: optionalString(),
+  check_in_opens_at: optionalDateTimeInput(),
+  check_in_closes_at: optionalDateTimeInput(),
 })
 
 export const teamSchema = z.object({
@@ -553,6 +555,24 @@ function optionalTimeInput() {
       return trimmedValue.length > 0 ? trimmedValue : null
     },
     z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  )
+}
+
+function optionalDateTimeInput() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      if (trimmedValue.length === 0) return null
+
+      const date = new Date(trimmedValue)
+      return Number.isNaN(date.getTime()) ? trimmedValue : date.toISOString()
+    },
+    z
+      .string()
+      .refine((value) => !Number.isNaN(new Date(value).getTime()))
+      .nullable(),
   )
 }
 
