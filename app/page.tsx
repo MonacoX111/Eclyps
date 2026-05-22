@@ -16,6 +16,7 @@ import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { getPlatformUserState } from "@/lib/auth/player-state"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getUserMatchDisputes } from "@/lib/data/disputes"
 import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
 
 export const dynamic = "force-dynamic"
@@ -26,6 +27,8 @@ type PageProps = {
     registrationSuccess?: string
     checkInError?: string
     checkInSuccess?: string
+    disputeError?: string
+    disputeSuccess?: string
   }>
 }
 
@@ -33,6 +36,7 @@ export default async function Page({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams
   const registrationFeedback = getRegistrationFeedback(resolvedSearchParams)
   const checkInFeedback = getCheckInFeedback(resolvedSearchParams)
+  const disputeFeedback = getDisputeFeedback(resolvedSearchParams)
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">
@@ -70,7 +74,7 @@ export default async function Page({ searchParams }: PageProps) {
         />
 
         <Suspense fallback={<ScheduleLoading />}>
-          <ActiveTournamentMatches />
+          <ActiveTournamentMatches feedback={disputeFeedback} />
         </Suspense>
 
         <div
@@ -154,10 +158,32 @@ async function ActiveTournamentRegistration({
   )
 }
 
-async function ActiveTournamentMatches() {
-  const homepageData = await getHomepageData()
+async function ActiveTournamentMatches({
+  feedback,
+}: {
+  feedback: RegistrationFeedback | null
+}) {
+  const [homepageData, userProfile] = await Promise.all([
+    getHomepageData(),
+    getCurrentUserProfile(),
+  ])
+  const platformState = await getPlatformUserState({
+    userProfile,
+    tournamentId: homepageData.tournament?.id ?? null,
+  })
+  const disputes = await getUserMatchDisputes({
+    userProfileId: userProfile?.id ?? null,
+    tournamentId: homepageData.tournament?.id ?? null,
+  })
 
-  return <MatchSchedule matches={homepageData.matchScheduleItems} />
+  return (
+    <MatchSchedule
+      matches={homepageData.matchScheduleItems}
+      userParticipantId={platformState.tournamentRegistration?.participant_id ?? null}
+      disputes={disputes}
+      feedback={feedback}
+    />
+  )
 }
 
 async function ActiveTournamentBracket() {
@@ -394,6 +420,37 @@ function getCheckInFeedback(searchParams?: {
       "check-in-closed": "Check-in is closed for this tournament.",
       "ownership-required": "Only the approved player or team owner can check in.",
     }[searchParams.checkInError] ?? "Check-in could not be completed."
+
+  return { tone: "error", message }
+}
+
+function getDisputeFeedback(searchParams?: {
+  disputeError?: string
+  disputeSuccess?: string
+}): RegistrationFeedback | null {
+  if (searchParams?.disputeSuccess === "submitted") {
+    return {
+      tone: "success",
+      message: "Dispute submitted. Admins will review the match issue.",
+    }
+  }
+
+  if (!searchParams?.disputeError) return null
+
+  const message =
+    {
+      "invalid-match": "This match is not available for disputes.",
+      "match-not-ready": "This match does not have confirmed participants yet.",
+      "discord-login-required": "Please log in with Discord before reporting a dispute.",
+      "not-match-participant": "Only match participants can report disputes.",
+      "ownership-required": "Only the approved player or team captain can report this dispute.",
+      "duplicate-open": "You already have an open dispute for this match.",
+      "invalid-dispute-type": "Choose a valid dispute type.",
+      "invalid-title": "Dispute title must not be empty.",
+      "invalid-description": "Dispute description must not be empty.",
+      "invalid-evidence-url": "Evidence link must be a valid URL.",
+      "service-unavailable": "Dispute service is not configured.",
+    }[searchParams.disputeError] ?? "Dispute could not be submitted."
 
   return { tone: "error", message }
 }

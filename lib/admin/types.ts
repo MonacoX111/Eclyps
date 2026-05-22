@@ -32,6 +32,8 @@ export type AdminSearchParams = {
   registrationError?: string
   registrationSuccess?: string
   registrationFilter?: string
+  disputeError?: string
+  disputeSuccess?: string
   activeError?: string
   activeSuccess?: string
 }

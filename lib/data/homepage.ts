@@ -846,6 +846,8 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
       status: match.status,
       score1: match.score1,
       score2: match.score2,
+      participant1Id: match.participant_1_id,
+      participant2Id: match.participant_2_id,
     }))
 }
 

@@ -208,3 +208,22 @@ export function getRegistrationFeedback(searchParams?: Pick<AdminSearchParams, "
 
   return { tone: "error", message }
 }
+
+export function getDisputeFeedback(searchParams?: Pick<AdminSearchParams, "disputeError" | "disputeSuccess">): AdminFeedback | null {
+  if (searchParams?.disputeSuccess === "under_review") return { tone: "success", message: "Dispute marked under review." }
+  if (searchParams?.disputeSuccess === "resolved") return { tone: "success", message: "Dispute resolved." }
+  if (searchParams?.disputeSuccess === "rejected") return { tone: "success", message: "Dispute rejected." }
+  if (searchParams?.disputeSuccess === "open") return { tone: "success", message: "Dispute reopened." }
+  if (!searchParams?.disputeError) return null
+
+  const message =
+    {
+      "missing-id": "Dispute id is missing.",
+      "invalid-status": "Dispute status is invalid.",
+      "admin-client-unavailable":
+        "Dispute review requires a server-only Supabase admin client.",
+      "mutation-failed": "Dispute review could not be saved. Please try again.",
+    }[searchParams.disputeError] ?? "Dispute review could not be saved."
+
+  return { tone: "error", message }
+}

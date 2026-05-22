@@ -1,6 +1,7 @@
 import { logoutAdmin } from "@/app/admin/actions"
 import { ActiveTournamentPanel } from "@/components/admin/active-tournament-panel"
 import { MatchesPanel } from "@/components/admin/matches-panel"
+import { DisputesPanel } from "@/components/admin/disputes-panel"
 import { PlayerApplicationsPanel } from "@/components/admin/player-applications-panel"
 import { PlayersPanel } from "@/components/admin/players-panel"
 import { RegistrationsPanel } from "@/components/admin/registrations-panel"
@@ -10,6 +11,7 @@ import { TournamentsPanel } from "@/components/admin/tournaments-panel"
 import { TeamNameDatalist } from "@/components/admin/admin-form-fields"
 import {
   getActiveTournamentFeedback,
+  getDisputeFeedback,
   getMatchFeedback,
   getPlayerApplicationFeedback,
   getPlayerFeedback,
@@ -19,6 +21,7 @@ import {
   getTournamentFeedback,
 } from "@/lib/admin/feedback"
 import { getAdminMatches } from "@/lib/admin/matches"
+import { getAdminDisputes } from "@/lib/admin/disputes"
 import { getAdminParticipants } from "@/lib/admin/participants"
 import { getAdminPlayerApplications } from "@/lib/admin/player-applications"
 import { getAdminPlayers } from "@/lib/admin/players"
@@ -61,6 +64,11 @@ const adminSections = [
     description: "Approve or reject public tournament signups.",
   },
   {
+    id: "disputes",
+    title: "Disputes",
+    description: "Review match reports from eligible players and captains.",
+  },
+  {
     id: "active-tournament",
     title: "Active Tournament",
     description: "Choose which tournament appears on the public homepage.",
@@ -79,6 +87,7 @@ export async function AdminDashboard({
     { applications, error: playerApplicationError },
     { participants, error: participantError },
     { registrations, error: registrationError },
+    { disputes, error: disputeError },
     { matches, error: matchError },
     { results, error: resultError },
   ] = await Promise.all([
@@ -88,6 +97,7 @@ export async function AdminDashboard({
     getAdminPlayerApplications(),
     getAdminParticipants(),
     getAdminRegistrations(),
+    getAdminDisputes(),
     getAdminMatches(),
     getAdminResults(),
   ])
@@ -178,6 +188,12 @@ export async function AdminDashboard({
         fetchError={registrationError}
         feedback={getRegistrationFeedback(searchParams)}
         filter={searchParams?.registrationFilter}
+      />
+
+      <DisputesPanel
+        disputes={disputes}
+        fetchError={disputeError}
+        feedback={getDisputeFeedback(searchParams)}
       />
 
       <MatchesPanel

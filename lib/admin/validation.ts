@@ -8,6 +8,15 @@ import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedul
 
 const participantTypes = ["team", "player"] as const
 const registrationStatuses = ["approved", "rejected"] as const
+const disputeTypes = [
+  "no_show",
+  "wrong_result",
+  "cheating",
+  "connection_issue",
+  "rule_violation",
+  "other",
+] as const
+const disputeStatuses = ["open", "under_review", "resolved", "rejected"] as const
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -198,6 +207,20 @@ export const registrationDecisionSchema = z.object({
   status: z.enum(registrationStatuses),
 })
 
+export const matchDisputeSchema = z.object({
+  match_id: requiredString(),
+  dispute_type: z.enum(disputeTypes),
+  title: requiredString(),
+  description: requiredString(),
+  evidence_url: optionalUrlString(),
+})
+
+export const disputeReviewSchema = z.object({
+  id: requiredString(),
+  status: z.enum(disputeStatuses),
+  admin_note: optionalString(),
+})
+
 export type AdminLoginInput = z.infer<typeof loginPasswordSchema>
 export type ActiveTournamentInput = z.infer<typeof activeTournamentSchema>
 export type TournamentInput = z.infer<typeof tournamentSchema>
@@ -214,6 +237,8 @@ export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema> &
   roster: TeamRosterInput | null
 }
 export type RegistrationDecisionInput = z.infer<typeof registrationDecisionSchema>
+export type MatchDisputeInput = z.infer<typeof matchDisputeSchema>
+export type DisputeReviewInput = z.infer<typeof disputeReviewSchema>
 
 export function parseLoginFormData(formData: FormData): ParseResult<AdminLoginInput> {
   return parseFormData(loginPasswordSchema, formData, {
@@ -396,6 +421,27 @@ export function parseRegistrationDecisionFormData(
   })
 }
 
+export function parseMatchDisputeFormData(
+  formData: FormData,
+): ParseResult<MatchDisputeInput> {
+  return parseFormData(matchDisputeSchema, formData, {
+    match_id: "invalid-match",
+    dispute_type: "invalid-dispute-type",
+    title: "invalid-title",
+    description: "invalid-description",
+    evidence_url: "invalid-evidence-url",
+  })
+}
+
+export function parseDisputeReviewFormData(
+  formData: FormData,
+): ParseResult<DisputeReviewInput> {
+  return parseFormData(disputeReviewSchema, formData, {
+    id: "missing-id",
+    status: "invalid-status",
+  })
+}
+
 function parseFormData<T extends z.ZodTypeAny>(
   schema: T,
   formData: FormData,
@@ -453,6 +499,18 @@ function optionalEmailString() {
       return trimmedValue.length > 0 ? trimmedValue : null
     },
     z.string().email().nullable(),
+  )
+}
+
+function optionalUrlString() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : null
+    },
+    z.string().url().nullable(),
   )
 }
 
