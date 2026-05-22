@@ -6,7 +6,7 @@ import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
 import type { PlatformUserState } from "@/lib/auth/player-state"
 import {
-  formatLocalCheckInDate,
+  formatKyivCheckInDateWithLabel,
   getCheckInWindowStateUtc,
 } from "@/lib/check-ins/time"
 import type { TournamentRegistrationSummary } from "@/lib/data/registrations"
@@ -316,7 +316,7 @@ function CheckInCard({
           <p className="mt-2 text-sm leading-6 text-white/68">{state.message}</p>
           {state.checkedInAt ? (
             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/70">
-              Confirmed {formatLocalCheckInDate(state.checkedInAt)}
+              Confirmed at {formatKyivCheckInDateWithLabel(state.checkedInAt)}
             </p>
           ) : null}
         </div>
@@ -404,7 +404,7 @@ function getCheckInState({
   if (windowState === "soon") {
     return {
       label: "Check-In Opens Soon",
-      message: `Check-in opens ${formatLocalCheckInDate(summary.checkInOpensAt)}.`,
+      message: `Check-in opens at ${formatKyivCheckInDateWithLabel(summary.checkInOpensAt)}.`,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -415,7 +415,7 @@ function getCheckInState({
     return {
       label: "Check-In Closed",
       message: summary.checkInClosesAt
-        ? `Check-in closed ${formatLocalCheckInDate(summary.checkInClosesAt)}.`
+        ? `Check-in closed at ${formatKyivCheckInDateWithLabel(summary.checkInClosesAt)}.`
         : "The check-in window has not been configured for this tournament.",
       tone: "locked",
       canCheckIn: false,

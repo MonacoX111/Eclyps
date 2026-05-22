@@ -4,7 +4,10 @@ import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/ad
 import { createTournament, deleteTournament, updateTournament } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton } from "@/components/admin/admin-form-fields"
-import { formatUtcDateTimeInput } from "@/lib/check-ins/time"
+import {
+  formatKyivDateTimeInput,
+  formatKyivCheckInDateWithLabel,
+} from "@/lib/check-ins/time"
 
 export function TournamentsPanel({
   tournaments,
@@ -97,11 +100,11 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           </div>
           <div>
             <dt className="text-white/35">Check-in opens</dt>
-            <dd className="mt-1">{formatDisplayDateTime(tournament.check_in_opens_at)}</dd>
+            <dd className="mt-1">{formatKyivDateTime(tournament.check_in_opens_at)}</dd>
           </div>
           <div>
             <dt className="text-white/35">Check-in closes</dt>
-            <dd className="mt-1">{formatDisplayDateTime(tournament.check_in_closes_at)}</dd>
+            <dd className="mt-1">{formatKyivDateTime(tournament.check_in_closes_at)}</dd>
           </div>
         </dl>
 
@@ -170,20 +173,20 @@ function TournamentForm({
         <input name="prize_pool" defaultValue={tournament?.prize_pool ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label="Check-in opens (UTC)">
+      <AdminField label="Check-in opens (Kyiv Time)">
         <input
           name="check_in_opens_at"
           type="datetime-local"
-          defaultValue={formatUtcDateTimeInput(tournament?.check_in_opens_at)}
+          defaultValue={formatKyivDateTimeInput(tournament?.check_in_opens_at)}
           className={inputClassName}
         />
       </AdminField>
 
-      <AdminField label="Check-in closes (UTC)">
+      <AdminField label="Check-in closes (Kyiv Time)">
         <input
           name="check_in_closes_at"
           type="datetime-local"
-          defaultValue={formatUtcDateTimeInput(tournament?.check_in_closes_at)}
+          defaultValue={formatKyivDateTimeInput(tournament?.check_in_closes_at)}
           className={inputClassName}
         />
       </AdminField>
@@ -240,4 +243,8 @@ function TournamentForm({
 
 function formatParticipantType(type: AdminTournament["participant_type"]) {
   return type === "team" ? "Team tournament" : "Player tournament"
+}
+
+function formatKyivDateTime(value: string | null) {
+  return value ? formatKyivCheckInDateWithLabel(value) : "???"
 }
