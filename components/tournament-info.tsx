@@ -137,5 +137,5 @@ function readPositiveCount(value?: string) {
   if (!normalizedValue) return null
 
   const numericValue = Number(normalizedValue)
-  return Number.isFinite(numericValue) && numericValue > 0 ? normalizedValue : null
+  return Number.isFinite(numericValue) && numericValue >= 0 ? normalizedValue : null
 }

@@ -422,10 +422,10 @@ async function createHomepageData({
       ? getPlayerCards(players, participants)
       : getTeamCards(teams)
   const { bracketMatches, normalMatches } = splitHomepageMatches(matches)
-  const publicPlayerCount =
-    participantType === "player"
-      ? getPlayerCount(players, participants)
-      : players.length
+  const tournamentParticipantCount = getTournamentParticipantCount(
+    participants,
+    participantType,
+  )
   const registrationSummary = tournament
     ? await getTournamentRegistrationSummary({
         tournamentId: tournament.id,
@@ -447,7 +447,7 @@ async function createHomepageData({
     participantType,
     participantLabel,
     tournamentView: tournament
-      ? getTournamentBlocksView(tournament, participantType, publicPlayerCount)
+      ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount)
       : null,
     participantCards,
     publicBracket: getPublicBracketData(bracketMatches, tournament),
@@ -696,7 +696,7 @@ function isMissingColumnError(error: { code?: string }) {
 function getTournamentBlocksView(
   tournament: HomepageTournament,
   participantType: "team" | "player",
-  playerCount: number,
+  participantCount: number,
 ): TournamentBlocksView {
   return {
     heroName: readString(tournament.name, tournament.title),
@@ -704,10 +704,7 @@ function getTournamentBlocksView(
     date: formatEventDate(tournament.event_date),
     game: readString(tournament.game),
     format: readString(tournament.format),
-    teamCount:
-      participantType === "player"
-        ? String(playerCount || readNumberString(tournament.team_count) || "0")
-        : readNumberString(tournament.team_count),
+    teamCount: String(participantCount),
     status: formatStatus(readString(tournament.status)),
     prizePool: formatPrizePool(tournament.prize_pool),
     matchDays: readNumberString(tournament.match_days),
@@ -796,11 +793,13 @@ function getParticipantType(
     : "team"
 }
 
-function getPlayerCount(
-  players: HomepagePlayer[],
+function getTournamentParticipantCount(
   participants: HomepageParticipant[],
+  participantType: "team" | "player",
 ) {
-  return Math.max(players.length, getPlayerParticipants(participants).length)
+  return participants.filter(
+    (participant) => participant.participant_type === participantType,
+  ).length
 }
 
 function getPlayerParticipants(participants: HomepageParticipant[]) {
