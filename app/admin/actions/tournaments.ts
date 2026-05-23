@@ -92,13 +92,119 @@ export async function deleteTournament(formData: FormData) {
     redirectAdminError("crudError", "admin-client-unavailable", "tournaments")
   }
 
+  const tournamentId = parsedId.data.id
+
+  // 1. Fetch match IDs so we can clean up disputes associated with them first
+  const { data: matches, error: matchesFetchError } = await supabaseAdmin
+    .from("matches")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+
+  if (matchesFetchError) {
+    logMutationError("fetch tournament matches for deletion", matchesFetchError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  const matchIds = matches?.map((m) => m.id) || []
+
+  // 2. Delete match disputes related to matches
+  if (matchIds.length > 0) {
+    const { error: disputesDeleteError1 } = await supabaseAdmin
+      .from("match_disputes")
+      .delete()
+      .in("match_id", matchIds)
+
+    if (disputesDeleteError1) {
+      logMutationError("delete match disputes by match IDs", disputesDeleteError1)
+      redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+    }
+  }
+
+  // Also delete match disputes associated with the tournament itself
+  const { error: disputesDeleteError2 } = await supabaseAdmin
+    .from("match_disputes")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (disputesDeleteError2) {
+    logMutationError("delete match disputes by tournament ID", disputesDeleteError2)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 3. Delete results related to tournament
+  const { error: resultsDeleteError } = await supabaseAdmin
+    .from("results")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (resultsDeleteError) {
+    logMutationError("delete results", resultsDeleteError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 4. Nullify matches.next_match_id to prevent self-reference key violation
+  const { error: matchesUpdateError } = await supabaseAdmin
+    .from("matches")
+    .update({ next_match_id: null })
+    .eq("tournament_id", tournamentId)
+
+  if (matchesUpdateError) {
+    logMutationError("nullify matches next_match_id", matchesUpdateError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 5. Delete bracket matches / matches related to tournament
+  const { error: matchesDeleteError } = await supabaseAdmin
+    .from("matches")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (matchesDeleteError) {
+    logMutationError("delete matches", matchesDeleteError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 6. Delete team registration roster entries
+  const { error: rosterDeleteError } = await supabaseAdmin
+    .from("tournament_registration_roster_entries")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (rosterDeleteError) {
+    logMutationError("delete roster entries", rosterDeleteError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 7. Delete tournament registrations
+  const { error: registrationsDeleteError } = await supabaseAdmin
+    .from("tournament_registrations")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (registrationsDeleteError) {
+    logMutationError("delete registrations", registrationsDeleteError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 8. Delete participants related to tournament
+  const { error: participantsDeleteError } = await supabaseAdmin
+    .from("participants")
+    .delete()
+    .eq("tournament_id", tournamentId)
+
+  if (participantsDeleteError) {
+    logMutationError("delete participants", participantsDeleteError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  // 9. Finally, delete the tournament itself
   const { error } = await runSupabaseMutation("delete tournament", () =>
-    supabaseAdmin.from("tournaments").delete().eq("id", parsedId.data.id),
+    supabaseAdmin.from("tournaments").delete().eq("id", tournamentId),
   )
 
   if (error) {
-    logMutationError("delete tournament", error)
-    redirectAdminError("crudError", "mutation-failed", "tournaments")
+    logMutationError("delete tournament row", error)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
   }
 
   revalidatePath("/admin")

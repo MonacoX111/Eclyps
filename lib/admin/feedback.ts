@@ -18,6 +18,7 @@ export function getTournamentFeedback(searchParams?: Pick<AdminSearchParams, "cr
       "admin-client-unavailable":
         "Tournament mutations require a server-only Supabase admin client.",
       "mutation-failed": "Tournament change could not be saved. Please try again.",
+      "dependent-cleanup-failed": "Tournament could not be deleted because dependent cleanup failed.",
     }[searchParams.crudError] ?? "Tournament change could not be saved."
 
   return { tone: "error", message }
