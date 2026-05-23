@@ -164,13 +164,6 @@ function TeamRecord({
                   <span className="text-white/45">• {tournamentName}</span>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                {team.created_at && (
-                  <span className="text-[9px] text-white/35">
-                    Created {new Date(team.created_at).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
             </div>
           </div>
           <span className={pillClassName}>Seed {team.seed ?? "???"}</span>
