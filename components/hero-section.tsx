@@ -72,7 +72,7 @@ export function HeroSection({
 
       {/* Title */}
       <m.h1
-        className="glow-text relative z-10 mb-4 text-center text-4xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl"
+        className="glow-text relative z-10 mb-8 text-center text-4xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.4 }}
@@ -82,7 +82,7 @@ export function HeroSection({
 
       {/* Event label */}
       <m.p
-        className="relative z-10 mb-2 text-center text-sm font-semibold tracking-widest uppercase text-primary/80 md:text-base"
+        className="relative z-10 mb-8 text-center text-sm font-semibold tracking-widest uppercase text-primary/80 md:text-base"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.55 }}
@@ -92,7 +92,7 @@ export function HeroSection({
 
       {/* Subtitle */}
       <m.p
-        className="relative z-10 mb-2 max-w-full break-words text-center text-lg font-medium tracking-widest uppercase text-primary md:text-xl"
+        className="relative z-10 mb-8 max-w-full break-words text-center text-lg font-medium tracking-widest uppercase text-primary md:text-xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.6 }}
