@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { m } from "framer-motion"
 import {
   BarChart3,
@@ -70,9 +71,9 @@ const roleGuides: RoleGuide[] = [
       "Bracket appears after admins publish it",
     ],
     ctas: [
-      { label: "View Tournament", href: "#tournament" },
-      { label: "Open Bracket", href: "#bracket" },
-      { label: "Match Schedule", href: "#schedule" },
+      { label: "View Tournament", href: "/tournament" },
+      { label: "Open Bracket", href: "/bracket" },
+      { label: "Match Schedule", href: "/schedule" },
     ],
   },
   {
@@ -111,9 +112,9 @@ const roleGuides: RoleGuide[] = [
       "Checked in means your attendance is confirmed",
     ],
     ctas: [
-      { label: "Open Registration", href: "#registration" },
-      { label: "View Players", href: "#players" },
-      { label: "View Results", href: "#results" },
+      { label: "Open Registration", href: "/registration" },
+      { label: "View Players", href: "/players" },
+      { label: "View Results", href: "/results" },
     ],
   },
   {
@@ -152,14 +153,16 @@ const roleGuides: RoleGuide[] = [
       "Only the owner or captain can check in the team",
     ],
     ctas: [
-      { label: "Open Registration", href: "#registration" },
-      { label: "View Teams", href: "#teams" },
-      { label: "Match Schedule", href: "#schedule" },
+      { label: "Open Registration", href: "/registration" },
+      { label: "View Teams", href: "/teams" },
+      { label: "Match Schedule", href: "/schedule" },
     ],
   },
 ]
 
 export function RoleOnboarding() {
+  const [activeRoleId, setActiveRoleId] = useState<RoleId | null>(null)
+
   return (
     <section className="relative z-10 px-4 py-20" id="guide">
       <div className="mx-auto max-w-6xl">
@@ -171,11 +174,14 @@ export function RoleOnboarding() {
         </SectionHeading>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          {roleGuides.map((guide, roleIndex) => (
+          {roleGuides.map((guide) => (
             <RoleGuideCard
               key={guide.id}
               guide={guide}
-              defaultOpen={roleIndex === 0}
+              isOpen={activeRoleId === guide.id}
+              onToggle={() => {
+                setActiveRoleId(activeRoleId === guide.id ? null : guide.id)
+              }}
             />
           ))}
         </div>
@@ -186,19 +192,31 @@ export function RoleOnboarding() {
 
 function RoleGuideCard({
   guide,
-  defaultOpen,
+  isOpen,
+  onToggle,
 }: {
   guide: RoleGuide
-  defaultOpen?: boolean
+  isOpen: boolean
+  onToggle: () => void
 }) {
   const Icon = guide.icon
 
   return (
     <details
-      className="group relative overflow-hidden rounded-2xl border border-primary/20 bg-[oklch(0.09_0.012_180/0.72)] shadow-[0_0_52px_oklch(0.78_0.18_165_/_0.07)] transition-all duration-300 open:border-primary/45 open:bg-primary/[0.07]"
-      open={defaultOpen}
+      className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 bg-[oklch(0.09_0.012_180/0.72)] ${
+        isOpen
+          ? "border-primary/45 bg-primary/[0.07] shadow-[0_0_52px_oklch(0.78_0.18_165_/_0.12)]"
+          : "border-primary/20 shadow-[0_0_52px_oklch(0.78_0.18_165_/_0.07)] hover:-translate-y-1 hover:border-primary/35 hover:bg-primary/[0.02] hover:shadow-[0_0_52px_oklch(0.78_0.18_165_/_0.15)]"
+      }`}
+      open={isOpen}
     >
-      <summary className="relative cursor-pointer list-none p-5 marker:hidden">
+      <summary
+        className="relative cursor-pointer list-none p-5 marker:hidden"
+        onClick={(e) => {
+          e.preventDefault()
+          onToggle()
+        }}
+      >
         <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         <span className="flex items-center justify-between gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-primary/25 bg-primary/10 text-primary">
@@ -215,7 +233,7 @@ function RoleGuideCard({
           {guide.title}
         </span>
         <span className="mt-4 inline-flex rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition group-open:border-primary/45">
-          Open guide
+          {isOpen ? "Close guide" : "Open guide"}
         </span>
       </summary>
 

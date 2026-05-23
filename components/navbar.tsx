@@ -16,19 +16,19 @@ type NavbarProps = {
 
 export function Navbar({
   participantLabel = "Teams",
-  homeHref = "#",
+  homeHref = "/",
   navHrefPrefix = "",
   userProfile = null,
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
-  const participantHref = participantLabel === "Players" ? "#players" : "#teams"
+  const participantHref = participantLabel === "Players" ? "/players" : "/teams"
   const navLinks = [
-    { href: `${navHrefPrefix}#tournament`, label: "Tournament" },
-    { href: `${navHrefPrefix}#registration`, label: "Registration" },
-    { href: `${navHrefPrefix}${participantHref}`, label: participantLabel },
-    { href: `${navHrefPrefix}#bracket`, label: "Bracket" },
-    { href: `${navHrefPrefix}#schedule`, label: "Schedule" },
-    { href: `${navHrefPrefix}#results`, label: "Results" },
+    { href: "/tournament", label: "Tournament" },
+    { href: "/registration", label: "Registration" },
+    { href: participantHref, label: participantLabel },
+    { href: "/bracket", label: "Bracket" },
+    { href: "/schedule", label: "Schedule" },
+    { href: "/results", label: "Results" },
   ]
 
   return (

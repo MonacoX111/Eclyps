@@ -1,44 +1,18 @@
 import { Suspense } from "react"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
-import { TournamentInfo } from "@/components/tournament-info"
-import { TeamsGrid } from "@/components/teams-grid"
-import { MatchSchedule } from "@/components/match-schedule"
-import { PublicBracket } from "@/components/public-bracket"
-import {
-  RegistrationSection,
-  type RegistrationFeedback,
-} from "@/components/registration-section"
-import { Results } from "@/components/results"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { RoleOnboarding } from "@/components/role-onboarding"
-import { getPlatformUserState } from "@/lib/auth/player-state"
+import { NavigationHub } from "@/components/navigation-hub"
+import { getHomepageData } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
-import { getUserMatchDisputes } from "@/lib/data/disputes"
-import { getHomepageData, type TournamentBlocksView } from "@/lib/data/homepage"
 
 export const dynamic = "force-dynamic"
 
-type PageProps = {
-  searchParams?: Promise<{
-    registrationError?: string
-    registrationSuccess?: string
-    checkInError?: string
-    checkInSuccess?: string
-    disputeError?: string
-    disputeSuccess?: string
-  }>
-}
-
-export default async function Page({ searchParams }: PageProps) {
-  const resolvedSearchParams = await searchParams
-  const registrationFeedback = getRegistrationFeedback(resolvedSearchParams)
-  const checkInFeedback = getCheckInFeedback(resolvedSearchParams)
-  const disputeFeedback = getDisputeFeedback(resolvedSearchParams)
-
+export default async function Page() {
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <AdminShortcut />
@@ -47,24 +21,12 @@ export default async function Page({ searchParams }: PageProps) {
         <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
-        <Suspense fallback={<TournamentBlocksLoading />}>
-          <ActiveTournamentBlocks />
+        
+        <Suspense fallback={<HeroSectionLoading />}>
+          <ActiveHero />
         </Suspense>
 
-        <Suspense fallback={<CardsLoading />}>
-          <ActiveTournamentTeams />
-        </Suspense>
-
-        <Suspense fallback={<RegistrationLoading />}>
-          <ActiveTournamentRegistration
-            feedback={registrationFeedback}
-            checkInFeedback={checkInFeedback}
-          />
-        </Suspense>
-
-        <Suspense fallback={<BracketLoading />}>
-          <ActiveTournamentBracket />
-        </Suspense>
+        <RoleOnboarding />
 
         <div
           className="mx-auto h-px max-w-xl"
@@ -74,32 +36,14 @@ export default async function Page({ searchParams }: PageProps) {
           }}
         />
 
-        <Suspense fallback={<ScheduleLoading />}>
-          <ActiveTournamentMatches feedback={disputeFeedback} />
+        <Suspense fallback={null}>
+          <ActiveNavigationHub />
         </Suspense>
 
-        <div
-          className="mx-auto h-px max-w-xl"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, oklch(0.78 0.18 165 / 0.4), transparent)",
-          }}
-        />
-
-        <Suspense fallback={<ResultsLoading />}>
-          <ActiveTournamentResults />
-        </Suspense>
       </MotionProvider>
       <Footer />
     </main>
   )
-}
-
-async function ActiveTournamentBlocks() {
-  const homepageData = await getHomepageData()
-  if (!homepageData.tournamentView) return <TournamentUnavailable />
-
-  return <TournamentBlocks {...homepageData.tournamentView} />
 }
 
 async function ActiveNavbar() {
@@ -116,391 +60,28 @@ async function ActiveNavbar() {
   )
 }
 
-async function ActiveTournamentTeams() {
+async function ActiveHero() {
   const homepageData = await getHomepageData()
+  const { heroName, date, status } = homepageData.tournamentView ?? {}
 
   return (
-    <TeamsGrid
-      teams={homepageData.participantCards}
-      participantLabel={homepageData.participantLabel}
+    <HeroSection
+      tournamentName={heroName}
+      tournamentDate={date}
+      registrationStatus={status}
     />
   )
 }
 
-async function ActiveTournamentRegistration({
-  feedback,
-  checkInFeedback,
-}: {
-  feedback: RegistrationFeedback | null
-  checkInFeedback: RegistrationFeedback | null
-}) {
-  const [homepageData, userProfile] = await Promise.all([
-    getHomepageData(),
-    getCurrentUserProfile(),
-  ])
-  const platformState = await getPlatformUserState({
-    userProfile,
-    tournamentId: homepageData.registrationSummary?.tournamentId ?? null,
-  })
-
-  return (
-    <RegistrationSection
-      summary={homepageData.registrationSummary}
-      participantLabel={homepageData.participantLabel}
-      tournamentName={
-        homepageData.tournament?.name ??
-        homepageData.tournament?.display_name ??
-        homepageData.tournament?.title
-      }
-      feedback={feedback}
-      checkInFeedback={checkInFeedback}
-      platformState={platformState}
-    />
-  )
-}
-
-async function ActiveTournamentMatches({
-  feedback,
-}: {
-  feedback: RegistrationFeedback | null
-}) {
-  const [homepageData, userProfile] = await Promise.all([
-    getHomepageData(),
-    getCurrentUserProfile(),
-  ])
-  const platformState = await getPlatformUserState({
-    userProfile,
-    tournamentId: homepageData.tournament?.id ?? null,
-  })
-  const disputes = await getUserMatchDisputes({
-    userProfileId: userProfile?.id ?? null,
-    tournamentId: homepageData.tournament?.id ?? null,
-  })
-
-  return (
-    <MatchSchedule
-      matches={homepageData.matchScheduleItems}
-      userParticipantId={platformState.tournamentRegistration?.participant_id ?? null}
-      disputes={disputes}
-      feedback={feedback}
-    />
-  )
-}
-
-async function ActiveTournamentBracket() {
+async function ActiveNavigationHub() {
   const homepageData = await getHomepageData()
-
-  return <PublicBracket bracket={homepageData.publicBracket} />
+  return <NavigationHub participantLabel={homepageData.participantLabel} />
 }
 
-async function ActiveTournamentResults() {
-  const homepageData = await getHomepageData()
-
-  return <Results results={homepageData.resultCards} />
-}
-
-function TournamentBlocks({
-  heroName,
-  sectionName,
-  date,
-  game,
-  format,
-  teamCount,
-  status,
-  prizePool,
-  matchDays,
-  arenaTitle,
-  arenaDescription,
-  arenaTags,
-  participantLabel,
-}: Partial<TournamentBlocksView> = {}) {
+function HeroSectionLoading() {
   return (
-    <>
-      <HeroSection
-        tournamentName={heroName}
-        tournamentDate={date}
-        registrationStatus={status}
-      />
-
-      <RoleOnboarding />
-
-      {/* Divider glow line */}
-      <div
-        className="mx-auto h-px max-w-xl"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, oklch(0.78 0.18 165 / 0.4), transparent)",
-        }}
-      />
-
-      <TournamentInfo
-        tournamentName={sectionName}
-        prizePool={prizePool}
-        teamCount={teamCount}
-        matchDays={matchDays}
-        format={format}
-        game={game}
-        arenaTitle={arenaTitle}
-        arenaDescription={arenaDescription}
-        arenaTags={arenaTags}
-        participantLabel={participantLabel}
-      />
-
-      <div
-        className="mx-auto h-px max-w-xl"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, oklch(0.78 0.18 165 / 0.4), transparent)",
-        }}
-      />
-    </>
-  )
-}
-
-function TournamentBlocksLoading() {
-  return (
-    <>
-      <section className="relative flex min-h-screen items-center justify-center px-4 py-20">
-        <div className="h-56 w-56 animate-pulse rounded-full bg-white/[0.04] md:h-72 md:w-72 lg:h-80 lg:w-80" />
-      </section>
-      <div className="mx-auto h-px max-w-xl bg-white/10" />
-      <section className="relative z-10 px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="mx-auto h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-          <div className="mt-16 flex flex-wrap justify-center gap-4">
-            {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="glass-card h-32 w-[calc((100%-1rem)/2)] animate-pulse rounded-xl md:w-[calc((100%-3rem)/4)]"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-      <div className="mx-auto h-px max-w-xl bg-white/10" />
-    </>
-  )
-}
-
-function TournamentUnavailable() {
-  return (
-    <>
-      <section className="relative flex min-h-screen items-center justify-center px-4 py-20 text-center">
-        <div>
-          <p className="mb-3 text-sm font-semibold tracking-widest uppercase text-primary">
-            Upcoming Event
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Tournament details are not available right now.
-          </p>
-        </div>
-      </section>
-      <RoleOnboarding />
-      <div className="mx-auto h-px max-w-xl bg-white/10" />
-    </>
-  )
-}
-
-function CardsLoading() {
-  return (
-    <section className="relative z-10 px-4 py-24">
-      <div className="mx-auto max-w-6xl">
-        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-        <div className="flex flex-wrap justify-center gap-4">
-          {[1, 2, 3, 4].map((item) => (
-            <div
-              key={item}
-              className="glass-card h-48 w-full animate-pulse rounded-xl sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]"
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function RegistrationLoading() {
-  return (
-    <section className="relative z-10 px-4 py-24">
-      <div className="mx-auto max-w-4xl">
-        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-        <div className="glass-card h-80 animate-pulse rounded-2xl" />
-      </div>
-    </section>
-  )
-}
-
-function getRegistrationFeedback(searchParams?: {
-  registrationError?: string
-  registrationSuccess?: string
-}): RegistrationFeedback | null {
-  if (searchParams?.registrationSuccess === "submitted") {
-    return {
-      tone: "success",
-      message: "Registration submitted. An admin will review it before it appears in the tournament.",
-    }
-  }
-
-  if (searchParams?.registrationSuccess === "player-application-submitted") {
-    return {
-      tone: "success",
-      message: "Player application submitted. An admin will review it before tournament registration opens for you.",
-    }
-  }
-
-  if (searchParams?.registrationSuccess === "player-application-pending") {
-    return {
-      tone: "success",
-      message: "Your player application is already pending review.",
-    }
-  }
-
-  if (searchParams?.registrationSuccess === "player-approved") {
-    return {
-      tone: "success",
-      message: "You are already approved as an Eclyps player.",
-    }
-  }
-
-  if (!searchParams?.registrationError) return null
-
-  const message =
-    {
-      "invalid-tournament-id": "Tournament is not available for registration.",
-      "invalid-participant-type": "Registration type must be team or player.",
-      "wrong-participant-type": "This tournament does not accept that registration type.",
-      "invalid-display-name": "Name must not be empty.",
-      "invalid-contact-email": "Contact email must be valid or left empty.",
-      "invalid-roster": "Team roster could not be submitted. Please check the lineup.",
-      "invalid-roster-minimum": "Team registrations require 5 main players.",
-      "invalid-roster-maximum": "Team rosters can include at most 7 players.",
-      "duplicate-roster-player": "Roster nicknames must be unique.",
-      "invalid-roster-captain": "Captain nickname must match one of the roster players.",
-      "registration-closed": "Registration is closed for this tournament.",
-      "registration-full": "This tournament is full.",
-      "duplicate-registration": "This team or player is already registered or awaiting review.",
-      "discord-login-required": "Please log in with Discord before registering.",
-      "discord-profile-unavailable": "Discord profile could not be synced. Please log out and try again.",
-      "discord-login-failed": "Discord login could not be completed. Please try again.",
-      "player-approval-required": "Apply as a player and wait for admin approval before registering for tournaments.",
-      "player-application-pending": "Your player application is waiting for admin review.",
-      "invalid-player-application": "Player application nickname must not be empty.",
-      "already-registered": "You already have a tournament registration in review or approved.",
-      "admin-client-unavailable": "Registration service is not configured.",
-      "mutation-failed": "Registration could not be submitted. Please try again.",
-    }[searchParams.registrationError] ?? "Registration could not be submitted."
-
-  return { tone: "error", message }
-}
-
-function getCheckInFeedback(searchParams?: {
-  checkInError?: string
-  checkInSuccess?: string
-}): RegistrationFeedback | null {
-  if (searchParams?.checkInSuccess === "checked-in") {
-    return {
-      tone: "success",
-      message: "Check-in confirmed. Your tournament slot is locked.",
-    }
-  }
-
-  if (searchParams?.checkInSuccess === "already-checked-in") {
-    return {
-      tone: "success",
-      message: "You are already checked in for this tournament.",
-    }
-  }
-
-  if (!searchParams?.checkInError) return null
-
-  const message =
-    {
-      "invalid-tournament": "Tournament check-in is not available.",
-      "discord-login-required": "Please log in with Discord before checking in.",
-      "service-unavailable": "Check-in service is not configured.",
-      "registration-required": "Register for this tournament before checking in.",
-      "registration-pending": "Your tournament registration is waiting for admin approval.",
-      "check-in-not-open": "Check-in is not open yet.",
-      "check-in-closed": "Check-in is closed for this tournament.",
-      "ownership-required": "Only the approved player or team owner can check in.",
-    }[searchParams.checkInError] ?? "Check-in could not be completed."
-
-  return { tone: "error", message }
-}
-
-function getDisputeFeedback(searchParams?: {
-  disputeError?: string
-  disputeSuccess?: string
-}): RegistrationFeedback | null {
-  if (searchParams?.disputeSuccess === "submitted") {
-    return {
-      tone: "success",
-      message: "Dispute submitted. Admins will review the match issue.",
-    }
-  }
-
-  if (!searchParams?.disputeError) return null
-
-  const message =
-    {
-      "invalid-match": "This match is not available for disputes.",
-      "match-not-ready": "This match does not have confirmed participants yet.",
-      "discord-login-required": "Please log in with Discord before reporting a dispute.",
-      "not-match-participant": "Only match participants can report disputes.",
-      "ownership-required": "Only the approved player or team captain can report this dispute.",
-      "duplicate-open": "You already have an open dispute for this match.",
-      "invalid-dispute-type": "Choose a valid dispute type.",
-      "invalid-title": "Dispute title must not be empty.",
-      "invalid-description": "Dispute description must not be empty.",
-      "invalid-evidence-url": "Evidence link must be a valid URL.",
-      "service-unavailable": "Dispute service is not configured.",
-    }[searchParams.disputeError] ?? "Dispute could not be submitted."
-
-  return { tone: "error", message }
-}
-
-
-function ScheduleLoading() {
-  return (
-    <section className="relative z-10 px-4 py-24">
-      <div className="mx-auto max-w-4xl">
-        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="glass-card h-20 animate-pulse rounded-xl" />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function BracketLoading() {
-  return (
-    <section className="relative z-10 px-4 py-24">
-      <div className="mx-auto max-w-7xl">
-        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-        <div className="grid gap-4 md:grid-flow-col md:auto-cols-fr">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="space-y-3">
-              <div className="mx-auto h-5 w-32 animate-pulse rounded bg-white/[0.04]" />
-              <div className="glass-card h-36 animate-pulse rounded-xl" />
-              <div className="glass-card h-36 animate-pulse rounded-xl" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function ResultsLoading() {
-  return (
-    <section className="relative z-10 px-4 py-24">
-      <div className="mx-auto max-w-5xl">
-        <div className="mx-auto mb-16 h-10 max-w-sm animate-pulse rounded bg-white/[0.04]" />
-        <div className="glass-card h-56 animate-pulse rounded-2xl" />
-      </div>
+    <section className="relative flex min-h-screen items-center justify-center px-4 py-20">
+      <div className="h-56 w-56 animate-pulse rounded-full bg-white/[0.04] md:h-72 md:w-72 lg:h-80 lg:w-80" />
     </section>
   )
 }

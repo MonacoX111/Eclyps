@@ -715,7 +715,7 @@ function getTournamentBlocksView(
   }
 }
 
-function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
+export function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
   return teams.map((team, index) => ({
     id: team.id,
     name: team.name,
@@ -727,7 +727,7 @@ function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
   }))
 }
 
-function getPlayerCards(
+export function getPlayerCards(
   players: HomepagePlayer[],
   participants: HomepageParticipant[],
 ): TeamCard[] {
