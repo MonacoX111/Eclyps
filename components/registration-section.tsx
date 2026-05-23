@@ -251,15 +251,7 @@ export function RegistrationSection({
                     />
                   </RegistrationField>
                 ) : null}
-                <RegistrationField label={t.registration.fields.contactEmail}>
-                  <input
-                    name="contact_email"
-                    type="email"
-                    disabled={!canSubmit}
-                    className={inputClassName}
-                    placeholder={t.registration.fields.emailPlaceholder}
-                  />
-                </RegistrationField>
+
                 <RegistrationField label={t.registration.fields.contactHandle}>
                   <input
                     name="contact_handle"
