@@ -3,6 +3,7 @@ import {
   PublicProfilePage,
 } from "@/components/public-profile-page"
 import { getPublicPlayerProfile } from "@/lib/data/profiles"
+import { getLanguage } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +18,9 @@ export default async function PlayerProfilePage({
   const data = await getPublicPlayerProfile(id)
 
   if (!data) {
-    return <PublicProfileError message="This player profile is not available." />
+    const lang = await getLanguage()
+    const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
+    return <PublicProfileError message={message} />
   }
 
   return <PublicProfilePage data={data} />

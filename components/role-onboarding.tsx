@@ -18,6 +18,7 @@ import {
   Users,
 } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 
 type RoleId = "spectator" | "player" | "captain"
 
@@ -35,141 +36,126 @@ type RoleGuide = {
   summary: string
   icon: typeof Eye
   steps: GuideStep[]
-  statusNotes: string[]
+  statusNotes: readonly string[]
   ctas: Array<{ label: string; href: string }>
 }
 
-const roleGuides: RoleGuide[] = [
-  {
-    id: "spectator",
-    label: "Spectator",
-    eyebrow: "Watch",
-    title: "Follow the event without logging in",
-    summary:
-      "Browse the tournament, scan the bracket, follow match times, and open player or team profiles. Discord is only needed when you want to participate.",
-    icon: Eye,
-    steps: [
-      {
-        title: "Start with the tournament",
-        body: "Check the active event, format, prize pool, player or team count, and stage details.",
-        icon: Trophy,
-      },
-      {
-        title: "Track the bracket and schedule",
-        body: "Use the bracket for tournament progress and the schedule for match times, live states, and finished scores.",
-        icon: GitBranch,
-      },
-      {
-        title: "Read results and profiles",
-        body: "Open profiles to review regions, recent matches, stats, rating, rank, and result history.",
-        icon: BarChart3,
-      },
-    ],
-    statusNotes: [
-      "No Discord login required",
-      "Time TBA means match time is not announced yet",
-      "Bracket appears after admins publish it",
-    ],
-    ctas: [
-      { label: "View Tournament", href: "/tournament" },
-      { label: "Open Bracket", href: "/bracket" },
-      { label: "Match Schedule", href: "/schedule" },
-    ],
-  },
-  {
-    id: "player",
-    label: "Player",
-    eyebrow: "Compete",
-    title: "From Discord login to ELO history",
-    summary:
-      "Connect Discord, become an approved Eclyps player, register for the active tournament, check in, then track matches and rating on your profile.",
-    icon: Gamepad2,
-    steps: [
-      {
-        title: "Login with Discord",
-        body: "Your Discord account anchors ownership for applications, registrations, check-in, and disputes.",
-        icon: LogIn,
-      },
-      {
-        title: "Apply as Player",
-        body: "Submit your nickname and region, then wait for admin approval before tournament registration unlocks.",
-        icon: UserPlus,
-      },
-      {
-        title: "Register and check in",
-        body: "After player approval, register for the tournament, wait for tournament approval, then check in during the open window.",
-        icon: CheckCircle2,
-      },
-      {
-        title: "Play and track progress",
-        body: "Finished matches feed your public profile, recent history, winrate, streak, rating, and rank.",
-        icon: Medal,
-      },
-    ],
-    statusNotes: [
-      "Pending means an admin still needs to review",
-      "Approved means your player or tournament slot is accepted",
-      "Checked in means your attendance is confirmed",
-    ],
-    ctas: [
-      { label: "Open Registration", href: "/registration" },
-      { label: "View Players", href: "/players" },
-      { label: "View Results", href: "/results" },
-    ],
-  },
-  {
-    id: "captain",
-    label: "Captain",
-    eyebrow: "Lead",
-    title: "Register a team and lock the roster",
-    summary:
-      "Captains need an approved player profile first. Then they can submit a team registration, roster, captain nickname, substitutes, and handle team check-in.",
-    icon: Crown,
-    steps: [
-      {
-        title: "Become an approved player",
-        body: "Captain ownership starts from a verified Discord account with an approved Eclyps player profile.",
-        icon: ShieldCheck,
-      },
-      {
-        title: "Submit the team",
-        body: "Enter the team name, contact details, 5 main players, and up to 2 optional substitutes.",
-        icon: Users,
-      },
-      {
-        title: "Match the captain nickname",
-        body: "The captain nickname must exactly match one of the submitted roster nicknames.",
-        icon: Crown,
-      },
-      {
-        title: "Approve, check in, compete",
-        body: "Admins review the team. Once approved, the captain or owner checks in and the roster is ready for matches.",
-        icon: Swords,
-      },
-    ],
-    statusNotes: [
-      "Roster requires 5 main players",
-      "Substitutes are optional and limited to 2",
-      "Only the owner or captain can check in the team",
-    ],
-    ctas: [
-      { label: "Open Registration", href: "/registration" },
-      { label: "View Teams", href: "/teams" },
-      { label: "Match Schedule", href: "/schedule" },
-    ],
-  },
-]
-
 export function RoleOnboarding() {
   const [activeRoleId, setActiveRoleId] = useState<RoleId | null>(null)
+  const { t } = useLanguage()
+
+  const roleGuides: RoleGuide[] = [
+    {
+      id: "spectator",
+      label: t.roleOnboarding.guides.spectator.label,
+      eyebrow: t.roleOnboarding.guides.spectator.eyebrow,
+      title: t.roleOnboarding.guides.spectator.title,
+      summary: t.roleOnboarding.guides.spectator.summary,
+      icon: Eye,
+      steps: [
+        {
+          title: t.roleOnboarding.guides.spectator.steps[0].title,
+          body: t.roleOnboarding.guides.spectator.steps[0].body,
+          icon: Trophy,
+        },
+        {
+          title: t.roleOnboarding.guides.spectator.steps[1].title,
+          body: t.roleOnboarding.guides.spectator.steps[1].body,
+          icon: GitBranch,
+        },
+        {
+          title: t.roleOnboarding.guides.spectator.steps[2].title,
+          body: t.roleOnboarding.guides.spectator.steps[2].body,
+          icon: BarChart3,
+        },
+      ],
+      statusNotes: t.roleOnboarding.guides.spectator.statusNotes,
+      ctas: [
+        { label: t.roleOnboarding.guides.spectator.ctas.tournament, href: "/tournament" },
+        { label: t.roleOnboarding.guides.spectator.ctas.bracket, href: "/bracket" },
+        { label: t.roleOnboarding.guides.spectator.ctas.schedule, href: "/schedule" },
+      ],
+    },
+    {
+      id: "player",
+      label: t.roleOnboarding.guides.player.label,
+      eyebrow: t.roleOnboarding.guides.player.eyebrow,
+      title: t.roleOnboarding.guides.player.title,
+      summary: t.roleOnboarding.guides.player.summary,
+      icon: Gamepad2,
+      steps: [
+        {
+          title: t.roleOnboarding.guides.player.steps[0].title,
+          body: t.roleOnboarding.guides.player.steps[0].body,
+          icon: LogIn,
+        },
+        {
+          title: t.roleOnboarding.guides.player.steps[1].title,
+          body: t.roleOnboarding.guides.player.steps[1].body,
+          icon: UserPlus,
+        },
+        {
+          title: t.roleOnboarding.guides.player.steps[2].title,
+          body: t.roleOnboarding.guides.player.steps[2].body,
+          icon: CheckCircle2,
+        },
+        {
+          title: t.roleOnboarding.guides.player.steps[3].title,
+          body: t.roleOnboarding.guides.player.steps[3].body,
+          icon: Medal,
+        },
+      ],
+      statusNotes: t.roleOnboarding.guides.player.statusNotes,
+      ctas: [
+        { label: t.roleOnboarding.guides.player.ctas.registration, href: "/registration" },
+        { label: t.roleOnboarding.guides.player.ctas.players, href: "/players" },
+        { label: t.roleOnboarding.guides.player.ctas.results, href: "/results" },
+      ],
+    },
+    {
+      id: "captain",
+      label: t.roleOnboarding.guides.captain.label,
+      eyebrow: t.roleOnboarding.guides.captain.eyebrow,
+      title: t.roleOnboarding.guides.captain.title,
+      summary: t.roleOnboarding.guides.captain.summary,
+      icon: Crown,
+      steps: [
+        {
+          title: t.roleOnboarding.guides.captain.steps[0].title,
+          body: t.roleOnboarding.guides.captain.steps[0].body,
+          icon: ShieldCheck,
+        },
+        {
+          title: t.roleOnboarding.guides.captain.steps[1].title,
+          body: t.roleOnboarding.guides.captain.steps[1].body,
+          icon: Users,
+        },
+        {
+          title: t.roleOnboarding.guides.captain.steps[2].title,
+          body: t.roleOnboarding.guides.captain.steps[2].body,
+          icon: Crown,
+        },
+        {
+          title: t.roleOnboarding.guides.captain.steps[3].title,
+          body: t.roleOnboarding.guides.captain.steps[3].body,
+          icon: Swords,
+        },
+      ],
+      statusNotes: t.roleOnboarding.guides.captain.statusNotes,
+      ctas: [
+        { label: t.roleOnboarding.guides.captain.ctas.registration, href: "/registration" },
+        { label: t.roleOnboarding.guides.captain.ctas.teams, href: "/teams" },
+        { label: t.roleOnboarding.guides.captain.ctas.schedule, href: "/schedule" },
+      ],
+    },
+  ]
 
   return (
     <section className="relative z-10 px-4 py-20" id="guide">
       <div className="mx-auto max-w-6xl">
-        <SectionHeading eyebrow="Start Here" title="How Do You Want to Use Eclyps?">
+        <SectionHeading eyebrow={t.roleOnboarding.eyebrow} title={t.roleOnboarding.title}>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-white/58">
-            Pick a role and get the short match plan before you browse, register,
-            or lead a roster.
+            {t.roleOnboarding.description}
           </p>
         </SectionHeading>
 
@@ -200,6 +186,7 @@ function RoleGuideCard({
   onToggle: () => void
 }) {
   const Icon = guide.icon
+  const { t } = useLanguage()
 
   return (
     <details
@@ -233,14 +220,14 @@ function RoleGuideCard({
           {guide.title}
         </span>
         <span className="mt-4 inline-flex rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition group-open:border-primary/45">
-          {isOpen ? "Close guide" : "Open guide"}
+          {isOpen ? t.roleOnboarding.closeGuide : t.roleOnboarding.openGuide}
         </span>
       </summary>
 
       <div className="px-5 pb-5">
         <div className="border-t border-white/10 pt-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">
-            {guide.label} route
+            {guide.label} {t.roleOnboarding.routeLabel}
           </p>
           <h3 className="mt-2 break-words text-xl font-bold text-foreground">
             {guide.title}
@@ -266,7 +253,7 @@ function RoleGuideCard({
                     </span>
                     <div className="min-w-0">
                       <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-primary/65">
-                        Step {index + 1}
+                        {t.roleOnboarding.step} {index + 1}
                       </p>
                       <h4 className="mt-1 break-words text-sm font-semibold text-foreground">
                         {step.title}
@@ -283,7 +270,7 @@ function RoleGuideCard({
 
           <div className="mt-5 rounded-xl border border-primary/15 bg-primary/[0.06] p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/80">
-              Status calls
+              {t.roleOnboarding.statusCalls}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {guide.statusNotes.map((note) => (

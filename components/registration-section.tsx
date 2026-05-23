@@ -1,9 +1,12 @@
+"use client"
+
 import type React from "react"
 import Image from "next/image"
 import { checkInTournament } from "@/app/actions/check-ins"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 import type { PlatformUserState } from "@/lib/auth/player-state"
 import {
   formatKyivCheckInDateWithLabel,
@@ -36,6 +39,8 @@ export function RegistrationSection({
   checkInFeedback,
   platformState,
 }: RegistrationSectionProps) {
+  const { t, lang } = useLanguage()
+
   if (!summary) return null
 
   const userProfile = platformState?.userProfile ?? null
@@ -43,34 +48,50 @@ export function RegistrationSection({
   const playerApplication = platformState?.playerApplication ?? null
   const tournamentRegistration = platformState?.tournamentRegistration ?? null
   const isDisabled = summary.isClosed || summary.isFull
-  const typeLabel = summary.participantType === "player" ? "Player" : "Team"
-  const typeLabelPlural = summary.participantType === "player" ? "players" : "teams"
-  const visibleTournamentName = tournamentName?.trim() || "Active tournament"
-  const disabledTitle = summary.isFull ? "Registration is full." : "Registration is closed."
+  
+  const typeLabel = summary.participantType === "player" 
+    ? t.roleOnboarding.guides.player.label 
+    : t.roleOnboarding.guides.captain.label
+
+  const typeLabelPlural = summary.participantType === "player" 
+    ? t.navbar.players 
+    : t.navbar.teams
+
+  const visibleTournamentName = tournamentName?.trim() || t.registration.activeTournament
+  
+  const disabledTitle = summary.isFull 
+    ? (lang === "uk" ? "Реєстрація заповнена." : "Registration is full.")
+    : (lang === "uk" ? "Реєстрація закрита." : "Registration is closed.")
+    
   const disabledMessage = summary.isFull
-    ? `This tournament has reached the maximum number of ${typeLabelPlural}.`
-    : `Registration is closed for this ${typeLabelPlural} tournament.`
+    ? (lang === "uk" ? `Цей турнір досяг максимальної кількості ${typeLabelPlural.toLowerCase()}.` : `This tournament has reached the maximum number of ${typeLabelPlural.toLowerCase()}.`)
+    : (lang === "uk" ? `Реєстрація закрита для цього турніру ${typeLabelPlural.toLowerCase()}.` : `Registration is closed for this ${typeLabelPlural.toLowerCase()} tournament.`)
+
   const isTournamentPending = tournamentRegistration?.status === "pending"
   const isTournamentApproved = tournamentRegistration?.status === "approved"
+  
   const checkInState = getCheckInState({
     summary,
     hasUser: Boolean(userProfile),
     hasApprovedPlayer: Boolean(approvedPlayer),
     registration: tournamentRegistration,
+    t,
   })
+  
   const canSubmit =
     !isDisabled &&
     Boolean(approvedPlayer) &&
     !isTournamentPending &&
     !isTournamentApproved
+  
   const applicationStatus = playerApplication?.status ?? null
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
       <div className="mx-auto max-w-4xl">
-        <SectionHeading eyebrow="Registration" title={visibleTournamentName}>
+        <SectionHeading eyebrow={t.registration.eyebrow} title={visibleTournamentName}>
           <span className="glass-card mt-4 inline-flex max-w-full break-words rounded-full px-4 py-1.5 text-center text-sm font-medium uppercase tracking-widest text-primary">
-            Join the {participantLabel}
+            {t.registration.joinCompetitor} {participantLabel === "Players" ? t.navbar.players.toLowerCase() : t.navbar.teams.toLowerCase()} {t.registration.tournamentType}
           </span>
         </SectionHeading>
 
@@ -80,19 +101,19 @@ export function RegistrationSection({
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
                 {summary.statusLabel}
               </p>
-              <p className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/65">
-                {typeLabel} tournament
+              <p className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/65 uppercase tracking-wide">
+                {typeLabel} {t.registration.tournamentType}
               </p>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <RegistrationStat label="Approved" value={String(summary.approvedCount)} />
-                <RegistrationStat label="Pending" value={String(summary.pendingCount)} />
+                <RegistrationStat label={t.registration.stats.approved} value={String(summary.approvedCount)} />
+                <RegistrationStat label={t.registration.stats.pending} value={String(summary.pendingCount)} />
                 <RegistrationStat
-                  label="Slots left"
-                  value={summary.slotsLeft === null ? "TBA" : String(summary.slotsLeft)}
+                  label={t.registration.stats.slotsLeft}
+                  value={summary.slotsLeft === null ? t.registration.stats.tba : String(summary.slotsLeft)}
                 />
                 <RegistrationStat
-                  label="Capacity"
-                  value={summary.capacity === null ? "TBA" : String(summary.capacity)}
+                  label={t.registration.stats.capacity}
+                  value={summary.capacity === null ? t.registration.stats.tba : String(summary.capacity)}
                 />
               </dl>
             </div>
@@ -123,164 +144,164 @@ export function RegistrationSection({
           </div>
 
           <div className="grid gap-5">
-          <CheckInCard
-            state={checkInState}
-            tournamentId={summary.tournamentId}
-            userProfile={userProfile}
-          />
+            <CheckInCard
+              state={checkInState}
+              tournamentId={summary.tournamentId}
+              userProfile={userProfile}
+            />
 
-          <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
-            {userProfile && !approvedPlayer ? (
-              <PlayerApplicationState status={applicationStatus} />
-            ) : null}
-            {isDisabled ? (
-              <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
-                <p className="text-sm font-semibold text-red-100">
-                  {disabledTitle}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/70">
-                  {disabledMessage}
-                </p>
-              </div>
-            ) : null}
-            {!isDisabled && !userProfile ? (
-              <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 shadow-[0_0_32px_rgba(0,200,150,0.12)]">
-                <p className="text-sm font-semibold text-primary">
-                  Discord login required
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/70">
-                  Registrations are tied to Discord accounts for ownership and check-in.
-                </p>
-                <div className="mt-4">
-                  <LoginButton />
-                </div>
-              </div>
-            ) : null}
-            {userProfile ? (
-              <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
-                {userProfile.avatar_url ? (
-                  <Image
-                    src={userProfile.avatar_url}
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 rounded-full border border-primary/30 object-cover"
-                  />
-                ) : (
-                  <span className="grid h-9 w-9 place-items-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
-                    {userProfile.discord_username.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.18em] text-primary/70">
-                    Discord account
+            <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
+              {userProfile && !approvedPlayer ? (
+                <PlayerApplicationState status={applicationStatus} />
+              ) : null}
+              {isDisabled ? (
+                <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
+                  <p className="text-sm font-semibold text-red-100">
+                    {disabledTitle}
                   </p>
-                  <p className="truncate text-sm font-medium text-white/80">
-                    {userProfile.discord_username}
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {disabledMessage}
                   </p>
                 </div>
-              </div>
-            ) : null}
-            {!isDisabled && approvedPlayer ? (
-              <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
-                Approved player: {approvedPlayer.nickname ?? approvedPlayer.name}
-              </div>
-            ) : null}
-            {!isDisabled && isTournamentPending ? (
-              <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4 text-sm text-amber-100">
-                Your tournament registration is pending admin approval.
-              </div>
-            ) : null}
-            {!isDisabled && isTournamentApproved ? (
-              <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 text-sm text-primary">
-                You are approved for this tournament.
-              </div>
-            ) : null}
-            <input type="hidden" name="tournament_id" value={summary.tournamentId} />
-            <input type="hidden" name="participant_type" value={summary.participantType} />
-            <div
-              className={`grid gap-3 sm:col-span-2 sm:grid-cols-2 ${
-                !canSubmit
-                  ? "rounded-xl border border-white/10 bg-black/20 p-3 opacity-60"
-                  : ""
-              }`}
-            >
-              <RegistrationField label={`${typeLabel} name`}>
-                <input
-                  name="display_name"
-                  required
-                  disabled={!canSubmit}
-                  className={inputClassName}
-                  defaultValue={
-                    summary.participantType === "player" && approvedPlayer
-                      ? approvedPlayer.nickname ?? approvedPlayer.name
-                      : undefined
-                  }
-                  placeholder={summary.participantType === "player" ? "Nickname or real name" : "Team name"}
-                />
-              </RegistrationField>
-              {summary.participantType === "team" ? (
-                <RegistrationField label="Captain nickname">
+              ) : null}
+              {!isDisabled && !userProfile ? (
+                <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 shadow-[0_0_32px_rgba(0,200,150,0.12)]">
+                  <p className="text-sm font-semibold text-primary">
+                    {t.registration.discordLoginRequired}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {t.registration.registrationsTiedToDiscord}
+                  </p>
+                  <div className="mt-4">
+                    <LoginButton />
+                  </div>
+                </div>
+              ) : null}
+              {userProfile ? (
+                <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+                  {userProfile.avatar_url ? (
+                    <Image
+                      src={userProfile.avatar_url}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded-full border border-primary/30 object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-9 w-9 place-items-center rounded-full border border-primary/30 bg-primary/10 text-sm font-semibold text-primary">
+                      {userProfile.discord_username.slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-[0.18em] text-primary/70">
+                      {t.registration.discordAccount}
+                    </p>
+                    <p className="truncate text-sm font-medium text-white/80">
+                      {userProfile.discord_username}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+              {!isDisabled && approvedPlayer ? (
+                <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  {t.registration.approvedPlayerPrefix} {approvedPlayer.nickname ?? approvedPlayer.name}
+                </div>
+              ) : null}
+              {!isDisabled && isTournamentPending ? (
+                <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4 text-sm text-amber-100">
+                  {t.registration.pendingAdminApproval}
+                </div>
+              ) : null}
+              {!isDisabled && isTournamentApproved ? (
+                <div className="sm:col-span-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-4 text-sm text-primary">
+                  {t.registration.approvedForTournament}
+                </div>
+              ) : null}
+              <input type="hidden" name="tournament_id" value={summary.tournamentId} />
+              <input type="hidden" name="participant_type" value={summary.participantType} />
+              <div
+                className={`grid gap-3 sm:col-span-2 sm:grid-cols-2 ${
+                  !canSubmit
+                    ? "rounded-xl border border-white/10 bg-black/20 p-3 opacity-60"
+                    : ""
+                }`}
+              >
+                <RegistrationField label={`${typeLabel} ${t.registration.fields.name.toLowerCase()}`}>
                   <input
-                    name="captain_nickname"
+                    name="display_name"
                     required
                     disabled={!canSubmit}
                     className={inputClassName}
-                    placeholder="Captain in-game name"
+                    defaultValue={
+                      summary.participantType === "player" && approvedPlayer
+                        ? approvedPlayer.nickname ?? approvedPlayer.name
+                        : undefined
+                    }
+                    placeholder={summary.participantType === "player" ? t.registration.fields.placeholderPlayer : t.registration.fields.placeholderTeam}
                   />
                 </RegistrationField>
-              ) : null}
-              <RegistrationField label="Contact email">
-                <input
-                  name="contact_email"
-                  type="email"
+                {summary.participantType === "team" ? (
+                  <RegistrationField label={t.registration.fields.captainNickname}>
+                    <input
+                      name="captain_nickname"
+                      required
+                      disabled={!canSubmit}
+                      className={inputClassName}
+                      placeholder={t.registration.fields.captainPlaceholder}
+                    />
+                  </RegistrationField>
+                ) : null}
+                <RegistrationField label={t.registration.fields.contactEmail}>
+                  <input
+                    name="contact_email"
+                    type="email"
+                    disabled={!canSubmit}
+                    className={inputClassName}
+                    placeholder={t.registration.fields.emailPlaceholder}
+                  />
+                </RegistrationField>
+                <RegistrationField label={t.registration.fields.contactHandle}>
+                  <input
+                    name="contact_handle"
+                    disabled={!canSubmit}
+                    className={inputClassName}
+                    placeholder={t.registration.fields.handlePlaceholder}
+                  />
+                </RegistrationField>
+                <RegistrationField label={t.registration.fields.region}>
+                  <input
+                    name="region"
+                    disabled={!canSubmit}
+                    className={inputClassName}
+                    placeholder={t.registration.fields.regionPlaceholder}
+                  />
+                </RegistrationField>
+                {summary.participantType === "team" ? (
+                  <TeamRosterFields disabled={!canSubmit} />
+                ) : null}
+              </div>
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
                   disabled={!canSubmit}
-                  className={inputClassName}
-                  placeholder="captain@example.com"
-                />
-              </RegistrationField>
-              <RegistrationField label="Discord / Telegram">
-                <input
-                  name="contact_handle"
-                  disabled={!canSubmit}
-                  className={inputClassName}
-                  placeholder="@handle"
-                />
-              </RegistrationField>
-              <RegistrationField label="Region">
-                <input
-                  name="region"
-                  disabled={!canSubmit}
-                  className={inputClassName}
-                  placeholder="Ukraine, EU, North America"
-                />
-              </RegistrationField>
-              {summary.participantType === "team" ? (
-                <TeamRosterFields disabled={!canSubmit} />
-              ) : null}
-            </div>
-            <div className="sm:col-span-2">
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-black transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
-              >
-                {isDisabled
-                  ? summary.statusLabel
-                  : isTournamentPending
-                    ? "Tournament approval pending"
-                    : isTournamentApproved
-                      ? "Tournament approved"
-                      : approvedPlayer
-                    ? `Register ${typeLabel}`
-                    : userProfile
-                      ? applicationStatus === "pending"
-                        ? "Player application pending"
-                        : "Player approval required"
-                      : "Login with Discord to register"}
-              </button>
-            </div>
-          </form>
+                  className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-black transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50 cursor-pointer"
+                >
+                  {isDisabled
+                    ? summary.statusLabel
+                    : isTournamentPending
+                      ? t.registration.buttons.approvalPending
+                      : isTournamentApproved
+                        ? t.registration.buttons.approved
+                        : approvedPlayer
+                      ? `${t.registration.buttons.register} ${typeLabel}`
+                      : userProfile
+                        ? applicationStatus === "pending"
+                          ? t.registration.buttons.playerPending
+                          : t.registration.buttons.playerRequired
+                        : t.registration.buttons.loginToRegister}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -305,18 +326,20 @@ function CheckInCard({
   tournamentId: string
   userProfile: PlatformUserState["userProfile"]
 }) {
+  const { t } = useLanguage()
+
   return (
     <div className={`rounded-2xl border px-4 py-4 shadow-[0_0_42px_rgba(0,200,150,0.10)] ${getCheckInCardClassName(state.tone)}`}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
-            Tournament Check-In
+            {t.registration.checkIn.title}
           </p>
           <h3 className="mt-2 text-xl font-semibold text-white">{state.label}</h3>
           <p className="mt-2 text-sm leading-6 text-white/68">{state.message}</p>
           {state.checkedInAt ? (
             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-primary/70">
-              Confirmed at {formatKyivCheckInDateWithLabel(state.checkedInAt)}
+              {t.registration.checkIn.confirmedAt} {formatKyivCheckInDateWithLabel(state.checkedInAt)}
             </p>
           ) : null}
         </div>
@@ -325,9 +348,9 @@ function CheckInCard({
             <input type="hidden" name="tournament_id" value={tournamentId} />
             <button
               type="submit"
-              className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-black shadow-[0_0_28px_rgba(0,200,150,0.22)] transition hover:bg-primary/90 sm:w-auto"
+              className="w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-black shadow-[0_0_28px_rgba(0,200,150,0.22)] transition hover:bg-primary/90 sm:w-auto cursor-pointer"
             >
-              Check In
+              {t.registration.checkIn.checkInButton}
             </button>
           </form>
         ) : !userProfile ? (
@@ -343,16 +366,18 @@ function getCheckInState({
   hasUser,
   hasApprovedPlayer,
   registration,
+  t,
 }: {
   summary: TournamentRegistrationSummary
   hasUser: boolean
   hasApprovedPlayer: boolean
   registration: PlatformUserState["tournamentRegistration"]
+  t: any
 }): CheckInState {
   if (!hasUser) {
     return {
-      label: "Discord Login Required",
-      message: "Connect Discord so Eclyps can verify tournament ownership before check-in.",
+      label: t.registration.checkIn.states.loginRequired.label,
+      message: t.registration.checkIn.states.loginRequired.message,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -361,8 +386,8 @@ function getCheckInState({
 
   if (!hasApprovedPlayer) {
     return {
-      label: "Player Approval Required",
-      message: "Your Discord account needs an approved Eclyps player profile before tournament check-in unlocks.",
+      label: t.registration.checkIn.states.playerRequired.label,
+      message: t.registration.checkIn.states.playerRequired.message,
       tone: "warning",
       canCheckIn: false,
       checkedInAt: null,
@@ -371,8 +396,8 @@ function getCheckInState({
 
   if (!registration) {
     return {
-      label: "Tournament Registration Required",
-      message: "Register for this tournament and wait for admin approval before check-in.",
+      label: t.registration.checkIn.states.registrationRequired.label,
+      message: t.registration.checkIn.states.registrationRequired.message,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -381,8 +406,8 @@ function getCheckInState({
 
   if (registration.status === "pending") {
     return {
-      label: "Registration Pending",
-      message: "Your tournament registration is waiting for admin approval.",
+      label: t.registration.checkIn.states.pending.label,
+      message: t.registration.checkIn.states.pending.message,
       tone: "warning",
       canCheckIn: false,
       checkedInAt: null,
@@ -391,8 +416,8 @@ function getCheckInState({
 
   if (registration.check_in_status === "checked_in") {
     return {
-      label: "Checked In Successfully",
-      message: `${registration.display_name} is locked for tournament arrival.`,
+      label: t.registration.checkIn.states.success.label,
+      message: `${registration.display_name} ${t.registration.checkIn.states.success.message}`,
       tone: "success",
       canCheckIn: false,
       checkedInAt: registration.checked_in_at,
@@ -403,8 +428,8 @@ function getCheckInState({
 
   if (windowState === "soon") {
     return {
-      label: "Check-In Opens Soon",
-      message: `Check-in opens at ${formatKyivCheckInDateWithLabel(summary.checkInOpensAt)}.`,
+      label: t.registration.checkIn.states.soon.label,
+      message: `${t.registration.checkIn.states.soon.message} ${formatKyivCheckInDateWithLabel(summary.checkInOpensAt)}.`,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -413,10 +438,10 @@ function getCheckInState({
 
   if (windowState === "closed") {
     return {
-      label: "Check-In Closed",
+      label: t.registration.checkIn.states.closed.label,
       message: summary.checkInClosesAt
-        ? `Check-in closed at ${formatKyivCheckInDateWithLabel(summary.checkInClosesAt)}.`
-        : "The check-in window has not been configured for this tournament.",
+        ? `${t.registration.checkIn.states.closed.messageClosed} ${formatKyivCheckInDateWithLabel(summary.checkInClosesAt)}.`
+        : t.registration.checkIn.states.closed.messageNotConfigured,
       tone: "locked",
       canCheckIn: false,
       checkedInAt: null,
@@ -424,8 +449,8 @@ function getCheckInState({
   }
 
   return {
-    label: "Ready to Check In",
-    message: `${registration.display_name} is approved. Confirm attendance before the bracket is prepared.`,
+    label: t.registration.checkIn.states.ready.label,
+    message: `${registration.display_name} ${t.registration.checkIn.states.ready.message}`,
     tone: "ready",
     canCheckIn: true,
     checkedInAt: null,
@@ -455,21 +480,21 @@ function getCheckInCardClassName(tone: CheckInState["tone"]) {
   return "border-white/10 bg-black/25"
 }
 
-
 function PlayerApplicationState({
   status,
 }: {
   status: "pending" | "approved" | "rejected" | null
 }) {
+  const { t } = useLanguage()
+
   if (status === "pending") {
     return (
       <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
         <p className="text-sm font-semibold text-amber-100">
-          Player application pending
+          {t.registration.playerApplication.pendingTitle}
         </p>
         <p className="mt-2 text-sm leading-6 text-white/70">
-          An admin needs to approve your Eclyps player application before
-          tournament registration unlocks.
+          {t.registration.playerApplication.pendingMessage}
         </p>
       </div>
     )
@@ -478,16 +503,14 @@ function PlayerApplicationState({
   return (
     <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
       <p className="text-sm font-semibold text-amber-100">
-        Player application not found
+        {t.registration.playerApplication.notFoundTitle}
       </p>
       <p className="mt-2 text-sm leading-6 text-white/70">
-        Your Discord account is connected, but no player application was found.
-        Log out and use Login with Discord again, then choose Yes to create the
-        application automatically.
+        {t.registration.playerApplication.notFoundMessage}
       </p>
       {status === "rejected" ? (
         <p className="mt-2 text-sm text-red-100">
-          Your previous player application was rejected.
+          {t.registration.playerApplication.rejected}
         </p>
       ) : null}
     </div>
@@ -497,7 +520,7 @@ function PlayerApplicationState({
 function LoginButton() {
   return (
     <DiscordLoginOnboarding
-      className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+      className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
     />
   )
 }
@@ -518,35 +541,37 @@ function RegistrationField({
 }
 
 function TeamRosterFields({ disabled }: { disabled: boolean }) {
+  const { t } = useLanguage()
+
   return (
     <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-3">
       <div className="flex flex-col gap-1">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
-          Team roster
+          {t.registration.fields.teamRoster}
         </p>
         <p className="text-sm text-white/55">
-          Submit 5 main players and up to 2 substitutes.
+          {t.registration.fields.rosterDescription}
         </p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {[1, 2, 3, 4, 5].map((index) => (
-          <RegistrationField key={index} label={`Main player ${index}`}>
+          <RegistrationField key={index} label={`${t.registration.fields.mainPlayer} ${index}`}>
             <input
               name={`roster_main_${index}`}
               required
               disabled={disabled}
               className={inputClassName}
-              placeholder={`Player ${index} nickname`}
+              placeholder={`${t.registration.fields.playerNicknamePlaceholder}`}
             />
           </RegistrationField>
         ))}
         {[1, 2].map((index) => (
-          <RegistrationField key={index} label={`Substitute ${index}`}>
+          <RegistrationField key={index} label={`${t.registration.fields.substitute} ${index}`}>
             <input
               name={`roster_sub_${index}`}
               disabled={disabled}
               className={inputClassName}
-              placeholder="Optional nickname"
+              placeholder={t.registration.fields.optionalPlaceholder}
             />
           </RegistrationField>
         ))}

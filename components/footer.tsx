@@ -1,7 +1,12 @@
+"use client"
+
 import Image from "next/image"
 import { instagramUrl } from "@/lib/site-config"
+import { useLanguage } from "@/components/language-provider"
 
 export function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className="relative z-10 border-t px-4 py-12" style={{ borderColor: "oklch(0.78 0.18 165 / 0.1)" }}>
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center">
@@ -14,9 +19,10 @@ export function Footer() {
           sizes="48px"
           className="h-12 w-12 object-contain opacity-60"
         />
-        <p className="text-sm text-muted-foreground">
-          Eclyps Hub &copy; 2026. All rights reserved.
-        </p>
+        <p 
+          className="text-sm text-muted-foreground"
+          dangerouslySetInnerHTML={{ __html: t.footer.copyright }}
+        />
         <div className="flex items-center gap-6">
           <a
             href={instagramUrl}

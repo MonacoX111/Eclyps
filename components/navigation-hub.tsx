@@ -12,49 +12,53 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 
 type NavigationHubProps = {
   participantLabel?: "Teams" | "Players"
 }
 
 export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps) {
+  const { t } = useLanguage()
   const competitorPath = participantLabel === "Players" ? "/players" : "/teams"
 
   const cards = [
     {
       href: "/tournament",
-      label: "Tournament Info",
-      description: "Explore the event format, guidelines, rules, and prizing structure.",
+      label: t.navigationHub.cards.tournament.label,
+      description: t.navigationHub.cards.tournament.description,
       icon: Trophy,
     },
     {
       href: competitorPath,
-      label: participantLabel,
-      description: `View the current roster of approved and registered ${participantLabel.toLowerCase()}.`,
+      label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams,
+      description: participantLabel === "Players" 
+        ? t.navigationHub.cards.competitor.descriptionPlayers 
+        : t.navigationHub.cards.competitor.descriptionTeams,
       icon: Users,
     },
     {
       href: "/registration",
-      label: "Registration & Check-in",
-      description: "Apply as a competitor, register your team, and confirm attendance.",
+      label: t.navigationHub.cards.registration.label,
+      description: t.navigationHub.cards.registration.description,
       icon: UserPlus,
     },
     {
       href: "/bracket",
-      label: "Live Bracket",
-      description: "Track live match progressions, bracket stages, and active standings.",
+      label: t.navigationHub.cards.bracket.label,
+      description: t.navigationHub.cards.bracket.description,
       icon: GitBranch,
     },
     {
       href: "/schedule",
-      label: "Match Schedule",
-      description: "Follow match timetables, upcoming scheduling, and report disputes.",
+      label: t.navigationHub.cards.schedule.label,
+      description: t.navigationHub.cards.schedule.description,
       icon: Calendar,
     },
     {
       href: "/results",
-      label: "Tournament Results",
-      description: "Review historical tournament rankings, final scorelines, and MVPs.",
+      label: t.navigationHub.cards.results.label,
+      description: t.navigationHub.cards.results.description,
       icon: Medal,
     },
   ]
@@ -62,9 +66,9 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
   return (
     <section className="relative z-10 px-4 py-24" id="navigation-hub">
       <div className="mx-auto max-w-6xl">
-        <SectionHeading eyebrow="Explore Platform" title="Tournament Hub">
+        <SectionHeading eyebrow={t.navigationHub.eyebrow} title={t.navigationHub.title}>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-white/58">
-            Access tournament sections directly. Select an option below to view full details, live updates, and manage your participation.
+            {t.navigationHub.description}
           </p>
         </SectionHeading>
 
@@ -111,7 +115,7 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
                     href={card.href}
                     className="flex items-center justify-between text-xs font-mono uppercase tracking-wider text-primary"
                   >
-                    <span>View Section</span>
+                    <span>{t.navigationHub.viewSection}</span>
                     <ArrowRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1.5 duration-300" />
                   </Link>
                 </div>

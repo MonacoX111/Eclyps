@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowLeft, Shield, User } from "lucide-react"
 import { Footer } from "@/components/footer"
@@ -7,6 +9,7 @@ import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { Results } from "@/components/results"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 import type { PublicProfileData } from "@/lib/data/profiles"
 
 type PublicProfilePageProps = {
@@ -14,14 +17,14 @@ type PublicProfilePageProps = {
 }
 
 export function PublicProfilePage({ data }: PublicProfilePageProps) {
+  const { t } = useLanguage()
   const { profile } = data
   const isTeam = profile.kind === "team"
   const rating = getProfileRating(data)
   const rankPosition = getProfileRankPosition(data)
-  const connectionsTitle = isTeam ? "Connected Players" : "Team Connection"
-  const emptyConnections = isTeam
-    ? "No connected players are available for this team yet."
-    : "No team connection is available for this player yet."
+  
+  const connectionsTitle = isTeam ? t.profile.connectionsTeams : t.profile.connectionsPlayers
+  const emptyConnections = isTeam ? t.profile.emptyConnectionsTeams : t.profile.emptyConnectionsPlayers
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">
@@ -35,7 +38,7 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
               className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Eclyps
+              {t.profile.backToEclyps}
             </Link>
 
             <div className="glass-card overflow-hidden rounded-2xl">
@@ -51,7 +54,7 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
 
                 <div className="min-w-0 flex-1">
                   <p className="mb-3 text-sm font-semibold tracking-widest uppercase text-primary">
-                    {isTeam ? "Team Profile" : "Player Profile"}
+                    {isTeam ? t.profile.teamProfile : t.profile.playerProfile}
                   </p>
                   <h1 className="glow-text break-words text-4xl font-bold text-foreground md:text-6xl">
                     {profile.display_name}
@@ -63,23 +66,23 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
                   ) : null}
                   <div className="mt-6 flex flex-wrap gap-3 text-sm">
                     <MetaPill
-                      label="Tournament"
+                      label={t.profile.meta.tournament}
                       value={data.tournamentName}
-                      empty={isTeam ? "Tournament TBA" : "Not registered"}
+                      empty={isTeam ? t.profile.meta.tournamentTba : t.profile.meta.notRegistered}
                     />
-                    <MetaPill label="Region" value={profile.region} empty="Region TBA" />
+                    <MetaPill label={t.profile.meta.region} value={profile.region} empty={t.profile.meta.regionTba} />
                     <MetaPill
-                      label="Seed"
+                      label={t.profile.meta.seed}
                       value={profile.seed ? `#${profile.seed}` : null}
-                      empty="Seed TBA"
+                      empty={t.profile.meta.seedTba}
                     />
-                    <MetaPill label="Rating" value={String(rating)} />
+                    <MetaPill label={t.profile.meta.rating} value={String(rating)} />
                     <MetaPill
-                      label="Rank"
+                      label={t.profile.meta.rank}
                       value={rankPosition ? `#${rankPosition}` : null}
-                      empty="Unranked"
+                      empty={t.profile.meta.unranked}
                     />
-                    <MetaPill label="Record" value={`${data.stats.wins}W / ${data.stats.losses}L`} />
+                    <MetaPill label={t.profile.meta.record} value={`${data.stats.wins}W / ${data.stats.losses}L`} />
                   </div>
                 </div>
               </div>
@@ -95,7 +98,7 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
 
         <section className="relative z-10 px-4 py-24">
           <div className="mx-auto max-w-5xl">
-            <SectionHeading eyebrow="Roster Link" title={connectionsTitle} />
+            <SectionHeading eyebrow={t.profile.rosterHeading} title={connectionsTitle} />
             {data.connections.length === 0 ? (
               <EmptyState>{emptyConnections}</EmptyState>
             ) : (
@@ -126,9 +129,9 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
           <MatchSchedule matches={data.matches} />
         ) : (
           <ProfileSectionEmpty
-            eyebrow="Battle Calendar"
-            title="Recent Matches"
-            message={`No recent matches involving this ${isTeam ? "team" : "player"} yet.`}
+            eyebrow={t.profile.recentMatchesEyebrow}
+            title={t.profile.recentMatchesTitle}
+            message={t.profile.emptyRecentMatches}
           />
         )}
 
@@ -138,9 +141,9 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
           <Results results={data.results} />
         ) : (
           <ProfileSectionEmpty
-            eyebrow="Hall of Legends"
-            title="Results"
-            message={`No placements connected to this ${isTeam ? "team" : "player"} yet.`}
+            eyebrow={t.profile.resultsEyebrow}
+            title={t.profile.resultsTitle}
+            message={t.profile.emptyResults}
           />
         )}
       </MotionProvider>
@@ -150,39 +153,40 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
 }
 
 function StatsSection({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
   const { stats } = data
   const rating = getProfileRating(data)
   const rankPosition = getProfileRankPosition(data)
   const streakLabel =
     stats.currentStreak.result && stats.currentStreak.count > 0
       ? `${stats.currentStreak.count}${stats.currentStreak.result === "win" ? "W" : "L"}`
-      : "None"
+      : t.profile.stats.none
 
   return (
     <section className="relative z-10 px-4 py-24">
       <div className="mx-auto max-w-5xl">
-        <SectionHeading eyebrow="Combat Stats" title="Performance" />
+        <SectionHeading eyebrow={t.profile.statsHeading} title={t.profile.performance} />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Rating" value={String(rating)} />
-          <StatCard label="Rank" value={rankPosition ? `#${rankPosition}` : "Unranked"} />
-          <StatCard label="Wins" value={String(stats.wins)} />
-          <StatCard label="Losses" value={String(stats.losses)} />
-          <StatCard label="Matches" value={String(stats.totalMatches)} />
-          <StatCard label="Win Rate" value={`${stats.winRate}%`} />
-          <StatCard label="Streak" value={streakLabel} />
+          <StatCard label={t.profile.stats.rating} value={String(rating)} />
+          <StatCard label={t.profile.stats.rank} value={rankPosition ? `#${rankPosition}` : t.profile.stats.unranked} />
+          <StatCard label={t.profile.stats.wins} value={String(stats.wins)} />
+          <StatCard label={t.profile.stats.losses} value={String(stats.losses)} />
+          <StatCard label={t.profile.stats.matches} value={String(stats.totalMatches)} />
+          <StatCard label={t.profile.stats.winRate} value={`${stats.winRate}%`} />
+          <StatCard label={t.profile.stats.streak} value={streakLabel} />
         </div>
 
         <div className="mt-8">
           {stats.recentHistory.length === 0 ? (
-            <EmptyState>No match history yet</EmptyState>
+            <EmptyState>{t.profile.noHistory}</EmptyState>
           ) : (
             <div className="glass-card overflow-hidden rounded-2xl">
               <div
                 className="px-6 py-4"
                 style={{ background: "oklch(0.78 0.18 165 / 0.05)" }}
               >
-                <h3 className="text-lg font-bold text-foreground">Recent Match History</h3>
+                <h3 className="text-lg font-bold text-foreground">{t.profile.recentHistory}</h3>
               </div>
               <div className="divide-y divide-border/50">
                 {stats.recentHistory.map((match) => (
@@ -192,7 +196,7 @@ function StatsSection({ data }: { data: PublicProfileData }) {
                   >
                     <div className="min-w-0">
                       <p className="break-words font-semibold text-foreground">
-                        vs {match.opponent}
+                        {t.profile.vs} {match.opponent}
                       </p>
                       <p className="mt-1 text-xs tracking-wider uppercase text-muted-foreground">
                         {match.round}
@@ -212,7 +216,7 @@ function StatsSection({ data }: { data: PublicProfileData }) {
                         }
                         style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
                       >
-                        {match.result === "win" ? "Win" : "Loss"}
+                        {match.result === "win" ? t.profile.win : t.profile.loss}
                       </span>
                     </div>
                   </div>
@@ -262,14 +266,16 @@ export function PublicProfileLoading() {
 }
 
 export function PublicProfileError({ message }: { message: string }) {
+  const { t } = useLanguage()
+
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <ParticleField />
       <MotionProvider>
         <Navbar homeHref="/" navHrefPrefix="/" participantLabel="Teams" />
         <ProfileSectionEmpty
-          eyebrow="Profile"
-          title="Something Went Offline"
+          eyebrow={t.profile.teamProfile}
+          title={t.profile.somethingWentOffline}
           message={message}
         />
       </MotionProvider>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { createPortal } from "react-dom"
 import { m } from "framer-motion"
 import { loginWithDiscord } from "@/app/auth/actions"
+import { useLanguage } from "@/components/language-provider"
 
 type DiscordLoginOnboardingProps = {
   className?: string
@@ -15,9 +16,13 @@ const advisoryClassName =
 
 export function DiscordLoginOnboarding({
   className,
-  label = "Login with Discord",
+  label,
 }: DiscordLoginOnboardingProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const { t } = useLanguage()
+
+  const buttonLabel = label || t.navbar.loginDiscord
+
   const modal =
     isOpen && typeof document !== "undefined"
       ? createPortal(
@@ -47,32 +52,30 @@ export function DiscordLoginOnboarding({
 
               <div className="relative">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80">
-                  Before Discord Auth
+                  {t.discordLogin.beforeAuth}
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold text-white">
-                  Become an Eclyps Player?
+                  {t.discordLogin.becomePlayer}
                 </h2>
                 <p className={advisoryClassName}>
-                  You do not need to become a player to browse tournaments,
-                  matches, rankings, and results. Continue to Discord only if you
-                  want to start the player application path.
+                  {t.discordLogin.advisory}
                 </p>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <form action={loginWithDiscord}>
                     <button
                       type="submit"
-                      className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+                      className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
                     >
-                      Yes, continue
+                      {t.discordLogin.yes}
                     </button>
                   </form>
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white"
+                    className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white cursor-pointer"
                   >
-                    Continue Browsing
+                    {t.discordLogin.continueBrowsing}
                   </button>
                 </div>
               </div>
@@ -89,7 +92,7 @@ export function DiscordLoginOnboarding({
         onClick={() => setIsOpen(true)}
         className={className}
       >
-        {label}
+        {buttonLabel}
       </button>
       {modal}
     </>

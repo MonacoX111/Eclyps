@@ -3,6 +3,7 @@
 import { m } from "framer-motion"
 import { Trophy, Users, Calendar, Swords } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 
 type TournamentInfoProps = {
   tournamentName?: string
@@ -29,23 +30,26 @@ export function TournamentInfo({
   arenaTags = ["PC Platform", "5v5 Format", "BO1 + BO3", "Private Lobby"],
   participantLabel = "Teams",
 }: TournamentInfoProps) {
+  const { t } = useLanguage()
+
   const visiblePrizePool = readDisplayValue(prizePool)
   const visibleGame = readDisplayValue(game)
   const visibleTeamCount = readPositiveCount(teamCount)
   const visibleMatchDays = readDisplayValue(matchDays)
   const visibleFormat = readDisplayValue(format)
+
   const stats = [
     visiblePrizePool
-      ? { icon: Trophy, label: "Prize Pool", value: visiblePrizePool }
+      ? { icon: Trophy, label: t.tournament.prizePool, value: visiblePrizePool }
       : null,
     visibleTeamCount
-      ? { icon: Users, label: participantLabel, value: visibleTeamCount }
+      ? { icon: Users, label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams, value: visibleTeamCount }
       : null,
     visibleMatchDays
-      ? { icon: Calendar, label: "Match Days", value: visibleMatchDays }
+      ? { icon: Calendar, label: t.tournament.matchDays, value: visibleMatchDays }
       : null,
     visibleFormat
-      ? { icon: Swords, label: "Format", value: visibleFormat }
+      ? { icon: Swords, label: t.tournament.format, value: visibleFormat }
       : null,
   ].filter(
     (
@@ -62,11 +66,13 @@ export function TournamentInfo({
       ? arenaDescription
       : null
 
+  const displayArenaTitle = arenaTitle === "Enter the Arena" ? t.tournament.enterArena : arenaTitle
+
   return (
     <section className="relative z-10 px-4 py-24" id="tournament">
       <div className="mx-auto max-w-6xl">
         {/* Section header */}
-        <SectionHeading eyebrow="Upcoming Event" title={tournamentName}>
+        <SectionHeading eyebrow={t.tournament.upcomingEvent} title={tournamentName}>
           {visibleGame ? (
             <span className="glass-card mt-4 inline-flex max-w-full break-words rounded-full px-4 py-1.5 text-center text-sm font-medium uppercase tracking-widest text-primary">
               {visibleGame}
@@ -105,7 +111,7 @@ export function TournamentInfo({
           transition={{ duration: 0.7, delay: 0.2 }}
         >
           <h3 className="mb-4 text-xl font-bold text-foreground md:text-2xl">
-            {arenaTitle}
+            {displayArenaTitle}
           </h3>
           {visibleArenaDescription ? (
             <p className="mb-6 leading-relaxed text-muted-foreground">

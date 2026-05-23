@@ -3,6 +3,7 @@
 import { m } from "framer-motion"
 import Image from "next/image"
 import { InstagramCta } from "@/components/instagram-cta"
+import { useLanguage } from "@/components/language-provider"
 
 type HeroSectionProps = {
   tournamentName?: string
@@ -10,11 +11,26 @@ type HeroSectionProps = {
   registrationStatus?: string
 }
 
+const statusTranslations: Record<string, { uk: string; en: string }> = {
+  "Registration Open": { uk: "Реєстрація відкрита", en: "Registration Open" },
+  "Check In Open": { uk: "Чек-ін відкритий", en: "Check-in Open" },
+  "Ongoing": { uk: "Турнір триває", en: "Ongoing" },
+  "Finished": { uk: "Завершено", en: "Finished" },
+  "Registration Closed": { uk: "Реєстрацію закрито", en: "Registration Closed" },
+}
+
 export function HeroSection({
   tournamentName = "Summer Private Cup",
   tournamentDate = "June 21, 2026",
   registrationStatus = "Registration Open",
 }: HeroSectionProps) {
+  const { lang, t } = useLanguage()
+
+  // Translate status if possible
+  const translatedStatus = registrationStatus
+    ? statusTranslations[registrationStatus]?.[lang] || registrationStatus
+    : ""
+
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-20">
       {/* Radial background glow */}
@@ -71,7 +87,7 @@ export function HeroSection({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.55 }}
       >
-        NEXT EVENT
+        {t.hero.nextEvent}
       </m.p>
 
       {/* Subtitle */}
@@ -92,13 +108,15 @@ export function HeroSection({
         transition={{ duration: 0.8, delay: 0.8 }}
       >
         <span className="max-w-full break-words font-mono">{tournamentDate}</span>
-        <span className="flex max-w-full items-center gap-1.5 break-words">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+        {translatedStatus && (
+          <span className="flex max-w-full items-center gap-1.5 break-words">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+            </span>
+            {translatedStatus}
           </span>
-          {registrationStatus}
-        </span>
+        )}
       </m.div>
 
       {/* CTA Button */}
@@ -117,7 +135,7 @@ export function HeroSection({
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5 }}
       >
-        <span className="text-xs tracking-widest uppercase">Scroll</span>
+        <span className="text-xs tracking-widest uppercase">{t.hero.scroll}</span>
         <m.div
           className="h-8 w-px bg-primary/40"
           animate={{ scaleY: [0.5, 1, 0.5], opacity: [0.3, 0.8, 0.3] }}

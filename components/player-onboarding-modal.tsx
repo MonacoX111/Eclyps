@@ -6,6 +6,7 @@ import {
   dismissPlayerOnboarding,
   submitPlayerApplication,
 } from "@/app/actions/player-applications"
+import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
 
 type PlayerOnboardingModalProps = {
@@ -27,6 +28,7 @@ export function PlayerOnboardingModal({
 }: PlayerOnboardingModalProps) {
   const [isApplying, setIsApplying] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
+  const { t } = useLanguage()
 
   if (
     !userProfile ||
@@ -61,21 +63,19 @@ export function PlayerOnboardingModal({
         <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full border border-primary/20" />
         <div className="relative">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary/80">
-            Discord Connected
+            {t.playerOnboarding.discordConnected}
           </p>
           <h2 className="mt-3 text-3xl font-semibold text-white">
-            Become an Eclyps Player?
+            {t.playerOnboarding.becomePlayer}
           </h2>
           <p className={advisoryClassName}>
-            You do not need to become a player to browse tournaments, matches,
-            rankings, and results. Apply only if you want to participate in
-            Eclyps tournaments.
+            {t.playerOnboarding.advisory}
           </p>
 
           {isApplying ? (
             <form action={submitPlayerApplication} className="mt-6 grid gap-3">
               <label className="space-y-2 text-sm text-white/75">
-                <span className="block">Player nickname</span>
+                <span className="block">{t.playerOnboarding.nickname}</span>
                 <input
                   name="requested_nickname"
                   required
@@ -84,26 +84,26 @@ export function PlayerOnboardingModal({
                 />
               </label>
               <label className="space-y-2 text-sm text-white/75">
-                <span className="block">Region</span>
+                <span className="block">{t.registration.fields.region}</span>
                 <input
                   name="requested_region"
                   className={inputClassName}
-                  placeholder="Ukraine, EU, North America"
+                  placeholder={t.registration.fields.regionPlaceholder}
                 />
               </label>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+                  className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
                 >
-                  Submit Application
+                  {t.playerOnboarding.submit}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsApplying(false)}
-                  className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white"
+                  className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white cursor-pointer"
                 >
-                  Back
+                  {t.playerOnboarding.back}
                 </button>
               </div>
             </form>
@@ -112,9 +112,9 @@ export function PlayerOnboardingModal({
               <button
                 type="button"
                 onClick={() => setIsApplying(true)}
-                className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90"
+                className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
               >
-                Apply as Player
+                {t.playerOnboarding.apply}
               </button>
               <form
                 action={dismissPlayerOnboarding}
@@ -122,9 +122,9 @@ export function PlayerOnboardingModal({
               >
                 <button
                   type="submit"
-                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white"
+                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/25 hover:text-white cursor-pointer"
                 >
-                  Continue Browsing
+                  {t.playerOnboarding.continueBrowsing}
                 </button>
               </form>
             </div>

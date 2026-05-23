@@ -3,6 +3,7 @@ import {
   PublicProfilePage,
 } from "@/components/public-profile-page"
 import { getPublicTeamProfile } from "@/lib/data/profiles"
+import { getLanguage } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -15,7 +16,9 @@ export default async function TeamProfilePage({ params }: TeamProfilePageProps) 
   const data = await getPublicTeamProfile(id)
 
   if (!data) {
-    return <PublicProfileError message="This team profile is not available." />
+    const lang = await getLanguage()
+    const message = lang === "uk" ? "Цей профіль команди недоступний." : "This team profile is not available."
+    return <PublicProfileError message={message} />
   }
 
   return <PublicProfilePage data={data} />

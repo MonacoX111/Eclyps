@@ -5,6 +5,7 @@ import { m } from "framer-motion"
 import Image from "next/image"
 import { logoutDiscord } from "@/app/auth/actions"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
+import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
 
 type NavbarProps = {
@@ -21,14 +22,16 @@ export function Navbar({
   userProfile = null,
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
+  const { t } = useLanguage()
+
   const participantHref = participantLabel === "Players" ? "/players" : "/teams"
   const navLinks = [
-    { href: "/tournament", label: "Tournament" },
-    { href: "/registration", label: "Registration" },
-    { href: participantHref, label: participantLabel },
-    { href: "/bracket", label: "Bracket" },
-    { href: "/schedule", label: "Schedule" },
-    { href: "/results", label: "Results" },
+    { href: "/tournament", label: t.navbar.tournament },
+    { href: "/registration", label: t.navbar.registration },
+    { href: participantHref, label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams },
+    { href: "/bracket", label: t.navbar.bracket },
+    { href: "/schedule", label: t.navbar.schedule },
+    { href: "/results", label: t.navbar.results },
   ]
 
   return (
@@ -74,10 +77,14 @@ export function Navbar({
                 {link.label}
               </a>
             ))}
-            <AuthControl userProfile={userProfile} />
+            <div className="flex items-center gap-4">
+              <LanguageSwitcher />
+              <AuthControl userProfile={userProfile} />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 md:hidden">
+            <LanguageSwitcher />
             <MobileAuthAvatar userProfile={userProfile} />
             <button
               className="flex flex-col gap-1.5"
@@ -142,6 +149,37 @@ export function Navbar({
   )
 }
 
+function LanguageSwitcher() {
+  const { lang, setLanguage } = useLanguage()
+
+  return (
+    <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-black/30 p-0.5 shrink-0">
+      <button
+        type="button"
+        onClick={() => setLanguage("uk")}
+        className={`rounded-full px-2 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer ${
+          lang === "uk"
+            ? "bg-primary text-black shadow-[0_0_12px_oklch(0.78_0.18_165_/_0.4)] font-extrabold"
+            : "text-white/60 hover:text-white"
+        }`}
+      >
+        UK
+      </button>
+      <button
+        type="button"
+        onClick={() => setLanguage("en")}
+        className={`rounded-full px-2 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer ${
+          lang === "en"
+            ? "bg-primary text-black shadow-[0_0_12px_oklch(0.78_0.18_165_/_0.4)] font-extrabold"
+            : "text-white/60 hover:text-white"
+        }`}
+      >
+        EN
+      </button>
+    </div>
+  )
+}
+
 function AuthControl({
   userProfile,
   mobile = false,
@@ -149,11 +187,14 @@ function AuthControl({
   userProfile: UserProfile | null
   mobile?: boolean
 }) {
+  const { t } = useLanguage()
+
   if (!userProfile) {
     return (
       <DiscordLoginOnboarding
+        label={t.navbar.loginDiscord}
         className={`rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/60 hover:bg-primary/15 ${
-          mobile ? "w-full" : ""
+          mobile ? "w-full text-center" : ""
         }`}
       />
     )
@@ -172,9 +213,9 @@ function AuthControl({
       </div>
       <button
         type="submit"
-        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-primary/40 hover:text-primary"
+        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-primary/40 hover:text-primary cursor-pointer"
       >
-        Logout
+        {t.navbar.logout}
       </button>
     </form>
   )

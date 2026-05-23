@@ -3,6 +3,7 @@
 import { m } from "framer-motion"
 import { Radio, Trophy } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 
 export type PublicBracketParticipant = {
   id: string | null
@@ -46,10 +47,11 @@ type PublicBracketProps = {
 }
 
 export function PublicBracket({ bracket }: PublicBracketProps) {
+  const { t } = useLanguage()
   const hasBracket = Boolean(bracket && bracket.rounds.length > 0)
   const labels = bracket?.labels ?? {
-    title: "Live Bracket",
-    subtitle: "Tournament Tree",
+    title: t.navbar.bracket,
+    subtitle: t.navigationHub.cards.bracket.description,
   }
 
   const finalOnly =
@@ -83,13 +85,15 @@ export function PublicBracket({ bracket }: PublicBracketProps) {
 }
 
 function BracketEmptyState() {
+  const { t } = useLanguage()
+
   return (
     <div className="relative z-10 mx-auto max-w-xl rounded-xl border border-white/10 bg-black/25 px-5 py-8 text-center">
       <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary/80">
-        Bracket is not generated yet.
+        {t.bracket.emptyTitle}
       </p>
       <p className="mt-3 text-sm leading-6 text-white/60">
-        Check back after the tournament bracket is created.
+        {t.bracket.emptyBody}
       </p>
     </div>
   )
@@ -195,12 +199,14 @@ function MultiRoundBracket({
 }
 
 function RoundHeader({ label, index }: { label: string; index: number }) {
+  const { t } = useLanguage()
+
   return (
     <div className="flex items-center gap-3">
       <span className="h-px flex-1 bg-primary/20" />
       <div className="text-center">
         <p className="font-mono text-[10px] tracking-[0.35em] text-muted-foreground uppercase">
-          Round {index}
+          {t.bracket.round} {index}
         </p>
         <h3 className="mt-1 text-sm font-bold tracking-widest text-primary uppercase">
           {label}
@@ -220,6 +226,7 @@ function BracketCore({
   status: PublicBracketMatch["status"]
   labels: PublicBracketLabels
 }) {
+  const { t } = useLanguage()
   const isChampion = Boolean(champion)
 
   return (
@@ -241,7 +248,7 @@ function BracketCore({
 
       <div className="mt-4 min-h-16">
         <p className="text-xs font-semibold tracking-[0.3em] text-primary uppercase">
-          {isChampion ? "Champion" : labels.stageLabel}
+          {isChampion ? t.bracket.champion : labels.stageLabel}
         </p>
         <p className="mt-2 min-w-0 break-words text-lg font-bold text-foreground">
           {champion ?? labels.arenaLabel}
@@ -280,6 +287,7 @@ function FinalistPanel({
   matchStatus: PublicBracketMatch["status"]
   label: string
 }) {
+  const { t } = useLanguage()
   const isLoser = matchStatus === "finished" && participant.id && !participant.isWinner
 
   return (
@@ -308,7 +316,7 @@ function FinalistPanel({
       {participant.isWinner ? (
         <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary">
           <Trophy className="h-4 w-4" />
-          Winner
+          {t.bracket.winner}
         </div>
       ) : null}
     </div>
@@ -415,18 +423,20 @@ function ScoreBox({ score, compact = false }: { score: number | null; compact?: 
 }
 
 function StatusBadge({ status }: { status: PublicBracketMatch["status"] }) {
+  const { t } = useLanguage()
+
   if (status === "live") {
     return (
       <span className="flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-bold text-primary">
         <Radio className="h-3 w-3" />
-        LIVE
+        {t.schedule.live}
       </span>
     )
   }
 
   return (
     <span className={getStatusClassName(status)}>
-      {formatStatus(status)}
+      {formatStatus(status, t)}
     </span>
   )
 }
@@ -440,6 +450,6 @@ function getStatusClassName(status: PublicBracketMatch["status"]) {
   ].join(" ")
 }
 
-function formatStatus(status: PublicBracketMatch["status"]) {
-  return status === "finished" ? "Finished" : "Upcoming"
+function formatStatus(status: PublicBracketMatch["status"], t: any) {
+  return status === "finished" ? t.bracket.finished : t.bracket.upcoming
 }

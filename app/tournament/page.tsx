@@ -7,6 +7,8 @@ import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getLanguage } from "@/lib/i18n/server"
+import { translations } from "@/lib/i18n/translations"
 
 export const dynamic = "force-dynamic"
 
@@ -19,7 +21,7 @@ export default async function TournamentPage() {
         <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
-
+        
         <Suspense fallback={<TournamentInfoLoading />}>
           <ActiveTournamentInfo />
         </Suspense>
@@ -45,7 +47,11 @@ async function ActiveNavbar() {
 
 async function ActiveTournamentInfo() {
   const homepageData = await getHomepageData()
-  if (!homepageData.tournamentView) return <TournamentUnavailable />
+  if (!homepageData.tournamentView) {
+    const lang = await getLanguage()
+    const t = translations[lang]
+    return <TournamentUnavailable t={t} />
+  }
 
   const {
     sectionName,
@@ -76,15 +82,15 @@ async function ActiveTournamentInfo() {
   )
 }
 
-function TournamentUnavailable() {
+function TournamentUnavailable({ t }: { t: typeof translations.uk }) {
   return (
     <section className="relative flex min-h-[60vh] items-center justify-center px-4 py-20 text-center">
       <div>
         <p className="mb-3 text-sm font-semibold tracking-widest uppercase text-primary">
-          Upcoming Event
+          {t.tournament.upcomingEvent}
         </p>
         <p className="text-sm text-muted-foreground">
-          Tournament details are not available right now.
+          {t.tournament.detailsUnavailable}
         </p>
       </div>
     </section>

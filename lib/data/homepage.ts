@@ -11,6 +11,7 @@ import type {
 import type { ResultCard } from "@/components/results"
 import type { TeamCard } from "@/components/teams-grid"
 import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
+import { getLanguage } from "@/lib/i18n/server"
 import { supabase } from "@/lib/supabase/client"
 import {
   readMatchStatus,
@@ -414,6 +415,7 @@ async function createHomepageData({
   matches: HomepageMatch[]
   results: HomepageResult[]
 }): Promise<HomepageData> {
+  const lang = await getLanguage()
   const participantType =
     tournament?.participant_type ?? getParticipantType(participants, matches, results)
   const participantLabel = participantType === "player" ? "Players" : "Teams"
@@ -447,7 +449,7 @@ async function createHomepageData({
     participantType,
     participantLabel,
     tournamentView: tournament
-      ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount)
+      ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount, lang)
       : null,
     participantCards,
     publicBracket: getPublicBracketData(bracketMatches, tournament),
@@ -697,11 +699,12 @@ function getTournamentBlocksView(
   tournament: HomepageTournament,
   participantType: "team" | "player",
   participantCount: number,
+  lang: "uk" | "en",
 ): TournamentBlocksView {
   return {
     heroName: readString(tournament.name, tournament.title),
     sectionName: readString(tournament.name, tournament.display_name, tournament.title),
-    date: formatEventDate(tournament.event_date),
+    date: formatEventDate(tournament.event_date, lang),
     game: readString(tournament.game),
     format: readString(tournament.format),
     teamCount: String(participantCount),

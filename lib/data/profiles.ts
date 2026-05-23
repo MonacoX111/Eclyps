@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { MatchScheduleItem } from "@/components/match-schedule"
 import type { ResultCard } from "@/components/results"
 import { formatEventMonthYear } from "@/lib/date-format"
+import { getLanguage } from "@/lib/i18n/server"
 import { getMatchesForTournament, type TournamentMatch } from "@/lib/data/matches"
 import {
   readNullableInteger,
@@ -189,6 +190,8 @@ async function getPublicProfile(
       ])
     : [null, [], [], []]
 
+  const lang = await getLanguage()
+
   const profile = toPublicProfileRecord({
     kind,
     participant: sourceParticipant,
@@ -218,7 +221,7 @@ async function getPublicProfile(
       profile.display_name,
     ),
     matches: getProfileMatches(matches, profile),
-    results: getProfileResults(results, tournament, profile),
+    results: getProfileResults(results, tournament, profile, lang),
   }
 }
 
@@ -628,6 +631,7 @@ function getProfileResults(
   results: TournamentResult[],
   tournament: ProfileTournament | null,
   profile: PublicProfileRecord,
+  lang?: "uk" | "en",
 ): ResultCard[] {
   const placements = results
     .filter((result) => isResultConnectedToProfile(result, profile))
@@ -636,7 +640,7 @@ function getProfileResults(
         (result.placement === 1 ||
           result.placement === 2 ||
           result.placement === 3) &&
-        Boolean(result.team),
+          Boolean(result.team),
     )
     .map((result) => ({
       placement: result.placement,
@@ -650,7 +654,7 @@ function getProfileResults(
       season: tournament?.name ?? "Tournament result",
       placements,
       mvp: results.find((result) => result.placement === 1)?.mvp ?? null,
-      date: formatEventMonthYear(tournament?.event_date),
+      date: formatEventMonthYear(tournament?.event_date, lang),
     },
   ]
 }

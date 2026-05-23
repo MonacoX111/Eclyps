@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Shield } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
+import { useLanguage } from "@/components/language-provider"
 
 export type TeamCard = {
   id: string
@@ -28,17 +29,20 @@ export function TeamsGrid({
   teams = [],
   participantLabel = "Teams",
 }: TeamsGridProps) {
+  const { t } = useLanguage()
   const sectionId = participantLabel === "Players" ? "players" : "teams"
-  const emptyLabel = participantLabel.toLowerCase()
 
   return (
     <section className="relative z-10 px-4 py-24" id={sectionId}>
       <div className="mx-auto max-w-6xl">
-        <SectionHeading eyebrow="Combatants" title={`Registered ${participantLabel}`} />
+        <SectionHeading 
+          eyebrow={t.teamsGrid.eyebrow} 
+          title={participantLabel === "Players" ? t.teamsGrid.registeredPlayers : t.teamsGrid.registeredTeams} 
+        />
 
         {teams.length === 0 ? (
           <p className="glass-card mx-auto mt-12 max-w-xl rounded-xl p-6 text-center text-sm text-muted-foreground">
-            No registered {emptyLabel} yet.
+            {t.teamsGrid.noRegistered}
           </p>
         ) : (
           <div className="flex flex-wrap justify-center gap-4">
