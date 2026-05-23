@@ -1,7 +1,7 @@
 import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
-import { supabase } from "@/lib/supabase/client"
+import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { runAdminRowsQuery } from "@/lib/admin/query"
 import {
   readNullableInteger,
@@ -32,16 +32,17 @@ export type AdminTeamQueryResult = {
 
 export async function getAdminTeams(): Promise<AdminTeamQueryResult> {
   noStore()
+  const supabaseAdmin = createSupabaseAdminClient()
 
-  if (!supabase) {
+  if (!supabaseAdmin) {
     return {
       teams: [],
-      error: "Supabase is not configured.",
+      error: "Server-only Supabase admin client is not configured.",
     }
   }
 
   const { rows, error } = await runAdminRowsQuery("teams", () =>
-    supabase
+    supabaseAdmin
       .from("teams")
       .select(`
         id,
