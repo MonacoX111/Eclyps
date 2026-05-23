@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { translations, type Language, type TranslationSchema } from "@/lib/i18n/translations"
 
 type LanguageContextType = {
@@ -20,6 +21,7 @@ export function LanguageProvider({
 }) {
   const [lang, setLangState] = useState<Language>(initialLang)
   const [, startTransition] = useTransition()
+  const router = useRouter()
 
   const setLanguage = (newLang: Language) => {
     // Write cookie
@@ -27,8 +29,8 @@ export function LanguageProvider({
     setLangState(newLang)
 
     startTransition(() => {
-      // Reload page to re-render server components in-place with the correct language
-      window.location.reload()
+      // Refresh Next.js Server Components dynamically without reloading the page
+      router.refresh()
     })
   }
 
