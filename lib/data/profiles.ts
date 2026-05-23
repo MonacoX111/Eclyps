@@ -48,6 +48,12 @@ export type PublicProfileRecord = {
   wins: number
   losses: number
   participant_id: string | null
+  status: string | null
+  captain_name: string | null
+  member_count: number | null
+  user_id?: string | null
+  discord_username?: string | null
+  owner_player_id?: string | null
 }
 
 export type PublicProfileConnection = {
@@ -65,6 +71,7 @@ export type PublicProfileData = {
   ranking: RankingRow | null
   matches: MatchScheduleItem[]
   results: ResultCard[]
+  teamMembers?: any[]
 }
 
 type ProfileParticipant = {
@@ -96,6 +103,8 @@ type ProfileTeam = {
   rank_position: number | null
   wins: number
   losses: number
+  status: string | null
+  owner_player_id?: string | null
 }
 
 type ProfilePlayer = {
@@ -111,6 +120,8 @@ type ProfilePlayer = {
   rank_position: number | null
   wins: number
   losses: number
+  status: string | null
+  user_id: string | null
   owner_profile: ProfilePlayerOwnerProfile | null
 }
 
@@ -121,14 +132,14 @@ type ProfilePlayerOwnerProfile = {
 }
 
 const PLAYER_SELECT_WITH_REGION =
-  "id, tournament_id, name, nickname, region, seed, rating, rating_matches_played, rank_position, wins, losses, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
+  "id, tournament_id, name, nickname, region, seed, rating, rating_matches_played, rank_position, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
 const PLAYER_SELECT_WITH_REGION_NO_RATING =
-  "id, tournament_id, name, nickname, region, seed, wins, losses, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
+  "id, tournament_id, name, nickname, region, seed, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
 const PLAYER_SELECT_FALLBACK =
-  "id, tournament_id, name, nickname, seed, wins, losses"
+  "id, tournament_id, name, nickname, seed, wins, losses, status, user_id"
 const TEAM_SELECT_WITH_RATING =
-  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses"
-const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses"
+  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses, status, owner_player_id"
+const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses, status, owner_player_id"
 const PARTICIPANT_SELECT_WITH_REGION =
   "id, tournament_id, participant_type, display_name, region, seed, logo_url, avatar_url, source_team_id, source_player_id"
 const PARTICIPANT_SELECT_FALLBACK =
@@ -192,10 +203,51 @@ async function getPublicProfile(
 
   const lang = await getLanguage()
 
+  // Resolve captain display name & member count & team members if it is a team
+  let captainName: string | null = null
+  let memberCount: number | null = null
+  let status: string | null = null
+  let teamMembers: any[] = []
+
+  if (kind === "team") {
+    const teamId = source?.id ?? id
+    const membersRes = await supabase
+      .from("team_members")
+      .select(`
+        player_id,
+        role,
+        players!team_members_player_id_fkey(display_name, nickname, name, avatar_url)
+      `)
+      .eq("team_id", teamId)
+
+    if (membersRes.data) {
+      teamMembers = (membersRes.data ?? []).map((m: any) => ({
+        player_id: m.player_id,
+        role: m.role,
+        display_name: m.players?.display_name ?? m.players?.nickname ?? m.players?.name ?? "Unknown player",
+        avatar_url: m.players?.avatar_url ?? null,
+      }))
+
+      memberCount = teamMembers.length
+
+      const captain = teamMembers.find((m: any) => m.role === "captain")
+      if (captain) {
+        captainName = captain.display_name
+      }
+    }
+
+    if (source && "status" in source) {
+      status = source.status
+    }
+  }
+
   const profile = toPublicProfileRecord({
     kind,
     participant: sourceParticipant,
     source,
+    status,
+    captainName,
+    memberCount,
   })
 
   return {
@@ -222,6 +274,7 @@ async function getPublicProfile(
     ),
     matches: getProfileMatches(matches, profile),
     results: getProfileResults(results, tournament, profile, lang),
+    teamMembers,
   }
 }
 
@@ -567,15 +620,23 @@ function toPublicProfileRecord({
   kind,
   participant,
   source,
+  status = null,
+  captainName = null,
+  memberCount = null,
 }: {
   kind: PublicProfileKind
   participant: ProfileParticipant | null
   source: ProfileTeam | ProfilePlayer | null
+  status?: string | null
+  captainName?: string | null
+  memberCount?: number | null
 }): PublicProfileRecord {
   const displayName =
     participant?.display_name ??
     (source && "display_name" in source ? source.display_name : source?.name) ??
     "Untitled profile"
+
+  const effectiveStatus = status ?? (source && "status" in source ? source.status : null) ?? null
 
   return {
     id: source?.id ?? participant?.id ?? "",
@@ -598,6 +659,12 @@ function toPublicProfileRecord({
     wins: source?.wins ?? 0,
     losses: source?.losses ?? 0,
     participant_id: participant?.id ?? null,
+    status: effectiveStatus,
+    captain_name: captainName,
+    member_count: memberCount,
+    user_id: source && "user_id" in source ? source.user_id : null,
+    discord_username: source && "owner_profile" in source ? source.owner_profile?.discord_username ?? null : null,
+    owner_player_id: source && "owner_player_id" in source ? source.owner_player_id : null,
   }
 }
 
@@ -891,14 +958,13 @@ function normalizeParticipant(
 
 function normalizeTeam(row: Record<string, unknown>): ProfileTeam | null {
   const id = readStringId(row.id)
-  const tournamentId = readStringId(row.tournament_id)
   const name = readNullableString(row.name)
 
-  if (!id || !tournamentId || !name) return null
+  if (!id || !name) return null
 
   return {
     id,
-    tournament_id: tournamentId,
+    tournament_id: readStringId(row.tournament_id) ?? "",
     name,
     seed: readNullableInteger(row.seed),
     rating: readNullableInteger(row.rating),
@@ -906,6 +972,8 @@ function normalizeTeam(row: Record<string, unknown>): ProfileTeam | null {
     rank_position: readNullableInteger(row.rank_position),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
+    status: readNullableString(row.status),
+    owner_player_id: readStringId(row.owner_player_id),
   }
 }
 
@@ -951,6 +1019,8 @@ function normalizePlayer(row: Record<string, unknown>): ProfilePlayer | null {
     rank_position: readNullableInteger(row.rank_position),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
+    status: readNullableString(row.status),
+    user_id: readStringId(row.user_id),
     owner_profile: normalizePlayerOwnerProfile(row.owner_profile),
   }
 }

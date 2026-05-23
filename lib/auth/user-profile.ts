@@ -49,9 +49,63 @@ export async function upsertUserProfileFromAuthUser(user: User) {
     .select("id, auth_user_id, discord_id, discord_username, display_name, avatar_url, onboarding_seen_at, created_at, updated_at")
     .maybeSingle()
 
-  if (error) {
+  if (error || !data) {
     console.error("Failed to sync Discord user profile:", error)
     return null
+  }
+
+  // Synchronize a global player profile for the user
+  try {
+    const userProfileId = data.id
+    // Query for existing player record using user_id or owner_user_id
+    const { data: existingPlayer, error: playerFetchError } = await supabaseAdmin
+      .from("players")
+      .select("id, status, user_id, owner_user_id")
+      .or(`user_id.eq.${user.id},owner_user_id.eq.${userProfileId}`)
+      .limit(1)
+      .maybeSingle()
+
+    if (playerFetchError) {
+      console.error("Failed to query existing player profile during auth sync:", playerFetchError)
+    } else if (existingPlayer) {
+      // Update existing player record: update display_name/avatar_url, and link user_id / owner_user_id if missing
+      const { error: playerUpdateError } = await supabaseAdmin
+        .from("players")
+        .update({
+          display_name: profileInput.displayName,
+          avatar_url: profileInput.avatarUrl,
+          user_id: user.id,
+          owner_user_id: userProfileId,
+          updated_at: now,
+        })
+        .eq("id", existingPlayer.id)
+
+      if (playerUpdateError) {
+        console.error("Failed to update existing player profile during auth sync:", playerUpdateError)
+      }
+    } else {
+      // Create new pending player profile
+      const { error: playerInsertError } = await supabaseAdmin
+        .from("players")
+        .insert({
+          user_id: user.id,
+          owner_user_id: userProfileId,
+          name: profileInput.displayName,
+          nickname: profileInput.displayName,
+          display_name: profileInput.displayName,
+          avatar_url: profileInput.avatarUrl,
+          status: "pending",
+          tournament_id: null,
+          wins: 0,
+          losses: 0,
+        })
+
+      if (playerInsertError) {
+        console.error("Failed to insert pending player profile during auth sync:", playerInsertError)
+      }
+    }
+  } catch (err) {
+    console.error("Unexpected error syncing global player profile:", err)
   }
 
   return normalizeUserProfile(data)

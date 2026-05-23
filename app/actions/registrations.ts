@@ -10,6 +10,8 @@ import {
 } from "@/lib/data/registrations"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parsePublicRegistrationFormData } from "@/lib/admin/validation"
+import { canManageTeam } from "@/lib/auth/permissions"
+import { canRegisterTeamForTournament } from "@/lib/teams/eligibility"
 
 export async function submitTournamentRegistration(formData: FormData) {
   const parsed = parsePublicRegistrationFormData(formData)
@@ -87,63 +89,97 @@ export async function submitTournamentRegistration(formData: FormData) {
     redirect(`/?registrationError=registration-full&${registrationTypeQuery}#registration`)
   }
 
-  const { data: existingUserRegistration, error: existingUserRegistrationError } =
-    await supabaseAdmin
+  let finalPlayerId: string | null = null
+  let finalTeamId: string | null = null
+  let finalDisplayName = parsed.data.display_name
+
+  if (parsed.data.participant_type === "player") {
+    finalPlayerId = approvedPlayer.id
+    finalDisplayName = approvedPlayer.nickname ?? approvedPlayer.name
+
+    // Duplicate player check: Check if player_id OR user_profile_id is already registered
+    const { data: existingReg, error: existingRegErr } = await supabaseAdmin
       .from("tournament_registrations")
       .select("id")
       .eq("tournament_id", parsed.data.tournament_id)
-      .eq("user_profile_id", userProfile.id)
+      .or(`player_id.eq.${approvedPlayer.id},user_profile_id.eq.${userProfile.id},source_player_id.eq.${approvedPlayer.id}`)
       .in("status", ["pending", "approved"])
       .limit(1)
       .maybeSingle()
 
-  if (existingUserRegistrationError) {
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
-  }
+    if (existingRegErr) {
+      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+    }
 
-  if (existingUserRegistration) {
-    redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
-  }
+    if (existingReg) {
+      redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
+    }
+  } else {
+    // Team registration
+    const teamId = formData.get("team_id") as string | null
+    if (!teamId || teamId.trim().length === 0) {
+      redirect(`/?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
+    }
 
-  const duplicateResult = await findActiveRegistrationByName(supabaseAdmin, {
-    tournamentId: parsed.data.tournament_id,
-    participantType: parsed.data.participant_type,
-    displayName: parsed.data.display_name,
-  })
+    finalTeamId = teamId.trim()
 
-  if (duplicateResult.error) {
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
-  }
+    // 1. Server-side validation: Check that team exists and get its name
+    const { data: teamData, error: teamFetchError } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .eq("id", finalTeamId)
+      .maybeSingle()
 
-  if (duplicateResult.registration) {
-    redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
-  }
+    if (teamFetchError || !teamData) {
+      redirect(`/?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
+    }
 
-  const approvedDuplicateResult = await findApprovedParticipantByName(supabaseAdmin, {
-    tournamentId: parsed.data.tournament_id,
-    participantType: parsed.data.participant_type,
-    displayName: parsed.data.display_name,
-  })
+    // Do NOT trust client-selected names, resolve from verified DB record!
+    finalDisplayName = teamData.name
 
-  if (approvedDuplicateResult.error) {
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
-  }
+    // 2. Validate captain role/ownership via canManageTeam helper
+    const isManager = await canManageTeam(finalTeamId, approvedPlayer.id)
+    if (!isManager) {
+      redirect(`/?registrationError=permission-denied&${registrationTypeQuery}#registration`)
+    }
 
-  if (approvedDuplicateResult.participant) {
-    redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
+    // 3. Validate eligibility using canRegisterTeamForTournament helper
+    const eligibility = await canRegisterTeamForTournament(finalTeamId)
+    if (!eligibility.allowed) {
+      redirect(`/?registrationError=team-ineligible&${registrationTypeQuery}#registration`)
+    }
+
+    // 4. Duplicate team check: check both new team_id and legacy source_team_id
+    const { data: existingReg, error: existingRegErr } = await supabaseAdmin
+      .from("tournament_registrations")
+      .select("id")
+      .eq("tournament_id", parsed.data.tournament_id)
+      .or(`team_id.eq.${finalTeamId},source_team_id.eq.${finalTeamId}`)
+      .in("status", ["pending", "approved"])
+      .limit(1)
+      .maybeSingle()
+
+    if (existingRegErr) {
+      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+    }
+
+    if (existingReg) {
+      redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
+    }
   }
 
   const { roster, ...registrationPayload } = parsed.data
-  const displayName =
-    parsed.data.participant_type === "player"
-      ? approvedPlayer.nickname ?? approvedPlayer.name
-      : registrationPayload.display_name
+
   const { data: createdRegistration, error } = await supabaseAdmin.from("tournament_registrations").insert({
     ...registrationPayload,
-    display_name: displayName,
+    display_name: finalDisplayName,
     user_profile_id: userProfile.id,
-    source_player_id:
-      parsed.data.participant_type === "player" ? approvedPlayer.id : null,
+    registration_type: parsed.data.participant_type,
+    player_id: finalPlayerId,
+    team_id: finalTeamId,
+    // Legacy support:
+    source_player_id: finalPlayerId,
+    source_team_id: finalTeamId,
     status: "pending",
   }).select("id").maybeSingle()
 
@@ -172,13 +208,13 @@ export async function submitTournamentRegistration(formData: FormData) {
       ...roster.substitutes
         .filter((nickname): nickname is string => Boolean(nickname))
         .map((nickname, index) => ({
-        nickname,
-        roster_role: "substitute",
-        roster_order: roster.main_players.length + index + 1,
-        is_captain:
-          normalizeRosterNickname(nickname) ===
-          normalizeRosterNickname(roster.captain_nickname),
-      })),
+          nickname,
+          roster_role: "substitute",
+          roster_order: roster.main_players.length + index + 1,
+          is_captain:
+            normalizeRosterNickname(nickname) ===
+            normalizeRosterNickname(roster.captain_nickname),
+        })),
     ]
 
     const { error: rosterError } = await supabaseAdmin
@@ -215,7 +251,7 @@ async function findApprovedOwnedPlayer(userProfileId: string) {
 
   const { data, error } = await supabaseAdmin
     .from("players")
-    .select("id, name, nickname")
+    .select("id, name, nickname, status")
     .eq("owner_user_id", userProfileId)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -226,13 +262,15 @@ async function findApprovedOwnedPlayer(userProfileId: string) {
     return null
   }
 
-  return typeof data?.id === "string" && typeof data.name === "string"
-    ? {
-        id: data.id,
-        name: data.name,
-        nickname: typeof data.nickname === "string" ? data.nickname : null,
-      }
-    : null
+  if (!data || data.status !== "approved") {
+    return null
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    nickname: typeof data.nickname === "string" ? data.nickname : null,
+  }
 }
 
 async function findPendingPlayerApplication(userProfileId: string) {

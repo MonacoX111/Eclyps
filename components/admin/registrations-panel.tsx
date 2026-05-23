@@ -123,6 +123,15 @@ function RegistrationRecord({
             {tournamentName} {"\u2022"} {formatType(registration.participant_type)}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {registration.registration_type ? (
+              <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1 text-emerald-300 font-medium">
+                {registration.registration_type === "player" ? "Global Player" : "Global Team"}
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/50">
+                Legacy Signup
+              </span>
+            )}
             {registration.owner_profile ? (
               <span className={`${pillClassName} inline-flex items-center gap-2`}>
                 {registration.owner_profile.avatar_url ? (

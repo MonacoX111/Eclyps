@@ -63,3 +63,32 @@ export async function deletePlayer(formData: FormData) {
   revalidatePath("/")
   redirect("/admin?playerSuccess=deleted#players")
 }
+
+export async function reviewPlayer(formData: FormData) {
+  await requireAdminSession()
+  const parsedId = parseRequiredIdFormData(formData, "missing-id")
+  if (!parsedId.ok) redirect("/admin?playerError=missing-id#players")
+  const status = formData.get("status") as string
+
+  if (status !== "approved" && status !== "rejected" && status !== "pending") {
+    redirect("/admin?playerError=invalid-status#players")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect("/admin?playerError=admin-client-unavailable#players")
+  }
+
+  const { error } = await runSupabaseMutation("review player", () =>
+    supabaseAdmin.from("players").update({ status }).eq("id", parsedId.data.id),
+  )
+
+  if (error) {
+    logMutationError("review player", error)
+    redirect("/admin?playerError=mutation-failed#players")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/")
+  redirect(`/admin?playerSuccess=${status}#players`)
+}

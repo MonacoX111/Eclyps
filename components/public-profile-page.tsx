@@ -56,8 +56,30 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
                   <p className="mb-3 text-sm font-semibold tracking-widest uppercase text-primary">
                     {isTeam ? t.profile.teamProfile : t.profile.playerProfile}
                   </p>
-                  <h1 className="glow-text break-words text-4xl font-bold text-foreground md:text-6xl">
+                  <h1 className="glow-text break-words text-4xl font-bold text-foreground md:text-6xl flex flex-wrap items-center gap-3">
                     {profile.display_name}
+                    {isTeam && (
+                      <span className="rounded-full px-2.5 py-0.5 text-xs font-mono text-emerald-300 bg-emerald-500/10 border border-emerald-500/25">
+                        [{profile.display_name.split(/\s+/).filter(Boolean).map(p => p[0]).join("").slice(0, 3).toUpperCase()}]
+                      </span>
+                    )}
+                    {profile.status && profile.status !== "approved" && (
+                      <span className={`inline-block rounded-xl px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wider ${
+                        profile.status === "rejected"
+                          ? "bg-red-500/10 border border-red-500/25 text-red-400"
+                          : "bg-amber-500/10 border border-amber-500/25 text-amber-400 animate-pulse"
+                      }`}>
+                        {profile.status === "rejected" ? t.profile.meta.rejected : t.profile.meta.pending}
+                      </span>
+                    )}
+                    {!isTeam && profile.discord_username && (
+                      <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/25 px-2.5 py-0.5 text-xs font-semibold text-[#5865F2]" title={t.profile.discordLinked}>
+                        <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 127.14 96.36">
+                          <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.4-5c.88-.65,1.73-1.34,2.54-2a75.7,75.7,0,0,0,72.76,0c.81.71,1.66,1.4,2.54,2a68.43,68.43,0,0,1-10.4,5,77.7,77.7,0,0,0,6.63,10.85,105.73,105.73,0,0,0,31-18.83C129.81,49.33,123.36,26.54,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
+                        </svg>
+                        {profile.discord_username}
+                      </span>
+                    )}
                   </h1>
                   {profile.nickname && profile.nickname !== profile.name ? (
                     <p className="mt-3 break-words text-sm text-muted-foreground">
@@ -76,6 +98,18 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
                       value={profile.seed ? `#${profile.seed}` : null}
                       empty={t.profile.meta.seedTba}
                     />
+                    {isTeam && profile.captain_name && (
+                      <MetaPill
+                        label={t.profile.meta.captain}
+                        value={profile.captain_name}
+                      />
+                    )}
+                    {isTeam && profile.member_count !== null && (
+                      <MetaPill
+                        label={t.profile.meta.members}
+                        value={String(profile.member_count)}
+                      />
+                    )}
                     <MetaPill label={t.profile.meta.rating} value={String(rating)} />
                     <MetaPill
                       label={t.profile.meta.rank}
@@ -96,34 +130,37 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
 
         <Divider />
 
-        <section className="relative z-10 px-4 py-24">
-          <div className="mx-auto max-w-5xl">
-            <SectionHeading eyebrow={t.profile.rosterHeading} title={connectionsTitle} />
-            {data.connections.length === 0 ? (
-              <EmptyState>{emptyConnections}</EmptyState>
-            ) : (
-              <div className="flex flex-wrap justify-center gap-4">
-                {data.connections.map((connection) => (
-                  <div
-                    key={connection.id}
-                    className="glass-card w-full rounded-xl p-5 sm:w-[calc((100%-1rem)/2)]"
-                  >
-                    <p className="break-words font-semibold text-foreground">
-                      {connection.label}
-                    </p>
-                    {connection.meta ? (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {connection.meta}
-                      </p>
-                    ) : null}
+        {!isTeam && (
+          <>
+            <section className="relative z-10 px-4 py-24">
+              <div className="mx-auto max-w-5xl">
+                <SectionHeading eyebrow={t.profile.rosterHeading} title={connectionsTitle} />
+                {data.connections.length === 0 ? (
+                  <EmptyState>{emptyConnections}</EmptyState>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {data.connections.map((connection) => (
+                      <div
+                        key={connection.id}
+                        className="glass-card w-full rounded-xl p-5 sm:w-[calc((100%-1rem)/2)]"
+                      >
+                        <p className="break-words font-semibold text-foreground">
+                          {connection.label}
+                        </p>
+                        {connection.meta ? (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {connection.meta}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
-        </section>
-
-        <Divider />
+            </section>
+            <Divider />
+          </>
+        )}
 
         {data.matches.length > 0 ? (
           <MatchSchedule matches={data.matches} />

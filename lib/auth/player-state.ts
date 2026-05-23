@@ -2,6 +2,7 @@ import "server-only"
 
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { canRegisterTeamForTournament } from "@/lib/teams/eligibility"
 
 export type PlayerApplicationStatus = "pending" | "approved" | "rejected"
 
@@ -35,11 +36,23 @@ export type CurrentTournamentRegistration = {
   source_player_id: string | null
 }
 
+export type ApprovedTeamSummary = {
+  id: string
+  name: string
+  slug: string | null
+  logo_url: string | null
+  owner_player_id: string | null
+  status: "pending" | "approved" | "rejected"
+  eligibility: { allowed: boolean; reason?: string }
+  isRegistered: boolean
+}
+
 export type PlatformUserState = {
   userProfile: UserProfile | null
   playerApplication: PlayerApplication | null
   approvedPlayer: ApprovedPlayerProfile | null
   tournamentRegistration: CurrentTournamentRegistration | null
+  manageableTeams: ApprovedTeamSummary[]
 }
 
 export async function getPlatformUserState({
@@ -55,6 +68,7 @@ export async function getPlatformUserState({
       playerApplication: null,
       approvedPlayer: null,
       tournamentRegistration: null,
+      manageableTeams: [],
     }
   }
 
@@ -65,6 +79,7 @@ export async function getPlatformUserState({
       playerApplication: null,
       approvedPlayer: null,
       tournamentRegistration: null,
+      manageableTeams: [],
     }
   }
 
@@ -79,11 +94,17 @@ export async function getPlatformUserState({
       : Promise.resolve(null),
   ])
 
+  let manageableTeams: ApprovedTeamSummary[] = []
+  if (approvedPlayer) {
+    manageableTeams = await fetchManageableTeams(approvedPlayer.id, tournamentId)
+  }
+
   return {
     userProfile,
     playerApplication: application,
     approvedPlayer,
     tournamentRegistration: registration,
+    manageableTeams,
   }
 }
 
@@ -112,7 +133,7 @@ async function fetchApprovedPlayer(userProfileId: string) {
 
   const { data, error } = await supabaseAdmin
     .from("players")
-    .select("id, name, nickname, region")
+    .select("id, name, nickname, region, status")
     .eq("owner_user_id", userProfileId)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -122,7 +143,7 @@ async function fetchApprovedPlayer(userProfileId: string) {
     console.error("Failed to fetch approved player profile:", error)
   }
 
-  if (!data || typeof data.id !== "string" || typeof data.name !== "string") {
+  if (!data || typeof data.id !== "string" || typeof data.name !== "string" || data.status !== "approved") {
     return null
   }
 
@@ -236,4 +257,118 @@ function readCheckInStatus(value: unknown): "not_checked_in" | "checked_in" {
 
 function isMissingApplicationStorageError(error: { code?: string }) {
   return error.code === "42P01" || error.code === "42703" || error.code === "PGRST200" || error.code === "PGRST204"
+}
+
+async function fetchManageableTeams(playerId: string, tournamentId: string | null): Promise<ApprovedTeamSummary[]> {
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return []
+
+  // 1. Fetch teams owned by player
+  const { data: ownedTeams } = await supabaseAdmin
+    .from("teams")
+    .select("id, name, slug, logo_url, owner_player_id, status")
+    .eq("owner_player_id", playerId)
+
+  // 2. Fetch teams where player is a captain
+  const { data: captainMemberships } = await supabaseAdmin
+    .from("team_members")
+    .select(`
+      team_id,
+      teams!inner(id, name, slug, logo_url, owner_player_id, status)
+    `)
+    .eq("player_id", playerId)
+    .eq("role", "captain")
+
+  const teamIds = new Set<string>()
+  const rawTeamsList: any[] = []
+
+  if (ownedTeams) {
+    for (const t of ownedTeams) {
+      if (!teamIds.has(t.id)) {
+        teamIds.add(t.id)
+        rawTeamsList.push(t)
+      }
+    }
+  }
+
+  if (captainMemberships) {
+    for (const item of captainMemberships) {
+      const t = (item as any).teams
+      if (t && !teamIds.has(t.id)) {
+        teamIds.add(t.id)
+        rawTeamsList.push(t)
+      }
+    }
+  }
+
+  const teamIdList = Array.from(teamIds)
+  if (teamIdList.length === 0) return []
+
+  // 3. Bulk fetch captain assignments for all resolved teams (1 query instead of N)
+  const { data: allCaptains } = await supabaseAdmin
+    .from("team_members")
+    .select("team_id, player_id")
+    .in("team_id", teamIdList)
+    .eq("role", "captain")
+
+  const captainsByTeam = new Map<string, string[]>()
+  if (allCaptains) {
+    for (const c of allCaptains) {
+      if (!captainsByTeam.has(c.team_id)) {
+        captainsByTeam.set(c.team_id, [])
+      }
+      captainsByTeam.get(c.team_id)!.push(c.player_id)
+    }
+  }
+
+  // 4. Bulk fetch registrations for all resolved teams (1 query instead of N)
+  const registeredTeamIds = new Set<string>()
+  if (tournamentId) {
+    const { data: registrations } = await supabaseAdmin
+      .from("tournament_registrations")
+      .select("team_id")
+      .eq("tournament_id", tournamentId)
+      .in("team_id", teamIdList)
+      .in("status", ["pending", "approved"])
+
+    if (registrations) {
+      for (const r of registrations) {
+        if (r.team_id) {
+          registeredTeamIds.add(r.team_id)
+        }
+      }
+    }
+  }
+
+  // 5. Compute eligibility and map in-memory (0 queries!)
+  const results: ApprovedTeamSummary[] = rawTeamsList.map((team) => {
+    const teamStatus = team.status ?? "approved"
+    
+    let allowed = true
+    let reason: string | undefined = undefined
+
+    if (teamStatus !== "approved") {
+      allowed = false
+      reason = `team-status-is-${teamStatus}`
+    } else {
+      const caps = captainsByTeam.get(team.id) || []
+      if (caps.length === 0) {
+        allowed = false
+        reason = "no-captain-assigned"
+      }
+    }
+
+    return {
+      id: team.id,
+      name: team.name,
+      slug: team.slug ?? null,
+      logo_url: team.logo_url ?? null,
+      owner_player_id: team.owner_player_id ?? null,
+      status: teamStatus as any,
+      eligibility: { allowed, reason },
+      isRegistered: registeredTeamIds.has(team.id),
+    }
+  })
+
+  return results
 }

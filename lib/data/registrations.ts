@@ -45,6 +45,9 @@ export type TournamentRegistrationRecord = {
   source_player_id: string | null
   reviewed_at: string | null
   created_at: string | null
+  registration_type: "player" | "team" | null
+  player_id: string | null
+  team_id: string | null
   roster: TournamentRegistrationRosterEntry[]
   owner_profile: TournamentRegistrationOwnerProfile | null
 }
@@ -70,7 +73,7 @@ export type TournamentRegistrationRosterEntry = {
 }
 
 const REGISTRATION_SELECT =
-  "id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, check_in_status, checked_in_at, checked_in_by_user_profile_id, participant_id, source_team_id, source_player_id, reviewed_at, created_at, owner_profile:user_profiles!tournament_registrations_user_profile_id_fkey(id, discord_username, display_name, avatar_url)"
+  "id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, check_in_status, checked_in_at, checked_in_by_user_profile_id, participant_id, source_team_id, source_player_id, reviewed_at, created_at, registration_type, player_id, team_id, owner_profile:user_profiles!tournament_registrations_user_profile_id_fkey(id, discord_username, display_name, avatar_url)"
 
 export async function getTournamentRegistrationSummary({
   tournamentId,
@@ -252,6 +255,9 @@ export function normalizeRegistration(
     source_player_id: readStringId(row.source_player_id),
     reviewed_at: readNullableString(row.reviewed_at),
     created_at: readNullableString(row.created_at),
+    registration_type: typeof row.registration_type === "string" ? (row.registration_type as "player" | "team") : null,
+    player_id: readStringId(row.player_id),
+    team_id: readStringId(row.team_id),
     roster: [],
     owner_profile: normalizeRegistrationOwnerProfile(row.owner_profile),
   }

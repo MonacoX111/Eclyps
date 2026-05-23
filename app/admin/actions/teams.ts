@@ -113,3 +113,85 @@ export async function deleteTeam(formData: FormData) {
   revalidatePath("/admin")
   redirect("/admin?teamSuccess=deleted#teams")
 }
+
+export async function approveTeam(formData: FormData) {
+  await requireAdminSession()
+
+  const parsedId = parseRequiredIdFormData(formData, "missing-id")
+  if (!parsedId.ok) {
+    redirect("/admin?teamError=missing-id#teams")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect("/admin?teamError=admin-client-unavailable#teams")
+  }
+
+  const { error } = await runSupabaseMutation("approve team", () =>
+    supabaseAdmin.from("teams").update({ status: "approved" }).eq("id", parsedId.data.id),
+  )
+
+  if (error) {
+    logMutationError("approve team", error)
+    redirect("/admin?teamError=mutation-failed#teams")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/teams")
+  redirect("/admin?teamSuccess=approved#teams")
+}
+
+export async function rejectTeam(formData: FormData) {
+  await requireAdminSession()
+
+  const parsedId = parseRequiredIdFormData(formData, "missing-id")
+  if (!parsedId.ok) {
+    redirect("/admin?teamError=missing-id#teams")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect("/admin?teamError=admin-client-unavailable#teams")
+  }
+
+  const { error } = await runSupabaseMutation("reject team", () =>
+    supabaseAdmin.from("teams").update({ status: "rejected" }).eq("id", parsedId.data.id),
+  )
+
+  if (error) {
+    logMutationError("reject team", error)
+    redirect("/admin?teamError=mutation-failed#teams")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/teams")
+  redirect("/admin?teamSuccess=rejected#teams")
+}
+
+export async function restoreTeamToPending(formData: FormData) {
+  await requireAdminSession()
+
+  const parsedId = parseRequiredIdFormData(formData, "missing-id")
+  if (!parsedId.ok) {
+    redirect("/admin?teamError=missing-id#teams")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect("/admin?teamError=admin-client-unavailable#teams")
+  }
+
+  const { error } = await runSupabaseMutation("restore team to pending", () =>
+    supabaseAdmin.from("teams").update({ status: "pending" }).eq("id", parsedId.data.id),
+  )
+
+  if (error) {
+    logMutationError("restore team to pending", error)
+    redirect("/admin?teamError=mutation-failed#teams")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/teams")
+  redirect("/admin?teamSuccess=pending#teams")
+}
+

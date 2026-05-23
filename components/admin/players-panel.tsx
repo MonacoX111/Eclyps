@@ -1,14 +1,15 @@
+"use client"
+
+import { useState } from "react"
 import type { AdminPlayer } from "@/lib/admin/players"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
-import { createTournamentNameMap } from "@/lib/admin/view-helpers"
-import { createPlayer, deletePlayer, updatePlayer } from "@/app/admin/actions"
+import { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
-import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
+import { AdminField, DeleteForm, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
 
 export function PlayersPanel({
   players,
-  tournaments,
   fetchError,
   feedback,
 }: {
@@ -17,38 +18,77 @@ export function PlayersPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
-  const tournamentNames = createTournamentNameMap(tournaments)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
+
+  // Client-side search and status filter
+  const filteredPlayers = players.filter((player) => {
+    const matchesSearch =
+      (player.display_name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (player.real_name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (player.discord_username ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStatus = statusFilter === "all" || (player.status ?? "approved") === statusFilter
+
+    return matchesSearch && matchesStatus
+  })
 
   return (
     <AdminSection
       id="players"
       title="Players"
-      description="Create, update, and remove individual tournament players."
+      description="Verify Discord users, approve profiles, and manage global players."
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="players"
     >
       <div className={panelGridClassName}>
+        {/* Creation panel */}
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Create player</h3>
-          <PlayerForm action={createPlayer} submitLabel="Create player" tournaments={tournaments} />
+          <p className="mt-1 text-xs text-white/45">Creates a new global player profile.</p>
+          <PlayerForm action={createPlayer} submitLabel="Create player" />
         </article>
+
+        {/* List panel */}
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Existing players</h3>
-          {players.length === 0 ? (
-            <AdminEmptyState>No players exist in Supabase yet.</AdminEmptyState>
+          <h3 className="text-lg font-medium font-semibold">Global players list</h3>
+
+          {/* Client-side search and status filters */}
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="text"
+              placeholder="Search by display name or Discord..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-xs rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white outline-none transition focus:border-primary/60"
+            />
+            <div className="flex flex-wrap gap-1 text-[11px]">
+              {(["all", "pending", "approved", "rejected"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setStatusFilter(filter)}
+                  className={`rounded-full border px-2.5 py-1 transition cursor-pointer ${
+                    statusFilter === filter
+                      ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                      : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+                  }`}
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredPlayers.length === 0 ? (
+            <AdminEmptyState>No players match the current filters.</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
-              {players.map((player) => (
+              {filteredPlayers.map((player) => (
                 <PlayerRecord
                   key={player.id}
                   player={player}
-                  tournaments={tournaments}
-                  tournamentName={
-                    player.tournament_id
-                      ? tournamentNames.get(player.tournament_id) ?? "Unknown tournament"
-                      : "Unassigned"
-                  }
                 />
               ))}
             </div>
@@ -61,37 +101,110 @@ export function PlayersPanel({
 
 function PlayerRecord({
   player,
-  tournaments,
-  tournamentName,
 }: {
   player: AdminPlayer
-  tournaments: AdminTournament[]
-  tournamentName: string
 }) {
   const showRealName = Boolean(
     player.real_name && player.real_name !== player.display_name,
   )
 
+  const status = player.status ?? "approved"
+
   return (
     <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h4 className="break-words font-medium">{player.display_name}</h4>
-            {showRealName && (
-              <p className="mt-1 break-words text-sm text-white/45">{player.real_name}</p>
+          <div className="flex items-center gap-3">
+            {player.avatar_url ? (
+              <img
+                src={player.avatar_url}
+                alt=""
+                className="h-10 w-10 rounded-full object-cover border border-white/10"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-semibold text-white/45">
+                {player.display_name.slice(0, 2).toUpperCase()}
+              </div>
             )}
-            {player.region && (
-              <p className="mt-1 break-words text-sm text-white/45">{player.region}</p>
-            )}
-            <p className="mt-1 break-words text-sm text-white/55">{tournamentName}</p>
+            <div>
+              <h4 className="break-words font-medium text-sm flex items-center gap-2">
+                {player.display_name}
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider ${
+                  status === "approved"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                    : status === "rejected"
+                    ? "border-red-500/20 bg-red-500/10 text-red-300"
+                    : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                }`}>
+                  {status}
+                </span>
+              </h4>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                {showRealName && (
+                  <span className="text-white/45">{player.real_name}</span>
+                )}
+                {player.region && (
+                  <span className="text-white/45">• {player.region}</span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                {player.discord_username && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-indigo-400/20 bg-indigo-400/10 px-2 py-0.5 text-[9px] text-indigo-200">
+                    Discord: {player.discord_username}
+                  </span>
+                )}
+                {player.created_at && (
+                  <span className="text-[9px] text-white/35">
+                    Joined {new Date(player.created_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           <span className={pillClassName}>Seed {player.seed ?? "???"}</span>
         </div>
       </summary>
+
       <div className="mt-4 border-t border-white/10 pt-4">
+        {/* Approve / Reject Actions Row */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <form action={reviewPlayer} className="flex flex-wrap gap-2 w-full">
+            <input type="hidden" name="id" value={player.id} />
+            {status !== "approved" && (
+              <button
+                type="submit"
+                name="status"
+                value="approved"
+                className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-300 cursor-pointer"
+              >
+                Approve Player
+              </button>
+            )}
+            {status !== "rejected" && (
+              <button
+                type="submit"
+                name="status"
+                value="rejected"
+                className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 cursor-pointer"
+              >
+                Reject Player
+              </button>
+            )}
+            {status !== "pending" && (
+              <button
+                type="submit"
+                name="status"
+                value="pending"
+                className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 cursor-pointer"
+              >
+                Restore to Pending
+              </button>
+            )}
+          </form>
+        </div>
+
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <PlayerForm action={updatePlayer} submitLabel="Save changes" tournaments={tournaments} player={player} />
+          <PlayerForm action={updatePlayer} submitLabel="Save changes" player={player} />
           <DeleteForm action={deletePlayer} id={player.id} />
         </div>
       </div>
@@ -102,23 +215,20 @@ function PlayerRecord({
 function PlayerForm({
   action,
   submitLabel,
-  tournaments,
   player,
 }: {
   action: AdminFormAction
   submitLabel: string
-  tournaments: AdminTournament[]
   player?: AdminPlayer
 }) {
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {player && <input type="hidden" name="id" value={player.id} />}
-      <TournamentSelect tournaments={tournaments} value={player?.tournament_id} />
       <AdminField label="Real name">
         <input name="name" defaultValue={player?.name ?? ""} required className={inputClassName} />
       </AdminField>
       <AdminField label="Nickname / display name">
-        <input name="nickname" defaultValue={player?.nickname ?? ""} className={inputClassName} />
+        <input name="nickname" defaultValue={player?.nickname ?? player?.display_name ?? ""} className={inputClassName} />
       </AdminField>
       <AdminField label="Region">
         <input
@@ -137,7 +247,7 @@ function PlayerForm({
       <AdminField label="Losses">
         <input name="losses" type="number" min={0} step={1} defaultValue={player?.losses ?? 0} required className={inputClassName} />
       </AdminField>
-      <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
+      <SubmitButton label={submitLabel} />
     </form>
   )
 }

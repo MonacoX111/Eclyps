@@ -1,8 +1,11 @@
+"use client"
+
+import { useState } from "react"
 import type { AdminTeam } from "@/lib/admin/teams"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
-import { createTeam, deleteTeam, updateTeam } from "@/app/admin/actions"
-import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName } from "@/components/admin/admin-section"
+import { createTeam, deleteTeam, updateTeam, approveTeam, rejectTeam, restoreTeamToPending } from "@/app/admin/actions"
+import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName, pillClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
 
 export function TeamsPanel({
@@ -16,37 +19,80 @@ export function TeamsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
+
   const tournamentNames = new Map(
     tournaments.map((tournament) => [tournament.id, tournament.name ?? "Untitled tournament"]),
   )
+
+  const filteredTeams = teams.filter((team) => {
+    const matchesSearch =
+      (team.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (team.owner_display_name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (team.slug ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStatus = statusFilter === "all" || (team.status ?? "approved") === statusFilter
+
+    return matchesSearch && matchesStatus
+  })
 
   return (
     <AdminSection
       id="teams"
       title="Teams"
-      description="Create, update, and remove teams linked to tournaments in Supabase."
+      description="Approve and moderate global team profiles, review owners, slugs, and verify roster states."
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="teams"
     >
       <div className={panelGridClassName}>
+        {/* Creation Form */}
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Create team</h3>
           <p className="mt-2 text-sm leading-6 text-white/55">
-            Adds a real team row to <code>public.teams</code>.
+            Adds a legacy or global team row to <code>public.teams</code>.
           </p>
 
           <TeamForm action={createTeam} submitLabel="Create team" tournaments={tournaments} />
         </article>
 
+        {/* Existing & Global Teams */}
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Existing teams</h3>
+          <h3 className="text-lg font-medium font-semibold">Global teams list</h3>
 
-          {teams.length === 0 ? (
-            <AdminEmptyState>No teams exist in Supabase yet.</AdminEmptyState>
+          {/* Client-side search and status filters */}
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="text"
+              placeholder="Search by team name, slug, or owner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-xs rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white outline-none transition focus:border-primary/60"
+            />
+            <div className="flex flex-wrap gap-1 text-[11px]">
+              {(["all", "pending", "approved", "rejected"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setStatusFilter(filter)}
+                  className={`rounded-full border px-2.5 py-1 transition cursor-pointer ${
+                    statusFilter === filter
+                      ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                      : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+                  }`}
+                >
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredTeams.length === 0 ? (
+            <AdminEmptyState>No teams match the current filters.</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
-              {teams.map((team) => (
+              {filteredTeams.map((team) => (
                 <TeamRecord
                   key={team.id}
                   team={team}
@@ -54,7 +100,7 @@ export function TeamsPanel({
                   tournamentName={
                     team.tournament_id
                       ? tournamentNames.get(team.tournament_id) ?? "Unknown tournament"
-                      : "Unassigned"
+                      : "Global Team"
                   }
                 />
               ))}
@@ -75,22 +121,97 @@ function TeamRecord({
   tournaments: AdminTournament[]
   tournamentName: string
 }) {
+  const status = team.status ?? "approved"
+
   return (
-    <details className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+    <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h4 className="break-words font-medium">{team.name ?? "Untitled team"}</h4>
-            <p className="mt-1 break-words text-sm text-white/55">{tournamentName}</p>
+          <div className="flex items-center gap-3">
+            {team.logo_url ? (
+              <img
+                src={team.logo_url}
+                alt=""
+                className="h-10 w-10 rounded-full object-cover border border-white/10"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-semibold text-white/45">
+                {team.name ? team.name.slice(0, 2).toUpperCase() : "TM"}
+              </div>
+            )}
+            <div>
+              <h4 className="break-words font-medium text-sm flex items-center gap-2">
+                {team.name ?? "Untitled team"}
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider ${
+                  status === "approved"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                    : status === "rejected"
+                    ? "border-red-500/20 bg-red-500/10 text-red-300"
+                    : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                }`}>
+                  {status}
+                </span>
+              </h4>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                {team.slug && (
+                  <span className="text-white/45">Slug: {team.slug}</span>
+                )}
+                {team.owner_display_name && (
+                  <span className="text-white/45">• Captain: {team.owner_display_name}</span>
+                )}
+                <span className="text-white/45">• {team.members_count ?? 0} members</span>
+                {team.tournament_id && (
+                  <span className="text-white/45">• {tournamentName}</span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                {team.created_at && (
+                  <span className="text-[9px] text-white/35">
+                    Created {new Date(team.created_at).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-
-          <span className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-white/65">
-            Seed {team.seed ?? "???"}
-          </span>
+          <span className={pillClassName}>Seed {team.seed ?? "???"}</span>
         </div>
       </summary>
 
       <div className="mt-4 border-t border-white/10 pt-4">
+        {/* Approve / Reject Actions Row */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <form className="flex flex-wrap gap-2 w-full">
+            <input type="hidden" name="id" value={team.id} />
+            {status !== "approved" && (
+              <button
+                type="submit"
+                formAction={approveTeam}
+                className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-300 cursor-pointer"
+              >
+                Approve Team
+              </button>
+            )}
+            {status !== "rejected" && (
+              <button
+                type="submit"
+                formAction={rejectTeam}
+                className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 cursor-pointer"
+              >
+                Reject Team
+              </button>
+            )}
+            {status !== "pending" && (
+              <button
+                type="submit"
+                formAction={restoreTeamToPending}
+                className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 cursor-pointer"
+              >
+                Restore to Pending
+              </button>
+            )}
+          </form>
+        </div>
+
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
           <TeamForm action={updateTeam} submitLabel="Save changes" tournaments={tournaments} team={team} />
           <DeleteForm action={deleteTeam} id={team.id} />
@@ -132,7 +253,7 @@ function TeamForm({
         <input name="losses" type="number" min={0} step={1} defaultValue={team?.losses ?? 0} required className={inputClassName} />
       </AdminField>
 
-      <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
+      <SubmitButton label={submitLabel} />
     </form>
   )
 }

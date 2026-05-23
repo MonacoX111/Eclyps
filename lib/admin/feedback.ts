@@ -66,6 +66,9 @@ export function getPlayerFeedback(searchParams?: Pick<AdminSearchParams, "player
   if (searchParams?.playerSuccess === "created") return { tone: "success", message: "Player created." }
   if (searchParams?.playerSuccess === "updated") return { tone: "success", message: "Player updated." }
   if (searchParams?.playerSuccess === "deleted") return { tone: "success", message: "Player deleted." }
+  if (searchParams?.playerSuccess === "approved") return { tone: "success", message: "Player profile approved." }
+  if (searchParams?.playerSuccess === "rejected") return { tone: "success", message: "Player profile rejected." }
+  if (searchParams?.playerSuccess === "pending") return { tone: "success", message: "Player profile restored to pending." }
   if (!searchParams?.playerError) return null
 
   const message =

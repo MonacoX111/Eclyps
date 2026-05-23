@@ -7,10 +7,40 @@ import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData, getTeamCards } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { CreateTeamModal } from "@/components/create-team-modal"
+import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = "force-dynamic"
 
-export default async function TeamsPage() {
+type PageProps = {
+  searchParams?: Promise<{
+    teamError?: string
+    teamSuccess?: string
+  }>
+}
+
+export default async function TeamsPage({ searchParams }: PageProps) {
+  const resolvedParams = await searchParams
+  const userProfile = await getCurrentUserProfile()
+  const isLoggedIn = Boolean(userProfile)
+
+  let hasApprovedPlayer = false
+  if (userProfile) {
+    const supabaseAdmin = createSupabaseAdminClient()
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("players")
+        .select("id, status")
+        .eq("user_id", userProfile.auth_user_id)
+        .limit(1)
+        .maybeSingle()
+
+      if (data && data.status === "approved") {
+        hasApprovedPlayer = true
+      }
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-x-hidden pt-20">
       <AdminShortcut />
@@ -19,6 +49,15 @@ export default async function TeamsPage() {
         <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
+
+        <div className="relative z-10 pt-16 flex justify-center">
+          <CreateTeamModal
+            isLoggedIn={isLoggedIn}
+            hasApprovedPlayer={hasApprovedPlayer}
+            initialError={resolvedParams?.teamError}
+            initialSuccess={resolvedParams?.teamSuccess}
+          />
+        </div>
 
         <Suspense fallback={<TeamsLoading />}>
           <ActiveTeamsGrid />
@@ -45,7 +84,7 @@ async function ActiveNavbar() {
 
 async function ActiveTeamsGrid() {
   const homepageData = await getHomepageData()
-  const teamCards = getTeamCards(homepageData.teams)
+  const teamCards = getTeamCards(homepageData.teams, homepageData.participants)
 
   return (
     <TeamsGrid

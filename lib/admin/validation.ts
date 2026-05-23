@@ -59,7 +59,7 @@ export const teamSchema = z.object({
 })
 
 export const playerSchema = z.object({
-  tournament_id: requiredString(),
+  tournament_id: optionalString(),
   name: requiredString(),
   nickname: optionalString(),
   region: optionalString(),

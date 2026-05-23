@@ -21,6 +21,10 @@ export type AdminPlayer = {
   wins: number | null
   losses: number | null
   created_at: string | null
+  status: string | null
+  avatar_url: string | null
+  discord_username: string | null
+  user_id: string | null
 }
 
 export async function getAdminPlayers() {
@@ -37,8 +41,8 @@ export async function getAdminPlayers() {
   const { rows, error } = await runAdminRowsQuery("players", () =>
     supabaseAdmin
       .from("players")
-      .select("id, tournament_id, name, nickname, region, seed, wins, losses, created_at")
-      .order("seed", { ascending: true, nullsFirst: false }),
+      .select("id, tournament_id, name, nickname, display_name, real_name, avatar_url, region, seed, wins, losses, status, created_at, user_id, owner_user_id, owner_profile:user_profiles!players_owner_user_id_fkey(id, discord_username)")
+      .order("created_at", { ascending: false }),
     normalizePlayer,
   )
 
@@ -52,7 +56,13 @@ function normalizePlayer(row: Record<string, unknown>): AdminPlayer | null {
   const realName = readNullableString(row.name)
   const nickname = readNullableString(row.nickname)
   const region = readNullableString(row.region)
-  const displayName = getPlayerDisplayName(realName, nickname)
+  const displayName = readNullableString(row.display_name) ?? getPlayerDisplayName(realName, nickname)
+
+  const ownerProfileRaw = row.owner_profile
+  const ownerProfile = Array.isArray(ownerProfileRaw) ? ownerProfileRaw[0] : ownerProfileRaw
+  const discordUsername = ownerProfile && typeof ownerProfile === "object"
+    ? readNullableString((ownerProfile as Record<string, unknown>).discord_username)
+    : null
 
   return {
     id,
@@ -66,6 +76,10 @@ function normalizePlayer(row: Record<string, unknown>): AdminPlayer | null {
     wins: readNullableInteger(row.wins),
     losses: readNullableInteger(row.losses),
     created_at: readNullableString(row.created_at),
+    status: readNullableString(row.status) ?? "approved",
+    avatar_url: readNullableString(row.avatar_url),
+    discord_username: discordUsername,
+    user_id: readStringId(row.user_id),
   }
 }
 

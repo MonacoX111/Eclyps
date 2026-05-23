@@ -65,11 +65,12 @@ export type HomepageTournament = {
 
 export type HomepageTeam = {
   id: string
-  tournament_id: string
+  tournament_id: string | null
   name: string
   seed: number | null
   wins: number
   losses: number
+  logo_url: string | null
 }
 
 export type HomepagePlayer = {
@@ -191,10 +192,19 @@ export const getHomepageData = cache(async (): Promise<HomepageData> => {
     })
   }
 
-  const [teams, players, participants, matches, results] = await Promise.all([
-    fetchHomepageTeams(tournament.id),
-    fetchAllEclypsPlayers(),
-    fetchHomepageParticipants(tournament.id),
+  const participants = await fetchHomepageParticipants(tournament.id)
+
+  const sourceTeamIds = participants
+    .map((p) => p.source_team_id)
+    .filter((id): id is string => typeof id === "string")
+
+  const sourcePlayerIds = participants
+    .map((p) => p.source_player_id)
+    .filter((id): id is string => typeof id === "string")
+
+  const [teams, players, matches, results] = await Promise.all([
+    fetchAllEclypsTeams(sourceTeamIds, tournament.id),
+    fetchAllEclypsPlayers(sourcePlayerIds, tournament.id),
     fetchHomepageMatches(tournament.id),
     fetchHomepageResults(tournament.id),
   ])
@@ -251,41 +261,67 @@ async function fetchHomepageTournament() {
   }
 }
 
-async function fetchHomepageTeams(tournamentId: string): Promise<HomepageTeam[]> {
+async function fetchAllEclypsTeams(targetIds?: string[], tournamentId?: string): Promise<HomepageTeam[]> {
   if (!supabase) {
-    console.warn("Skipping homepage teams query because Supabase is not configured.")
+    console.warn("Skipping Eclyps teams query because Supabase is not configured.")
     return []
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("teams")
-      .select("id, tournament_id, name, seed, wins, losses")
-      .eq("tournament_id", tournamentId)
-      .order("seed", { ascending: true, nullsFirst: false })
+      .select("id, tournament_id, name, seed, wins, losses, logo_url")
+
+    if (targetIds && targetIds.length > 0) {
+      if (tournamentId) {
+        query = query.or(`id.in.(${targetIds.map((id) => `"${id}"`).join(",")}),tournament_id.eq.${tournamentId}`)
+      } else {
+        query = query.in("id", targetIds)
+      }
+    } else if (tournamentId) {
+      query = query.eq("tournament_id", tournamentId)
+    } else {
+      return []
+    }
+
+    const { data, error } = await query.order("name", { ascending: true })
 
     if (error) {
-      console.error("Failed to fetch homepage teams:", error)
+      console.error("Failed to fetch all Eclyps teams:", error)
       return []
     }
 
     return normalizeRows(data, normalizeHomepageTeam)
   } catch (error) {
-    console.error("Unexpected error while fetching homepage teams:", error)
+    console.error("Unexpected error while fetching all Eclyps teams:", error)
     return []
   }
 }
 
-async function fetchAllEclypsPlayers(): Promise<HomepagePlayer[]> {
+async function fetchAllEclypsPlayers(targetIds?: string[], tournamentId?: string): Promise<HomepagePlayer[]> {
   if (!supabase) {
     console.warn("Skipping Eclyps players query because Supabase is not configured.")
     return []
   }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("players")
       .select("id, tournament_id, name, nickname, seed, wins, losses, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)")
+
+    if (targetIds && targetIds.length > 0) {
+      if (tournamentId) {
+        query = query.or(`id.in.(${targetIds.map((id) => `"${id}"`).join(",")}),tournament_id.eq.${tournamentId}`)
+      } else {
+        query = query.in("id", targetIds)
+      }
+    } else if (tournamentId) {
+      query = query.eq("tournament_id", tournamentId)
+    } else {
+      return []
+    }
+
+    const { data, error } = await query
       .order("seed", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
 
@@ -422,7 +458,7 @@ async function createHomepageData({
   const participantCards =
     participantType === "player"
       ? getPlayerCards(players, participants)
-      : getTeamCards(teams)
+      : getTeamCards(teams, participants)
   const { bracketMatches, normalMatches } = splitHomepageMatches(matches)
   const tournamentParticipantCount = getTournamentParticipantCount(
     participants,
@@ -504,21 +540,21 @@ function readTournamentParticipantType(value: unknown): "team" | "player" | null
 
 function normalizeHomepageTeam(row: Record<string, unknown>): HomepageTeam | null {
   const id = readStringId(row.id)
-  const tournamentId = readStringId(row.tournament_id)
   const name = readNullableString(row.name)
 
-  if (!id || !tournamentId || !name) {
+  if (!id || !name) {
     console.error("Skipping malformed homepage team row:", row)
     return null
   }
 
   return {
     id,
-    tournament_id: tournamentId,
+    tournament_id: readStringId(row.tournament_id),
     name,
     seed: readNullableInteger(row.seed),
     wins: readNonNegativeInteger(row.wins),
     losses: readNonNegativeInteger(row.losses),
+    logo_url: readNullableString(row.logo_url),
   }
 }
 
@@ -718,16 +754,31 @@ function getTournamentBlocksView(
   }
 }
 
-export function getTeamCards(teams: HomepageTeam[]): TeamCard[] {
-  return teams.map((team, index) => ({
-    id: team.id,
-    name: team.name,
-    tag: createTeamTag(team.name),
-    wins: team.wins,
-    losses: team.losses,
-    rank: team.seed ?? index + 1,
-    profileHref: `/teams/${team.id}`,
-  }))
+export function getTeamCards(
+  teams: HomepageTeam[],
+  participants: HomepageParticipant[],
+): TeamCard[] {
+  const teamParticipants = participants.filter((p) => p.participant_type === "team")
+  const teamsById = new Map(teams.map((team) => [team.id, team]))
+
+  return teamParticipants.map((participant, index) => {
+    const team = participant.source_team_id
+      ? teamsById.get(participant.source_team_id)
+      : null
+    const displayName = participant.display_name
+
+    return {
+      id: participant.id,
+      name: displayName,
+      tag: createTeamTag(displayName),
+      wins: team?.wins ?? 0,
+      losses: team?.losses ?? 0,
+      rank: participant.seed ?? index + 1,
+      profileHref: `/teams/${team?.id ?? participant.id}`,
+      avatarUrl: team?.logo_url ?? null,
+      avatarAlt: displayName,
+    }
+  })
 }
 
 export function getPlayerCards(

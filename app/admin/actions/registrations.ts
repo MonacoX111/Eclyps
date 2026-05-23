@@ -11,6 +11,7 @@ import {
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseRegistrationDecisionFormData } from "./parsers"
 import { requireAdminSession } from "./shared"
+import { canRegisterTeamForTournament } from "@/lib/teams/eligibility"
 
 export async function reviewRegistration(formData: FormData) {
   await requireAdminSession()
@@ -29,7 +30,7 @@ export async function reviewRegistration(formData: FormData) {
 
   const { data: registration, error: registrationError } = await supabaseAdmin
     .from("tournament_registrations")
-    .select("id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, source_player_id, source_team_id")
+    .select("id, tournament_id, participant_type, user_profile_id, display_name, contact_email, contact_handle, region, status, source_player_id, source_team_id, registration_type, player_id, team_id, participant_id")
     .eq("id", parsed.data.id)
     .maybeSingle()
 
@@ -47,103 +48,67 @@ export async function reviewRegistration(formData: FormData) {
     redirect("/admin?registrationSuccess=rejected#registrations")
   }
 
-  const { data: tournament, error: tournamentError } = await supabaseAdmin
-    .from("tournaments")
-    .select("id, team_count, status, participant_type")
-    .eq("id", registration.tournament_id)
-    .maybeSingle()
-
-  if (tournamentError || !tournament) {
-    redirect("/admin?registrationError=invalid-tournament-id#registrations")
-  }
-
-  if (tournament.status !== "upcoming") {
-    redirect("/admin?registrationError=registration-closed#registrations")
-  }
-
-  if (
-    tournament.participant_type !== "team" &&
-    tournament.participant_type !== "player"
-  ) {
-    redirect("/admin?registrationError=invalid-participant-type#registrations")
-  }
-
-  if (registration.participant_type !== tournament.participant_type) {
-    redirect("/admin?registrationError=wrong-participant-type#registrations")
-  }
-
-  const approvedCount = await countApprovedParticipants(
-    supabaseAdmin,
-    registration.tournament_id,
-    registration.participant_type,
+  // Call the new transactional stored procedure to approve the registration atomically
+  const { data: participantId, error: rpcError } = await supabaseAdmin.rpc(
+    "approve_tournament_registration",
+    {
+      registration_uuid: parsed.data.id,
+    },
   )
 
-  if (typeof tournament.team_count === "number" && approvedCount >= tournament.team_count) {
-    redirect("/admin?registrationError=registration-full#registrations")
-  }
-
-  if (
-    await hasApprovedParticipantName(
-      supabaseAdmin,
-      registration.tournament_id,
-      registration.participant_type,
-      registration.display_name,
-    )
-  ) {
-    redirect("/admin?registrationError=duplicate-registration#registrations")
-  }
-
-  const seed = await getNextParticipantSeed(
-    supabaseAdmin,
-    registration.tournament_id,
-    registration.participant_type,
-  )
-  const source =
-    registration.participant_type === "player"
-      ? await approvePlayerRegistration(supabaseAdmin, registration, seed)
-      : await approveTeamRegistration(supabaseAdmin, registration, seed)
-
-  if (source?.duplicate) {
-    redirect("/admin?registrationError=duplicate-registration#registrations")
-  }
-
-  if (!source) {
-    redirect("/admin?registrationError=mutation-failed#registrations")
-  }
-
-  const participantId = source.participantId
-
-  if (registration.participant_type === "team") {
-    const rosterResult = await approveTeamRegistrationRoster(supabaseAdmin, {
-      registrationId: registration.id,
-      tournamentId: registration.tournament_id,
-      teamParticipantId: participantId,
-    })
-
-    if (!rosterResult) {
-      redirect("/admin?registrationError=mutation-failed#registrations")
+  if (rpcError || !participantId) {
+    console.error("RPC approve_tournament_registration failed:", rpcError)
+    
+    // Map Postgres exception messages to clear admin panel error parameters
+    const errMsg = rpcError?.message || ""
+    let errorParam = "mutation-failed"
+    
+    if (errMsg.includes("full")) {
+      errorParam = "registration-full"
+    } else if (errMsg.includes("captain")) {
+      errorParam = "team-ineligible"
+    } else if (errMsg.includes("closed")) {
+      errorParam = "registration-closed"
+    } else if (errMsg.includes("mismatch")) {
+      errorParam = "wrong-participant-type"
     }
-  }
 
-  const { error } = await supabaseAdmin
-    .from("tournament_registrations")
-    .update({
-      status: "approved",
-      participant_id: participantId,
-      source_team_id: registration.participant_type === "team" ? source.sourceId : null,
-      source_player_id: registration.participant_type === "player" ? source.sourceId : null,
-      reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", parsed.data.id)
-
-  if (error) {
-    logMutationError("approve registration", error)
-    redirect("/admin?registrationError=mutation-failed#registrations")
+    redirect(`/admin?registrationError=${errorParam}#registrations`)
   }
 
   revalidateRegistrationPaths()
   redirect("/admin?registrationSuccess=approved#registrations")
+}
+
+async function findApprovedParticipantBySource(
+  supabaseAdmin: SupabaseClient,
+  {
+    tournamentId,
+    participantType,
+    sourceId,
+  }: {
+    tournamentId: string
+    participantType: "team" | "player"
+    sourceId: string
+  },
+): Promise<string | null> {
+  const sourceColumn =
+    participantType === "team" ? "source_team_id" : "source_player_id"
+  const { data, error } = await supabaseAdmin
+    .from("participants")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("participant_type", participantType)
+    .eq(sourceColumn, sourceId)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    logMutationError("find approved participant by source", error)
+    return null
+  }
+
+  return data?.id ?? null
 }
 
 async function approveTeamRegistration(

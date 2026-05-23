@@ -5,8 +5,9 @@ export {
   setActiveTournament,
   updateTournament,
 } from "./actions/tournaments"
-export { createTeam, deleteTeam, updateTeam } from "./actions/teams"
-export { createPlayer, deletePlayer, updatePlayer } from "./actions/players"
+export { createTeam, deleteTeam, updateTeam, approveTeam, rejectTeam, restoreTeamToPending } from "./actions/teams"
+
+export { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "./actions/players"
 export { reviewPlayerApplication } from "./actions/player-applications"
 export { reviewDispute } from "./actions/disputes"
 export { reviewRegistration } from "./actions/registrations"

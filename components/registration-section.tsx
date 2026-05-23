@@ -1,6 +1,7 @@
 "use client"
 
-import type React from "react"
+import React, { useState, useEffect } from "react"
+import { useFormStatus } from "react-dom"
 import Image from "next/image"
 import { checkInTournament } from "@/app/actions/check-ins"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
@@ -78,12 +79,28 @@ export function RegistrationSection({
     t,
   })
   
+  const manageableTeams = platformState?.manageableTeams ?? []
+  const approvedTeams = manageableTeams.filter((t) => t.status === "approved")
+  
+  const [selectedTeamId, setSelectedTeamId] = useState(approvedTeams[0]?.id ?? "")
+
+  useEffect(() => {
+    if (approvedTeams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(approvedTeams[0].id)
+    }
+  }, [approvedTeams, selectedTeamId])
+
+  const selectedTeam = approvedTeams.find((t) => t.id === selectedTeamId)
+  const isTeamAlreadyRegistered = summary.participantType === "team" && selectedTeam?.isRegistered
+  const isTeamEligible = summary.participantType !== "team" || (selectedTeam && selectedTeam.eligibility?.allowed)
+
   const canSubmit =
     !isDisabled &&
     Boolean(approvedPlayer) &&
     !isTournamentPending &&
-    !isTournamentApproved
-  
+    !isTournamentApproved &&
+    (summary.participantType !== "team" || (approvedTeams.length > 0 && !isTeamAlreadyRegistered && isTeamEligible))
+
   const applicationStatus = playerApplication?.status ?? null
 
   return (
@@ -152,7 +169,56 @@ export function RegistrationSection({
 
             <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
               {userProfile && !approvedPlayer ? (
-                <PlayerApplicationState status={applicationStatus} />
+                <PlayerApplicationState status={applicationStatus} lang={lang} />
+              ) : null}
+              {userProfile && approvedPlayer && summary.participantType === "team" && manageableTeams.length === 0 ? (
+                <div className="sm:col-span-2 rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-4">
+                  <p className="text-sm font-semibold text-red-100">
+                    {lang === "uk" ? "Лише схвалені команди можуть реєструватися" : "Only approved teams can register for this tournament."}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {lang === "uk"
+                      ? "Ви не є власником або капітаном жодної команди. Створіть команду в розділі 'Команди' та зачекайте на схвалення адміністратора."
+                      : "You do not own or manage any global teams. Create a team in the 'Teams' tab and wait for admin approval."}
+                  </p>
+                </div>
+              ) : null}
+              {userProfile && approvedPlayer && summary.participantType === "team" && manageableTeams.length > 0 && approvedTeams.length === 0 ? (
+                <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
+                  <p className="text-sm font-semibold text-amber-100">
+                    {lang === "uk" ? "Лише схвалені команди можуть реєструватися" : "Only approved teams can register for this tournament."}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {lang === "uk"
+                      ? "Ваші команди наразі очікують на схвалення адміністратора або були відхилені. Тільки схвалені команди мають право на участь."
+                      : "Your teams are currently pending admin approval or have been rejected. Only approved teams can register for this tournament."}
+                  </p>
+                </div>
+              ) : null}
+              {userProfile && approvedPlayer && summary.participantType === "team" && selectedTeam && !selectedTeam.eligibility?.allowed ? (
+                <div className="sm:col-span-2 rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-4">
+                  <p className="text-sm font-semibold text-red-100">
+                    {lang === "uk" ? "Команда не відповідає вимогам" : "Team Registration Ineligible"}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    {selectedTeam.eligibility?.reason === "no-captain-assigned" ? (
+                      lang === "uk" 
+                        ? "У цій команді немає призначеного капітана в складі."
+                        : "This team does not have an assigned captain in team members."
+                    ) : (
+                      lang === "uk"
+                        ? "Ця команда наразі не має права реєструватися."
+                        : "This team is currently not eligible to register."
+                    )}
+                  </p>
+                </div>
+              ) : null}
+              {userProfile && approvedPlayer && summary.participantType === "team" && selectedTeam?.isRegistered ? (
+                <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
+                  <p className="text-sm font-semibold text-amber-100">
+                    {lang === "uk" ? "Ця команда вже зареєстрована на цей турнір." : "This team is already registered for this tournament."}
+                  </p>
+                </div>
               ) : null}
               {isDisabled ? (
                 <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
@@ -226,20 +292,43 @@ export function RegistrationSection({
                     : ""
                 }`}
               >
-                <RegistrationField label={`${typeLabel} ${t.registration.fields.name.toLowerCase()}`}>
-                  <input
-                    name="display_name"
-                    required
-                    disabled={!canSubmit}
-                    className={inputClassName}
-                    defaultValue={
-                      summary.participantType === "player" && approvedPlayer
-                        ? approvedPlayer.nickname ?? approvedPlayer.name
-                        : undefined
-                    }
-                    placeholder={summary.participantType === "player" ? t.registration.fields.placeholderPlayer : t.registration.fields.placeholderTeam}
-                  />
-                </RegistrationField>
+                {summary.participantType === "team" ? (
+                  <RegistrationField label={lang === "uk" ? "Оберіть вашу команду" : "Select your team"}>
+                    <select
+                      name="team_id"
+                      value={selectedTeamId}
+                      onChange={(e) => setSelectedTeamId(e.target.value)}
+                      disabled={!canSubmit}
+                      className={`${inputClassName} cursor-pointer`}
+                    >
+                      {approvedTeams.map((team) => (
+                        <option key={team.id} value={team.id} className="bg-neutral-900 text-white">
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="hidden"
+                      name="display_name"
+                      value={approvedTeams.find((t) => t.id === selectedTeamId)?.name ?? ""}
+                    />
+                  </RegistrationField>
+                ) : (
+                  <RegistrationField label={`${typeLabel} ${t.registration.fields.name.toLowerCase()}`}>
+                    <input
+                      name="display_name"
+                      required
+                      disabled={!canSubmit}
+                      className={inputClassName}
+                      defaultValue={
+                        approvedPlayer
+                          ? approvedPlayer.nickname ?? approvedPlayer.name
+                          : undefined
+                      }
+                      placeholder={t.registration.fields.placeholderPlayer}
+                    />
+                  </RegistrationField>
+                )}
                 {summary.participantType === "team" ? (
                   <RegistrationField label={t.registration.fields.captainNickname}>
                     <input
@@ -248,6 +337,11 @@ export function RegistrationSection({
                       disabled={!canSubmit}
                       className={inputClassName}
                       placeholder={t.registration.fields.captainPlaceholder}
+                      defaultValue={
+                        approvedPlayer
+                          ? approvedPlayer.nickname ?? approvedPlayer.name
+                          : undefined
+                      }
                     />
                   </RegistrationField>
                 ) : null}
@@ -273,25 +367,27 @@ export function RegistrationSection({
                 ) : null}
               </div>
               <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-black transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50 cursor-pointer"
-                >
-                  {isDisabled
-                    ? summary.statusLabel
-                    : isTournamentPending
-                      ? t.registration.buttons.approvalPending
-                      : isTournamentApproved
-                        ? t.registration.buttons.approved
-                        : approvedPlayer
-                      ? `${t.registration.buttons.register} ${typeLabel}`
-                      : userProfile
-                        ? applicationStatus === "pending"
-                          ? t.registration.buttons.playerPending
-                          : t.registration.buttons.playerRequired
-                        : t.registration.buttons.loginToRegister}
-                </button>
+                <SubmitButton
+                  isDisabled={!canSubmit}
+                  text={
+                    isDisabled
+                      ? summary.statusLabel
+                      : isTournamentPending
+                        ? t.registration.buttons.approvalPending
+                        : isTournamentApproved
+                          ? t.registration.buttons.approved
+                          : isTeamAlreadyRegistered
+                            ? (lang === "uk" ? "Команда вже зареєстрована" : "Team Already Registered")
+                            : approvedPlayer
+                              ? `${t.registration.buttons.register} ${typeLabel}`
+                              : userProfile
+                                ? applicationStatus === "pending"
+                                  ? t.registration.buttons.playerPending
+                                  : t.registration.buttons.playerRequired
+                                : t.registration.buttons.loginToRegister
+                  }
+                  processingText={lang === "uk" ? "Обробка..." : "Processing..."}
+                />
               </div>
             </form>
           </div>
@@ -474,8 +570,10 @@ function getCheckInCardClassName(tone: CheckInState["tone"]) {
 
 function PlayerApplicationState({
   status,
+  lang,
 }: {
   status: "pending" | "approved" | "rejected" | null
+  lang: "uk" | "en"
 }) {
   const { t } = useLanguage()
 
@@ -483,10 +581,27 @@ function PlayerApplicationState({
     return (
       <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
         <p className="text-sm font-semibold text-amber-100">
-          {t.registration.playerApplication.pendingTitle}
+          {lang === "uk" ? "Профіль на розгляді" : "Profile Pending Approval"}
         </p>
         <p className="mt-2 text-sm leading-6 text-white/70">
-          {t.registration.playerApplication.pendingMessage}
+          {lang === "uk"
+            ? "Your player profile is waiting for admin approval."
+            : "Your player profile is waiting for admin approval."}
+        </p>
+      </div>
+    )
+  }
+
+  if (status === "rejected") {
+    return (
+      <div className="sm:col-span-2 rounded-xl border border-red-300/25 bg-red-300/10 px-4 py-4">
+        <p className="text-sm font-semibold text-red-100">
+          {lang === "uk" ? "Профіль відхилено" : "Profile Application Rejected"}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-white/70">
+          {lang === "uk"
+            ? "Your player profile application has been rejected by an admin. You cannot register."
+            : "Your player profile application has been rejected by an admin. You cannot register."}
         </p>
       </div>
     )
@@ -500,11 +615,6 @@ function PlayerApplicationState({
       <p className="mt-2 text-sm leading-6 text-white/70">
         {t.registration.playerApplication.notFoundMessage}
       </p>
-      {status === "rejected" ? (
-        <p className="mt-2 text-sm text-red-100">
-          {t.registration.playerApplication.rejected}
-        </p>
-      ) : null}
     </div>
   )
 }
@@ -580,5 +690,37 @@ function RegistrationStat({ label, value }: { label: string; value: string }) {
       </dt>
       <dd className="mt-1 text-lg font-semibold text-foreground">{value}</dd>
     </div>
+  )
+}
+
+function SubmitButton({
+  isDisabled,
+  text,
+  processingText = "Processing...",
+}: {
+  isDisabled: boolean
+  text: string
+  processingText?: string
+}) {
+  const { pending } = useFormStatus()
+
+  return (
+    <button
+      type="submit"
+      disabled={isDisabled || pending}
+      className="w-full rounded-xl bg-primary px-4 py-3 font-medium text-black transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50 cursor-pointer flex items-center justify-center gap-2"
+    >
+      {pending ? (
+        <>
+          <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>{processingText}</span>
+        </>
+      ) : (
+        text
+      )}
+    </button>
   )
 }

@@ -1,0 +1,315 @@
+-- Atomic database transaction stored function for tournament registration approval.
+-- Implements Phase 5B: Transaction Hardening for Registration Approval.
+-- All database updates (participant creation, roster linking, registration status update) succeed or fail together.
+
+create or replace function approve_tournament_registration(registration_uuid uuid)
+returns uuid
+language plpgsql
+security definer
+as $$
+declare
+  registration record;
+  tournament record;
+  reg_type text;
+  source_id uuid;
+  existing_participant_id uuid;
+  participant_id uuid;
+  approved_count bigint;
+  next_seed integer;
+  display_name text;
+  region text;
+  
+  -- Player variables
+  player_display text;
+  player_nick text;
+  player_name text;
+  player_region text;
+  
+  -- Team variables
+  team_name text;
+  team_status text;
+  team_captain_count bigint;
+  
+  -- Roster variables
+  roster_count bigint;
+  roster_entry record;
+  roster_player_id uuid;
+begin
+  -- 1. Fetch and validate registration
+  select * into registration
+  from tournament_registrations
+  where id = registration_uuid;
+
+  if not found then
+    raise exception 'Registration not found';
+  end if;
+
+  -- Idempotency check: if already approved, return the linked participant_id immediately
+  if registration.status = 'approved' and registration.participant_id is not null then
+    return registration.participant_id;
+  end if;
+
+  if registration.status <> 'pending' then
+    raise exception 'Registration is not pending';
+  end if;
+
+  -- 2. Fetch and validate tournament
+  select * into tournament
+  from tournaments
+  where id = registration.tournament_id;
+
+  if not found then
+    raise exception 'Tournament not found';
+  end if;
+
+  if tournament.status <> 'upcoming' then
+    raise exception 'Tournament registration is closed';
+  end if;
+
+  -- 3. Determine Effective Registration Type and Source ID
+  reg_type := coalesce(registration.registration_type, registration.participant_type);
+
+  if reg_type <> tournament.participant_type then
+    raise exception 'Registration type mismatch';
+  end if;
+
+  if reg_type = 'player' then
+    source_id := coalesce(registration.player_id, registration.source_player_id);
+    
+    -- If source_id is null, fall back to lookup by owner_user_id
+    if source_id is null and registration.user_profile_id is not null then
+      select id into source_id
+      from players
+      where owner_user_id = registration.user_profile_id
+      limit 1;
+    end if;
+  else
+    source_id := coalesce(registration.team_id, registration.source_team_id);
+    
+    -- If source_id is null, fall back to lookup by name and owner (legacy team fallback)
+    if source_id is null then
+      select id into source_id
+      from teams
+      where name ilike registration.display_name
+        and owner_user_id = registration.user_profile_id
+      limit 1;
+    end if;
+  end if;
+
+  -- 4. Check for existing approved participant for this tournament + source_id to reuse (Idempotency)
+  if source_id is not null then
+    select id into existing_participant_id
+    from participants
+    where tournament_id = registration.tournament_id
+      and participant_type = reg_type
+      and (
+        (reg_type = 'player' and source_player_id = source_id)
+        or
+        (reg_type = 'team' and source_team_id = source_id)
+      )
+    limit 1;
+
+    if existing_participant_id is not null then
+      participant_id := existing_participant_id;
+    end if;
+  end if;
+
+  -- 5. If no existing participant found, perform capacity check and create new participant record
+  if participant_id is null then
+    -- Capacity validation
+    select count(*) into approved_count
+    from participants
+    where tournament_id = registration.tournament_id
+      and participant_type = reg_type;
+
+    if tournament.team_count is not null and approved_count >= tournament.team_count then
+      raise exception 'Tournament registration is full';
+    end if;
+
+    -- Calculate next seed
+    select coalesce(max(seed), 0) + 1 into next_seed
+    from participants
+    where tournament_id = registration.tournament_id
+      and participant_type = reg_type;
+
+    -- Resolve fields based on type
+    if reg_type = 'player' then
+      if source_id is not null then
+        select players.display_name, players.nickname, players.name, players.region into player_display, player_nick, player_name, player_region
+        from players
+        where id = source_id;
+
+        display_name := coalesce(player_display, player_nick, player_name, registration.display_name);
+        region := coalesce(registration.region, player_region);
+
+        -- Sync player region back to global profile if empty
+        if registration.region is not null and player_region is null then
+          update players
+          set region = registration.region
+          where id = source_id;
+        end if;
+      else
+        display_name := registration.display_name;
+        region := registration.region;
+      end if;
+    else
+      -- Team Type
+      if source_id is not null then
+        -- 5a. Validate Team Eligibility (canRegisterTeamForTournament rules)
+        select status into team_status
+        from teams
+        where id = source_id;
+
+        if not found then
+          raise exception 'Global team not found';
+        end if;
+
+        if coalesce(team_status, 'approved') <> 'approved' then
+          raise exception 'Team is not approved';
+        end if;
+
+        select count(*) into team_captain_count
+        from team_members
+        where team_id = source_id and role = 'captain';
+
+        if team_captain_count = 0 then
+          raise exception 'Team does not have a captain assigned';
+        end if;
+
+        select name into team_name
+        from teams
+        where id = source_id;
+
+        display_name := coalesce(team_name, registration.display_name);
+      else
+        -- If it is a legacy team registration and source_id was not resolved above, create new legacy team
+        insert into teams (
+          tournament_id,
+          name,
+          seed,
+          wins,
+          losses,
+          owner_user_id,
+          captain_user_id,
+          slug,
+          status,
+          created_at
+        ) values (
+          registration.tournament_id,
+          registration.display_name,
+          next_seed,
+          0,
+          0,
+          registration.user_profile_id,
+          registration.user_profile_id,
+          lower(regexp_replace(registration.display_name, '[^a-zA-Z0-9]+', '-', 'g')),
+          'approved',
+          now()
+        ) returning id into source_id;
+
+        display_name := registration.display_name;
+      end if;
+    end if;
+
+    -- 5b. Create the Participant Record
+    insert into participants (
+      tournament_id,
+      participant_type,
+      display_name,
+      region,
+      seed,
+      source_player_id,
+      source_team_id,
+      created_at,
+      updated_at
+    ) values (
+      registration.tournament_id,
+      reg_type,
+      display_name,
+      region,
+      next_seed,
+      case when reg_type = 'player' then source_id else null end,
+      case when reg_type = 'team' then source_id else null end,
+      now(),
+      now()
+    ) returning id into participant_id;
+  end if;
+
+  -- 6. Roster Linking (Team Only)
+  if reg_type = 'team' then
+    select count(*) into roster_count
+    from tournament_registration_roster_entries
+    where registration_id = registration_uuid;
+
+    if roster_count < 5 or roster_count > 7 then
+      raise exception 'Team roster must contain between 5 and 7 players';
+    end if;
+
+    for roster_entry in (
+      select id, nickname, roster_order
+      from tournament_registration_roster_entries
+      where registration_id = registration_uuid
+      order by roster_order asc
+    ) loop
+      roster_player_id := null;
+
+      -- Check players by name case-insensitive
+      select id into roster_player_id
+      from players
+      where name ilike roster_entry.nickname
+      order by created_at asc
+      limit 1;
+
+      -- Check players by nickname case-insensitive if not found
+      if roster_player_id is null then
+        select id into roster_player_id
+        from players
+        where nickname ilike roster_entry.nickname
+        order by created_at asc
+        limit 1;
+      end if;
+
+      -- If no global player found, create a tournament-scoped legacy player
+      if roster_player_id is null then
+        insert into players (
+          tournament_id,
+          name,
+          wins,
+          losses,
+          status,
+          created_at
+        ) values (
+          registration.tournament_id,
+          roster_entry.nickname,
+          0,
+          0,
+          'approved',
+          now()
+        ) returning id into roster_player_id;
+      end if;
+
+      -- Link Roster Entry
+      update tournament_registration_roster_entries
+      set source_player_id = roster_player_id,
+          team_participant_id = participant_id,
+          updated_at = now()
+      where id = roster_entry.id;
+    end loop;
+  end if;
+
+  -- 7. Update Registration Status
+  update tournament_registrations
+  set status = 'approved',
+      participant_id = participant_id,
+      source_team_id = case when reg_type = 'team' then source_id else null end,
+      source_player_id = case when reg_type = 'player' then source_id else null end,
+      team_id = case when reg_type = 'team' then source_id else null end,
+      player_id = case when reg_type = 'player' then source_id else null end,
+      display_name = display_name,
+      reviewed_at = now(),
+      updated_at = now()
+  where id = registration_uuid;
+
+  return participant_id;
+end;
+$$;
