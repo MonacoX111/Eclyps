@@ -757,14 +757,48 @@ export function getPlayerCards(
       losses: player?.losses ?? 0,
       rank: participant.seed ?? index + 1,
       profileHref: `/players/${player?.id ?? participant.id}`,
-      avatarUrl: player?.owner_profile?.avatar_url ?? null,
+    }
+  })
+}
+
+export function getAllPlayerCards(
+  players: HomepagePlayer[],
+  participants: HomepageParticipant[],
+): TeamCard[] {
+  const participantByPlayerId = new Map<string, HomepageParticipant>()
+  for (const p of participants) {
+    if (p.participant_type === "player" && p.source_player_id) {
+      participantByPlayerId.set(p.source_player_id, p)
+    }
+  }
+
+  return players.map((player, index) => {
+    const participant = participantByPlayerId.get(player.id)
+    const displayName = player.display_name || player.nickname || player.name
+    const seed = participant?.seed ?? player.seed
+
+    return {
+      id: player.id,
+      name: displayName,
+      subtitle: getPlayerCardSubtitle({
+        realName: player.real_name ?? player.name,
+        displayName,
+        seed,
+      }),
+      tag: createTeamTag(displayName),
+      wins: player.wins,
+      losses: player.losses,
+      rank: seed ?? index + 1,
+      profileHref: `/players/${player.id}`,
+      avatarUrl: player.owner_profile?.avatar_url ?? null,
       avatarAlt:
-        player?.owner_profile?.discord_username ??
-        player?.owner_profile?.display_name ??
+        player.owner_profile?.discord_username ??
+        player.owner_profile?.display_name ??
         displayName,
     }
   })
 }
+
 
 function getParticipantType(
   participants: HomepageParticipant[],

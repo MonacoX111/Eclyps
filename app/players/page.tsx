@@ -5,7 +5,7 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
-import { getHomepageData, getPlayerCards } from "@/lib/data/homepage"
+import { getHomepageData, getAllPlayerCards } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 
 export const dynamic = "force-dynamic"
@@ -45,7 +45,7 @@ async function ActiveNavbar() {
 
 async function ActivePlayersGrid() {
   const homepageData = await getHomepageData()
-  const playerCards = getPlayerCards(homepageData.players, homepageData.participants)
+  const playerCards = getAllPlayerCards(homepageData.players, homepageData.participants)
 
   return (
     <TeamsGrid
