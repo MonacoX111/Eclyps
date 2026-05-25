@@ -23,7 +23,7 @@ export default async function PlayerProfilePage({
   if (!data) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} />
+    return <PublicProfileError message={message} kind="player" />
   }
 
   const userProfile = await getCurrentUserProfile()
@@ -35,7 +35,7 @@ export default async function PlayerProfilePage({
   if (playerStatus !== "approved" && !isOwner) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} />
+    return <PublicProfileError message={message} kind="player" />
   }
 
   let teams: TeamItem[] = []

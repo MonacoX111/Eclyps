@@ -302,16 +302,17 @@ export function PublicProfileLoading() {
   )
 }
 
-export function PublicProfileError({ message }: { message: string }) {
+export function PublicProfileError({ message, kind = "team" }: { message: string; kind?: "team" | "player" }) {
   const { t } = useLanguage()
+  const eyebrow = kind === "player" ? t.profile.playerProfile : t.profile.teamProfile
 
   return (
     <main className="relative min-h-screen overflow-x-hidden">
       <ParticleField />
       <MotionProvider>
-        <Navbar homeHref="/" navHrefPrefix="/" participantLabel="Teams" />
+        <Navbar homeHref="/" navHrefPrefix="/" participantLabel={kind === "player" ? "Players" : "Teams"} />
         <ProfileSectionEmpty
-          eyebrow={t.profile.teamProfile}
+          eyebrow={eyebrow}
           title={t.profile.somethingWentOffline}
           message={message}
         />

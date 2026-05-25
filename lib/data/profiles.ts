@@ -109,7 +109,7 @@ type ProfileTeam = {
 
 type ProfilePlayer = {
   id: string
-  tournament_id: string
+  tournament_id: string | null
   name: string
   nickname: string | null
   region: string | null
@@ -1004,7 +1004,7 @@ function normalizePlayer(row: Record<string, unknown>): ProfilePlayer | null {
   const nickname = readNullableString(row.nickname)
   const region = readNullableString(row.region)
 
-  if (!id || !tournamentId || !name) return null
+  if (!id || !name) return null
 
   return {
     id,
