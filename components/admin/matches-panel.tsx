@@ -78,11 +78,11 @@ export function MatchesPanel({
 
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">Existing matches</h3>
-          {normalMatches.length === 0 ? (
+          {matches.length === 0 ? (
             <AdminEmptyState>No matches exist in Supabase yet.</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
-              {normalMatches.map((match) => (
+              {matches.map((match) => (
                 <MatchRecord
                   key={match.id}
                   match={match}
@@ -447,6 +447,8 @@ function MatchRecord({
   playerNames: string[]
   tournamentName: string
 }) {
+  const isBracketMatch = Boolean(match.bracket_id)
+
   return (
     <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
@@ -456,15 +458,24 @@ function MatchRecord({
               {match.team1 ?? "TBD"} vs {match.team2 ?? "TBD"}
             </h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {tournamentName} {"\u2022"} {match.round ?? "No round"}
+              {tournamentName} {"\u2022"} {match.round ?? match.bracket_round ?? "No round"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs items-center">
+            <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase font-bold tracking-wider ${
+              isBracketMatch
+                ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-300"
+                : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+            }`}>
+              {isBracketMatch ? "Bracket" : "Manual"}
+            </span>
             <span className={pillClassName}>{formatStatus(match.status)}</span>
             <span className={pillClassName}>
               {match.score1 ?? "???"} : {match.score2 ?? "???"}
             </span>
-            <span className={pillClassName}>Order {match.match_order ?? "???"}</span>
+            {match.match_order !== null && (
+              <span className={pillClassName}>Order {match.match_order}</span>
+            )}
             <span className={pillClassName}>
               {formatMatchScheduleTime({
                 scheduledAt: match.scheduled_at,
@@ -476,6 +487,14 @@ function MatchRecord({
         </div>
       </summary>
       <div className="mt-4 border-t border-white/10 pt-4">
+        {isBracketMatch && (
+          <div className="mb-4 rounded-xl border border-indigo-500/20 bg-indigo-950/40 p-4 text-sm text-indigo-200 leading-relaxed">
+            <p className="font-semibold text-white">Bracket Match Details</p>
+            <p className="mt-2 text-xs text-white/60">
+              This match is part of a bracket. Structural fields (tournament, participants, round) are locked here and managed by the bracket system. You can update schedules, scores, status, and other metadata below.
+            </p>
+          </div>
+        )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
           <MatchForm
             action={updateMatch}
@@ -484,8 +503,9 @@ function MatchRecord({
             teamNames={teamNames}
             playerNames={playerNames}
             match={match}
+            mode={isBracketMatch ? "bracket" : "standard"}
           />
-          <DeleteForm action={deleteMatch} id={match.id} />
+          {!isBracketMatch && <DeleteForm action={deleteMatch} id={match.id} />}
         </div>
       </div>
     </details>
@@ -499,6 +519,7 @@ function MatchForm({
   teamNames,
   playerNames,
   match,
+  mode = "standard",
 }: {
   action: AdminFormAction
   submitLabel: string
@@ -506,21 +527,59 @@ function MatchForm({
   teamNames: string[]
   playerNames: string[]
   match?: AdminMatch
+  mode?: "standard" | "bracket"
 }) {
+  const isBracket = mode === "bracket"
+
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {match && <input type="hidden" name="id" value={match.id} />}
-      <TournamentSelect tournaments={tournaments} value={match?.tournament_id} />
-      <AdminField label="Round">
-        <input name="round" defaultValue={match?.round ?? ""} className={inputClassName} />
-      </AdminField>
-      <MatchParticipantFields
-        initialType={match?.participant_type}
-        teamNames={teamNames}
-        playerNames={playerNames}
-        team1={match?.team1}
-        team2={match?.team2}
-      />
+      {isBracket ? (
+        <>
+          <input type="hidden" name="tournament_id" value={match?.tournament_id ?? ""} />
+          <input type="hidden" name="participant_type" value={match?.participant_type ?? ""} />
+          <input type="hidden" name="team1" value={match?.team1 ?? "TBD"} />
+          <input type="hidden" name="team2" value={match?.team2 ?? "TBD"} />
+          <input type="hidden" name="round" value={match?.round ?? match?.bracket_round ?? ""} />
+
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:col-span-2 text-sm space-y-2">
+            <div>
+              <span className="text-white/45 font-medium">Tournament: </span>
+              <span className="text-white/80">{
+                match?.tournament_id
+                  ? tournaments.find(t => t.id === match.tournament_id)?.name ?? "Unknown Tournament"
+                  : "Unassigned"
+              }</span>
+            </div>
+            <div>
+              <span className="text-white/45 font-medium">Round: </span>
+              <span className="text-white/80">{match?.round ?? match?.bracket_round ?? "Bracket Round"}</span>
+            </div>
+            <div>
+              <span className="text-white/45 font-medium">Participant 1: </span>
+              <span className="text-emerald-300 font-semibold">{match?.team1 ?? "TBD"}</span>
+            </div>
+            <div>
+              <span className="text-white/45 font-medium">Participant 2: </span>
+              <span className="text-emerald-300 font-semibold">{match?.team2 ?? "TBD"}</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <TournamentSelect tournaments={tournaments} value={match?.tournament_id} />
+          <AdminField label="Round">
+            <input name="round" defaultValue={match?.round ?? ""} className={inputClassName} />
+          </AdminField>
+          <MatchParticipantFields
+            initialType={match?.participant_type}
+            teamNames={teamNames}
+            playerNames={playerNames}
+            team1={match?.team1}
+            team2={match?.team2}
+          />
+        </>
+      )}
       <AdminField label="Score 1">
         <input name="score1" type="number" defaultValue={match?.score1 ?? ""} className={inputClassName} />
       </AdminField>

@@ -489,7 +489,7 @@ async function createHomepageData({
       : null,
     participantCards,
     publicBracket: getPublicBracketData(bracketMatches, tournament),
-    matchScheduleItems: getMatchScheduleItems(normalMatches),
+    matchScheduleItems: getMatchScheduleItems(matches),
     resultCards: getResultCards(results, tournament),
     registrationSummary,
   }
@@ -898,27 +898,22 @@ function splitHomepageMatches(matches: HomepageMatch[]) {
 }
 
 function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
-  return matches
-    .filter(
-      (match): match is HomepageMatch & { team1: string; team2: string } =>
-        Boolean(match.team1 && match.team2),
-    )
-    .map((match) => ({
-      id: match.id,
-      round: formatRoundLabel(match.round),
-      teamA: match.team1,
-      teamB: match.team2,
-      time: formatMatchScheduleTime({
-        scheduledAt: match.scheduled_at,
-        timezone: match.timezone,
-        scheduleNote: match.schedule_note,
-      }),
-      status: match.status,
-      score1: match.score1,
-      score2: match.score2,
-      participant1Id: match.participant_1_id,
-      participant2Id: match.participant_2_id,
-    }))
+  return matches.map((match) => ({
+    id: match.id,
+    round: formatRoundLabel(match.round ?? match.bracket_round),
+    teamA: match.team1 ?? "TBD",
+    teamB: match.team2 ?? "TBD",
+    time: formatMatchScheduleTime({
+      scheduledAt: match.scheduled_at,
+      timezone: match.timezone,
+      scheduleNote: match.schedule_note,
+    }),
+    status: match.status,
+    score1: match.score1,
+    score2: match.score2,
+    participant1Id: match.participant_1_id,
+    participant2Id: match.participant_2_id,
+  }))
 }
 
 function getPublicBracketData(
