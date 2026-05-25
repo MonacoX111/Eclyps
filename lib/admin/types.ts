@@ -36,6 +36,8 @@ export type AdminSearchParams = {
   disputeSuccess?: string
   activeError?: string
   activeSuccess?: string
+  participantError?: string
+  participantSuccess?: string
 }
 
 export type AdminFormAction = (formData: FormData) => Promise<void>

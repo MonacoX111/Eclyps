@@ -94,6 +94,37 @@ export async function deleteTournament(formData: FormData) {
 
   const tournamentId = parsedId.data.id
 
+  // =========================================================================
+  // GLOBAL ENTITIES PROTECTION:
+  // Global profiles (user_profiles, players, teams, auth users, Discord profiles)
+  // MUST NEVER be deleted when removing a tournament.
+  // Only tournament-scoped relationships and records (matches, results,
+  // match_disputes, tournament_registrations, check-ins, roster entries,
+  // and participants) should be removed.
+  //
+  // To prevent database cascade deletes from removing global player and team rows,
+  // we explicitly set tournament_id = null for them before deleting the tournament.
+  // =========================================================================
+  const { error: playersNullifyError } = await supabaseAdmin
+    .from("players")
+    .update({ tournament_id: null })
+    .eq("tournament_id", tournamentId)
+
+  if (playersNullifyError) {
+    logMutationError("nullify players tournament_id for deletion", playersNullifyError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
+  const { error: teamsNullifyError } = await supabaseAdmin
+    .from("teams")
+    .update({ tournament_id: null })
+    .eq("tournament_id", tournamentId)
+
+  if (teamsNullifyError) {
+    logMutationError("nullify teams tournament_id for deletion", teamsNullifyError)
+    redirectAdminError("crudError", "dependent-cleanup-failed", "tournaments")
+  }
+
   // 1. Fetch match IDs so we can clean up disputes associated with them first
   const { data: matches, error: matchesFetchError } = await supabaseAdmin
     .from("matches")

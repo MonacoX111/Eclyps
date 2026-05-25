@@ -4,6 +4,7 @@ import { MatchesPanel } from "@/components/admin/matches-panel"
 import { DisputesPanel } from "@/components/admin/disputes-panel"
 import { PlayerApplicationsPanel } from "@/components/admin/player-applications-panel"
 import { PlayersPanel } from "@/components/admin/players-panel"
+import { ParticipantsPanel } from "@/components/admin/participants-panel"
 import { RegistrationsPanel } from "@/components/admin/registrations-panel"
 import { ResultsPanel } from "@/components/admin/results-panel"
 import { TeamsPanel } from "@/components/admin/teams-panel"
@@ -15,6 +16,7 @@ import {
   getMatchFeedback,
   getPlayerApplicationFeedback,
   getPlayerFeedback,
+  getParticipantFeedback,
   getRegistrationFeedback,
   getResultFeedback,
   getTeamFeedback,
@@ -47,6 +49,11 @@ const adminSections = [
     id: "players",
     title: "Players",
     description: "Player management is active.",
+  },
+  {
+    id: "participants",
+    title: "Participants",
+    description: "Tournament participant management is active.",
   },
   {
     id: "player-applications",
@@ -174,6 +181,13 @@ export async function AdminDashboard({
         tournaments={tournaments}
         fetchError={playerError}
         feedback={getPlayerFeedback(searchParams)}
+      />
+
+      <ParticipantsPanel
+        participants={participants}
+        tournaments={tournaments}
+        fetchError={participantError}
+        feedback={getParticipantFeedback(searchParams)}
       />
 
       <PlayerApplicationsPanel

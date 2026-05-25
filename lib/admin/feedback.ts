@@ -231,3 +231,18 @@ export function getDisputeFeedback(searchParams?: Pick<AdminSearchParams, "dispu
 
   return { tone: "error", message }
 }
+
+export function getParticipantFeedback(searchParams?: Pick<AdminSearchParams, "participantError" | "participantSuccess">): AdminFeedback | null {
+  if (searchParams?.participantSuccess === "deleted") return { tone: "success", message: "Participant removed from tournament." }
+  if (!searchParams?.participantError) return null
+
+  const message =
+    {
+      "missing-id": "Participant id is missing.",
+      "admin-client-unavailable": "Participant mutations require a server-only Supabase admin client.",
+      "participant-used-in-matches": "This participant is already used in generated matches. Reset the bracket before removing them.",
+      "mutation-failed": "Participant could not be removed. Please try again.",
+    }[searchParams.participantError] ?? "Participant removal failed."
+
+  return { tone: "error", message }
+}

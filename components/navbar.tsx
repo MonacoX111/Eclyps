@@ -24,11 +24,11 @@ export function Navbar({
   const [open, setOpen] = useState(false)
   const { t } = useLanguage()
 
-  const participantHref = participantLabel === "Players" ? "/players" : "/teams"
   const navLinks = [
     { href: "/tournament", label: t.navbar.tournament },
     { href: "/registration", label: t.navbar.registration },
-    { href: participantHref, label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams },
+    { href: "/teams", label: t.navbar.teams },
+    { href: "/players", label: t.navbar.players },
     { href: "/bracket", label: t.navbar.bracket },
     { href: "/schedule", label: t.navbar.schedule },
     { href: "/results", label: t.navbar.results },
