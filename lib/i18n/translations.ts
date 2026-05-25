@@ -310,7 +310,7 @@ const rawTranslations = {
     teamsGrid: {
       eyebrow: "Учасники",
       registeredTeams: "Зареєстровані Команди",
-      registeredPlayers: "Зареєстровані Гравці",
+      registeredPlayers: "Гравці",
       noRegistered: "Поки що немає зареєстрованих",
       openProfile: "Відкрити профіль",
     },
@@ -720,7 +720,7 @@ const rawTranslations = {
     teamsGrid: {
       eyebrow: "Combatants",
       registeredTeams: "Registered Teams",
-      registeredPlayers: "Registered Players",
+      registeredPlayers: "Players",
       noRegistered: "No registered yet.",
       openProfile: "Open profile",
     },

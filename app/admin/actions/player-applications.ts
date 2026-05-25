@@ -91,53 +91,142 @@ async function findOrCreateApprovedPlayer({
     return null
   }
 
+  // Branch 1: Player already exists
   if (typeof existingPlayer?.id === "string") {
-    const { error } = await supabaseAdmin
+    const { data: player, error: fetchError } = await supabaseAdmin
       .from("players")
-      .update({
+      .select("seed, status")
+      .eq("id", existingPlayer.id)
+      .maybeSingle()
+
+    if (fetchError) {
+      logMutationError("findOrCreateApprovedPlayer - fetch player", fetchError)
+      return null
+    }
+
+    let retryCount = 0
+    const maxRetries = 3
+    let success = false
+    let lastError: any = null
+
+    while (retryCount < maxRetries && !success) {
+      const updatePayload: Record<string, any> = {
         name: nickname,
         nickname,
         region,
         owner_user_id: userProfileId,
+        status: "approved",
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", existingPlayer.id)
+      }
 
-    if (error && !isMissingApplicationStorageError(error)) {
-      logMutationError("update owned player for application", error)
+      // If player doesn't have a seed already, compute max(seed) + 1
+      if (!player || player.seed === null || player.seed === undefined) {
+        const { data: maxSeedRow, error: maxSeedError } = await supabaseAdmin
+          .from("players")
+          .select("seed")
+          .not("seed", "is", null)
+          .order("seed", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (maxSeedError) {
+          logMutationError("findOrCreateApprovedPlayer - fetch max seed", maxSeedError)
+          return null
+        }
+
+        const maxSeed = typeof maxSeedRow?.seed === "number" ? maxSeedRow.seed : 0
+        updatePayload.seed = maxSeed + 1 + retryCount
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("players")
+        .update(updatePayload)
+        .eq("id", existingPlayer.id)
+
+      if (!updateError) {
+        success = true
+      } else {
+        lastError = updateError
+        if (updateError.code === "23505") {
+          console.warn(`Seed collision detected on update retry ${retryCount + 1}, retrying...`)
+          retryCount++
+        } else {
+          break
+        }
+      }
+    }
+
+    if (!success && !isMissingApplicationStorageError(lastError)) {
+      logMutationError("update owned player for application", lastError)
       return null
     }
 
     return existingPlayer.id
   }
 
-  const [tournamentId, nextSeed] = await Promise.all([
-    getPlayerProfileAnchorTournamentId(),
-    getNextEclypsPlayerSeed(),
-  ])
+  // Branch 2: Create new player profile
+  const tournamentId = await getPlayerProfileAnchorTournamentId()
   if (!tournamentId) return null
 
-  const { data, error } = await supabaseAdmin
-    .from("players")
-    .insert({
-      tournament_id: tournamentId,
-      name: nickname,
-      nickname,
-      region,
-      seed: nextSeed,
-      wins: 0,
-      losses: 0,
-      owner_user_id: userProfileId,
-    })
-    .select("id")
-    .maybeSingle()
+  let retryCount = 0
+  const maxRetries = 3
+  let success = false
+  let createdPlayerId: string | null = null
+  let lastError: any = null
 
-  if (error || typeof data?.id !== "string") {
-    logMutationError("create approved player from application", error)
+  while (retryCount < maxRetries && !success) {
+    const { data: maxSeedRow, error: maxSeedError } = await supabaseAdmin
+      .from("players")
+      .select("seed")
+      .not("seed", "is", null)
+      .order("seed", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (maxSeedError) {
+      logMutationError("findOrCreateApprovedPlayer - fetch max seed for insert", maxSeedError)
+      return null
+    }
+
+    const maxSeed = typeof maxSeedRow?.seed === "number" ? maxSeedRow.seed : 0
+    const nextSeed = maxSeed + 1 + retryCount
+
+    const { data, error: insertError } = await supabaseAdmin
+      .from("players")
+      .insert({
+        tournament_id: tournamentId,
+        name: nickname,
+        nickname,
+        region,
+        seed: nextSeed,
+        wins: 0,
+        losses: 0,
+        status: "approved",
+        owner_user_id: userProfileId,
+      })
+      .select("id")
+      .maybeSingle()
+
+    if (!insertError && data?.id) {
+      success = true
+      createdPlayerId = data.id
+    } else {
+      lastError = insertError
+      if (insertError && insertError.code === "23505") {
+        console.warn(`Seed collision detected on insert retry ${retryCount + 1}, retrying...`)
+        retryCount++
+      } else {
+        break
+      }
+    }
+  }
+
+  if (!success) {
+    logMutationError("create approved player from application", lastError)
     return null
   }
 
-  return data.id
+  return createdPlayerId
 }
 
 async function getNextEclypsPlayerSeed(): Promise<number> {

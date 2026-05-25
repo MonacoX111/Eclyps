@@ -5,7 +5,8 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
-import { getHomepageData, getAllPlayerCards } from "@/lib/data/homepage"
+import { getHomepageData } from "@/lib/data/homepage"
+import { getApprovedPlayers } from "@/lib/data/players"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 
 export const dynamic = "force-dynamic"
@@ -44,8 +45,31 @@ async function ActiveNavbar() {
 }
 
 async function ActivePlayersGrid() {
-  const homepageData = await getHomepageData()
-  const playerCards = getAllPlayerCards(homepageData.players, homepageData.participants)
+  const approvedPlayers = await getApprovedPlayers()
+
+  const playerCards = approvedPlayers.map((player, index) => {
+    const displayName = player.display_name || player.nickname || player.name
+    const seed = player.seed
+
+    return {
+      id: player.id,
+      name: displayName,
+      subtitle: getPlayerCardSubtitle({
+        realName: player.real_name,
+        nickname: player.nickname,
+      }),
+      tag: createTeamTag(displayName),
+      wins: player.wins,
+      losses: player.losses,
+      rank: seed ?? index + 1,
+      profileHref: `/players/${player.id}`,
+      avatarUrl: player.owner_profile?.avatar_url ?? null,
+      avatarAlt:
+        player.owner_profile?.discord_username ??
+        player.owner_profile?.display_name ??
+        displayName,
+    }
+  })
 
   return (
     <TeamsGrid
@@ -54,6 +78,34 @@ async function ActivePlayersGrid() {
     />
   )
 }
+
+function createTeamTag(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase()
+}
+
+function getPlayerCardSubtitle({
+  realName,
+  nickname,
+}: {
+  realName: string | null
+  nickname: string | null
+}) {
+  const hasNickname = typeof nickname === "string" && nickname.trim().length > 0
+  const hasRealName = typeof realName === "string" && realName.trim().length > 0
+
+  if (hasNickname && hasRealName) {
+    return realName
+  }
+  return "Player"
+}
+
+
 
 function PlayersLoading() {
   return (

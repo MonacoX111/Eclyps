@@ -79,12 +79,67 @@ export async function reviewPlayer(formData: FormData) {
     redirect("/admin?playerError=admin-client-unavailable#players")
   }
 
-  const { error } = await runSupabaseMutation("review player", () =>
-    supabaseAdmin.from("players").update({ status }).eq("id", parsedId.data.id),
-  )
+  // Fetch the player's current seed first
+  const { data: player, error: fetchError } = await supabaseAdmin
+    .from("players")
+    .select("seed")
+    .eq("id", parsedId.data.id)
+    .maybeSingle()
 
-  if (error) {
-    logMutationError("review player", error)
+  if (fetchError) {
+    logMutationError("review player - fetch player", fetchError)
+    redirect("/admin?playerError=mutation-failed#players")
+  }
+
+  let retryCount = 0
+  const maxRetries = 3
+  let success = false
+  let lastError: any = null
+
+  while (retryCount < maxRetries && !success) {
+    const updatePayload: Record<string, any> = { status }
+
+    if (status === "approved") {
+      // If the player doesn't have a seed already, compute max(seed) + 1
+      if (!player || player.seed === null || player.seed === undefined) {
+        const { data: maxSeedRow, error: maxSeedError } = await supabaseAdmin
+          .from("players")
+          .select("seed")
+          .not("seed", "is", null)
+          .order("seed", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (maxSeedError) {
+          logMutationError("review player - fetch max seed", maxSeedError)
+          redirect("/admin?playerError=mutation-failed#players")
+        }
+
+        const maxSeed = typeof maxSeedRow?.seed === "number" ? maxSeedRow.seed : 0
+        updatePayload.seed = maxSeed + 1 + retryCount // Use retry offset to resolve potential concurrency conflicts
+      }
+    }
+
+    const { error: updateError } = await runSupabaseMutation("review player", () =>
+      supabaseAdmin.from("players").update(updatePayload).eq("id", parsedId.data.id)
+    )
+
+    if (!updateError) {
+      success = true
+    } else {
+      lastError = updateError
+      if (updateError.code === "23505") {
+        console.warn(`Seed collision detected on retry ${retryCount + 1}, retrying with next seed...`)
+        retryCount++
+      } else {
+        // Break out of retry loop for other error types
+        break
+      }
+    }
+  }
+
+  if (!success) {
+    logMutationError("review player update", lastError)
     redirect("/admin?playerError=mutation-failed#players")
   }
 
@@ -92,3 +147,4 @@ export async function reviewPlayer(formData: FormData) {
   revalidatePath("/")
   redirect(`/admin?playerSuccess=${status}#players`)
 }
+
