@@ -29,7 +29,6 @@ export function Navbar({
     { href: "/registration", label: t.navbar.registration },
     { href: "/teams", label: t.navbar.teams },
     { href: "/players", label: t.navbar.players },
-    { href: "/bracket", label: t.navbar.bracket },
     { href: "/schedule", label: t.navbar.schedule },
     { href: "/results", label: t.navbar.results },
   ]

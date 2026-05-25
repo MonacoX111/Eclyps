@@ -44,7 +44,7 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
       icon: UserPlus,
     },
     {
-      href: "/bracket",
+      href: "/tournament#bracket",
       label: t.navigationHub.cards.bracket.label,
       description: t.navigationHub.cards.bracket.description,
       icon: GitBranch,

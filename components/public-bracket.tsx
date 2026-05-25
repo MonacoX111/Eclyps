@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { m } from "framer-motion"
 import { Radio, Trophy } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
@@ -48,6 +49,18 @@ type PublicBracketProps = {
 
 export function PublicBracket({ bracket }: PublicBracketProps) {
   const { t } = useLanguage()
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#bracket") {
+      const element = document.getElementById("bracket")
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: "smooth", block: "start" })
+        }, 300)
+      }
+    }
+  }, [])
+
   const hasBracket = Boolean(bracket && bracket.rounds.length > 0)
   const labels = bracket?.labels ?? {
     title: t.navbar.bracket,
