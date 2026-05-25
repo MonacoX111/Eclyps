@@ -50,7 +50,7 @@ export default async function TeamsPage({ searchParams }: PageProps) {
           <ActiveNavbar />
         </Suspense>
 
-        <div className="relative z-10 pt-16 flex justify-center">
+        <div className="relative pt-16 flex justify-center">
           <CreateTeamModal
             isLoggedIn={isLoggedIn}
             hasApprovedPlayer={hasApprovedPlayer}

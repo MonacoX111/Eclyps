@@ -50,7 +50,7 @@ export async function upsertUserProfileFromAuthUser(user: User) {
     .maybeSingle()
 
   if (error || !data) {
-    console.error("Failed to sync Discord user profile:", error)
+    logSupabaseError("Failed to sync Discord user profile:", error)
     return null
   }
 
@@ -66,7 +66,7 @@ export async function upsertUserProfileFromAuthUser(user: User) {
       .maybeSingle()
 
     if (playerFetchError) {
-      console.error("Failed to query existing player profile during auth sync:", playerFetchError)
+      logSupabaseError("Failed to query existing player profile during auth sync:", playerFetchError)
     } else if (existingPlayer) {
       // Update existing player record: update display_name/avatar_url, and link user_id / owner_user_id if missing
       const { error: playerUpdateError } = await supabaseAdmin
@@ -76,12 +76,11 @@ export async function upsertUserProfileFromAuthUser(user: User) {
           avatar_url: profileInput.avatarUrl,
           user_id: user.id,
           owner_user_id: userProfileId,
-          updated_at: now,
         })
         .eq("id", existingPlayer.id)
 
       if (playerUpdateError) {
-        console.error("Failed to update existing player profile during auth sync:", playerUpdateError)
+        logSupabaseError("Failed to update existing player profile during auth sync:", playerUpdateError)
       }
     } else {
       // Create new pending player profile
@@ -101,7 +100,7 @@ export async function upsertUserProfileFromAuthUser(user: User) {
         })
 
       if (playerInsertError) {
-        console.error("Failed to insert pending player profile during auth sync:", playerInsertError)
+        logSupabaseError("Failed to insert pending player profile during auth sync:", playerInsertError)
       }
     }
   } catch (err) {
@@ -182,4 +181,19 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null
+}
+
+function logSupabaseError(context: string, error: unknown) {
+  if (error && typeof error === "object") {
+    const err = error as { message?: string; details?: string; hint?: string; code?: string }
+    console.error(context, {
+      message: err.message ?? "No message",
+      details: err.details ?? "No details",
+      hint: err.hint ?? "No hint",
+      code: err.code ?? "No code",
+      raw: JSON.stringify(error),
+    })
+    return
+  }
+  console.error(context, error)
 }

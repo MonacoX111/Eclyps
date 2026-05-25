@@ -55,7 +55,7 @@ export function CreateTeamModal({
   }, [initialError, initialSuccess])
 
   return (
-    <div className="relative z-20 flex flex-col items-center">
+    <div className={`relative flex flex-col items-center ${isOpen ? "z-[100]" : "z-20"}`}>
       {/* Toast Alert Feedback */}
       {successMessage && (
         <div className="fixed top-24 right-4 z-50 rounded-xl border border-emerald-500/25 bg-emerald-950/80 px-4 py-3 text-sm text-emerald-200 shadow-xl backdrop-blur-md">
