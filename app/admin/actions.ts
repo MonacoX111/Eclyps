@@ -14,5 +14,5 @@ export { reviewRegistration } from "./actions/registrations"
 export { assignBracketSlot, generateBracketTemplate, updateBracketMatch, updateBracketStatus } from "./actions/brackets"
 export { createMatch, deleteMatch, updateMatch } from "./actions/matches"
 export { createResult, deleteResult, updateResult } from "./actions/results"
-export { deleteParticipant } from "./actions/participants"
+export { deleteParticipant, addParticipant } from "./actions/participants"
 

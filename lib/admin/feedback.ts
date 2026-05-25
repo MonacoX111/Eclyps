@@ -234,6 +234,7 @@ export function getDisputeFeedback(searchParams?: Pick<AdminSearchParams, "dispu
 
 export function getParticipantFeedback(searchParams?: Pick<AdminSearchParams, "participantError" | "participantSuccess">): AdminFeedback | null {
   if (searchParams?.participantSuccess === "deleted") return { tone: "success", message: "Participant removed from tournament." }
+  if (searchParams?.participantSuccess === "created") return { tone: "success", message: "Participant added successfully." }
   if (!searchParams?.participantError) return null
 
   const message =
@@ -241,8 +242,15 @@ export function getParticipantFeedback(searchParams?: Pick<AdminSearchParams, "p
       "missing-id": "Participant id is missing.",
       "admin-client-unavailable": "Participant mutations require a server-only Supabase admin client.",
       "participant-used-in-matches": "This participant is already used in generated matches. Reset the bracket before removing them.",
-      "mutation-failed": "Participant could not be removed. Please try again.",
-    }[searchParams.participantError] ?? "Participant removal failed."
+      "participant-already-exists": "This player/team is already added to this tournament.",
+      "player-not-found": "Selected player was not found.",
+      "team-not-found": "Selected team was not found.",
+      "seed-already-used": "This seed is already used in this tournament.",
+      "bracket-already-generated": "Participants cannot be added after the bracket has been generated. Reset the bracket first.",
+      "invalid-seed": "Seed must be a positive integer.",
+      "invalid-participant-data": "Participant details are invalid.",
+      "mutation-failed": "Participant action failed. Please try again.",
+    }[searchParams.participantError] ?? "Participant action failed."
 
   return { tone: "error", message }
 }

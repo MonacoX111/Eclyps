@@ -186,6 +186,8 @@ export async function AdminDashboard({
       <ParticipantsPanel
         participants={participants}
         tournaments={tournaments}
+        players={players}
+        teams={teams}
         fetchError={participantError}
         feedback={getParticipantFeedback(searchParams)}
       />
