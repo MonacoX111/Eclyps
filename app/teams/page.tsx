@@ -5,10 +5,12 @@ import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
-import { getHomepageData, getTeamCards } from "@/lib/data/homepage"
+import { getHomepageData } from "@/lib/data/homepage"
+import { getApprovedTeams } from "@/lib/data/teams"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { CreateTeamModal } from "@/components/create-team-modal"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { getLanguage } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -83,15 +85,55 @@ async function ActiveNavbar() {
 }
 
 async function ActiveTeamsGrid() {
-  const homepageData = await getHomepageData()
-  const teamCards = getTeamCards(homepageData.teams, homepageData.participants)
+  const approvedTeams = await getApprovedTeams()
+  const lang = await getLanguage()
+
+  const teamCards = approvedTeams.map((team, index) => {
+    const displayName = team.name
+    const seed = team.seed
+
+    const capPart = team.captain_name 
+      ? (lang === "uk" ? `Капітан: ${team.captain_name}` : `Captain: ${team.captain_name}`)
+      : ""
+    const memberLabel = lang === "uk" 
+      ? `${team.member_count} учасн.` 
+      : `${team.member_count} members`
+    
+    const subtitle = capPart ? `${capPart} • ${memberLabel}` : memberLabel
+
+    return {
+      id: team.id,
+      name: displayName,
+      subtitle,
+      tag: createTeamTag(displayName),
+      wins: team.wins,
+      losses: team.losses,
+      rank: seed ?? index + 1,
+      profileHref: `/teams/${team.id}`,
+      avatarUrl: team.logo_url ?? null,
+      avatarAlt: displayName,
+    }
+  })
+
+  const title = lang === "uk" ? "Команди" : "Teams"
 
   return (
     <TeamsGrid
       teams={teamCards}
       participantLabel="Teams"
+      title={title}
     />
   )
+}
+
+function createTeamTag(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase()
 }
 
 function TeamsLoading() {

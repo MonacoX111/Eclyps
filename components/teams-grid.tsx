@@ -23,11 +23,13 @@ export type TeamCard = {
 type TeamsGridProps = {
   teams?: TeamCard[]
   participantLabel?: "Teams" | "Players"
+  title?: string
 }
 
 export function TeamsGrid({
   teams = [],
   participantLabel = "Teams",
+  title,
 }: TeamsGridProps) {
   const { t } = useLanguage()
   const sectionId = participantLabel === "Players" ? "players" : "teams"
@@ -37,7 +39,7 @@ export function TeamsGrid({
       <div className="mx-auto max-w-6xl">
         <SectionHeading 
           eyebrow={t.teamsGrid.eyebrow} 
-          title={participantLabel === "Players" ? t.teamsGrid.registeredPlayers : t.teamsGrid.registeredTeams} 
+          title={title || (participantLabel === "Players" ? t.teamsGrid.registeredPlayers : t.teamsGrid.registeredTeams)} 
         />
 
         {teams.length === 0 ? (

@@ -88,7 +88,7 @@ export async function createGlobalTeam(formData: FormData) {
       slug,
       logo_url: logoUrl?.trim() || null,
       owner_player_id: player.id,
-      status: "approved",
+      status: "pending",
       tournament_id: null,
       wins: 0,
       losses: 0,

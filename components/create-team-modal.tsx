@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { createGlobalTeam } from "@/app/actions/teams"
+import { useLanguage } from "@/components/language-provider"
 
 const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-white outline-none transition focus:border-emerald-500/60"
@@ -23,9 +24,12 @@ export function CreateTeamModal({
   initialError,
   initialSuccess,
 }: CreateTeamModalProps) {
+  const { lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [name, setName] = useState("")
+  const [logoUrl, setLogoUrl] = useState("")
 
   // Map backend query error/success parameters to user-friendly messages
   useEffect(() => {
@@ -48,11 +52,17 @@ export function CreateTeamModal({
     }
 
     if (initialSuccess === "created") {
-      setSuccessMessage("Your global team has been successfully created!")
+      setIsOpen(false)
+      setName("")
+      setLogoUrl("")
+      const msg = lang === "uk"
+        ? "Команду створено. Очікує підтвердження адміністратора."
+        : "Team created. Waiting for admin approval."
+      setSuccessMessage(msg)
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [initialError, initialSuccess])
+  }, [initialError, initialSuccess, lang])
 
   return (
     <div className={`relative flex flex-col items-center ${isOpen ? "z-[100]" : "z-20"}`}>
@@ -105,7 +115,10 @@ export function CreateTeamModal({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                setIsOpen(false)
+                setErrorMessage(null)
+              }}
             />
             
             <motion.div
@@ -147,6 +160,8 @@ export function CreateTeamModal({
                     <input
                       name="name"
                       required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="Enter a unique team name..."
                       className={inputClassName}
                     />
@@ -157,6 +172,8 @@ export function CreateTeamModal({
                     <input
                       name="logo_url"
                       type="url"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
                       placeholder="https://example.com/logo.png"
                       className={inputClassName}
                     />
@@ -171,7 +188,10 @@ export function CreateTeamModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => {
+                        setIsOpen(false)
+                        setErrorMessage(null)
+                      }}
                       className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/20 hover:text-white cursor-pointer"
                     >
                       Cancel
