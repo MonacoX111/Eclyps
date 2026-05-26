@@ -105,6 +105,7 @@ type ProfileTeam = {
   losses: number
   status: string | null
   owner_player_id?: string | null
+  logo_url?: string | null
 }
 
 type ProfilePlayer = {
@@ -138,8 +139,8 @@ const PLAYER_SELECT_WITH_REGION_NO_RATING =
 const PLAYER_SELECT_FALLBACK =
   "id, tournament_id, name, nickname, seed, wins, losses, status, user_id"
 const TEAM_SELECT_WITH_RATING =
-  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses, status, owner_player_id"
-const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses, status, owner_player_id"
+  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses, status, owner_player_id, logo_url"
+const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses, status, owner_player_id, logo_url"
 const PARTICIPANT_SELECT_WITH_REGION =
   "id, tournament_id, participant_type, display_name, region, seed, logo_url, avatar_url, source_team_id, source_player_id"
 const PARTICIPANT_SELECT_FALLBACK =
@@ -648,7 +649,7 @@ function toPublicProfileRecord({
     region: source && "region" in source ? source.region ?? participant?.region ?? null : participant?.region ?? null,
     image_url:
       kind === "team"
-        ? participant?.logo_url ?? participant?.avatar_url ?? null
+        ? participant?.logo_url ?? participant?.avatar_url ?? (source && "logo_url" in source ? source.logo_url : null) ?? null
         : source && "owner_profile" in source
           ? source.owner_profile?.avatar_url ?? participant?.avatar_url ?? participant?.logo_url ?? null
           : participant?.avatar_url ?? participant?.logo_url ?? null,
@@ -974,6 +975,7 @@ function normalizeTeam(row: Record<string, unknown>): ProfileTeam | null {
     losses: readNonNegativeInteger(row.losses),
     status: readNullableString(row.status),
     owner_player_id: readStringId(row.owner_player_id),
+    logo_url: readNullableString(row.logo_url),
   }
 }
 
