@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { GoogleGenAI } from "@google/genai"
+import { getLatestNewsForAi } from "@/lib/data/news"
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,16 @@ export async function POST(req: NextRequest) {
     }
 
     const ai = new GoogleGenAI({ apiKey })
+    const latestNews = await getLatestNewsForAi(5)
+    const latestNewsContext =
+      latestNews.length > 0
+        ? latestNews
+            .map((post, index) => {
+              const date = post.date ? new Date(post.date).toISOString().slice(0, 10) : "date TBA"
+              return `${index + 1}. ${post.title} | ${post.category ?? "uncategorized"} | ${date} | ${post.excerpt ?? "No excerpt."}`
+            })
+            .join("\n")
+        : "No published news posts are available right now."
 
 const systemInstruction = lang === "uk"
   ? `
@@ -74,7 +85,10 @@ Instead, speak as a native part of the Eclyps platform.
       model: "gemini-2.5-flash",
       contents: message.trim(),
       config: {
-        systemInstruction,
+        systemInstruction: `${systemInstruction}
+
+Latest published Eclyps news for user questions, including "Які останні новини?":
+${latestNewsContext}`,
       }
     })
 

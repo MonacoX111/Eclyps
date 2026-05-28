@@ -12,6 +12,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseRegistrationDecisionFormData } from "./parsers"
 import { requireAdminSession } from "./shared"
 import { canRegisterTeamForTournament } from "@/lib/teams/eligibility"
+import { createNotification } from "@/lib/notifications/create-notification"
 
 export async function reviewRegistration(formData: FormData) {
   await requireAdminSession()
@@ -44,6 +45,29 @@ export async function reviewRegistration(formData: FormData) {
 
   if (parsed.data.status === "rejected") {
     await updateRegistrationStatus(supabaseAdmin, parsed.data.id, "rejected")
+    
+    if (registration.user_profile_id) {
+      // Get tournament name first
+      const { data: tournament } = await supabaseAdmin
+        .from("tournaments")
+        .select("name")
+        .eq("id", registration.tournament_id)
+        .maybeSingle()
+
+      const tName = tournament?.name || "Tournament"
+      createNotification({
+        userProfileId: registration.user_profile_id,
+        playerId: registration.player_id || registration.source_player_id,
+        teamId: registration.team_id || registration.source_team_id,
+        tournamentId: registration.tournament_id,
+        type: "registration_rejected",
+        title: "Registration Rejected",
+        message: `Your registration for "${tName}" was rejected.`,
+      }).catch((err) => {
+        console.error("Failed to create registration rejection notification:", err)
+      })
+    }
+
     revalidateRegistrationPaths()
     redirect("/admin?registrationSuccess=rejected#registrations")
   }
@@ -74,6 +98,28 @@ export async function reviewRegistration(formData: FormData) {
     }
 
     redirect(`/admin?registrationError=${errorParam}#registrations`)
+  }
+
+  if (registration.user_profile_id) {
+    // Get tournament name first
+    const { data: tournament } = await supabaseAdmin
+      .from("tournaments")
+      .select("name")
+      .eq("id", registration.tournament_id)
+      .maybeSingle()
+
+    const tName = tournament?.name || "Tournament"
+    createNotification({
+      userProfileId: registration.user_profile_id,
+      playerId: registration.player_id || registration.source_player_id,
+      teamId: registration.team_id || registration.source_team_id,
+      tournamentId: registration.tournament_id,
+      type: "registration_approved",
+      title: "Registration Approved",
+      message: `Your registration for "${tName}" has been approved!`,
+    }).catch((err) => {
+      console.error("Failed to create registration approval notification:", err)
+    })
   }
 
   revalidateRegistrationPaths()

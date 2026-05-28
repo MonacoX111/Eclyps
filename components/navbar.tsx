@@ -7,6 +7,7 @@ import { logoutDiscord } from "@/app/auth/actions"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { NotificationsBell } from "@/components/notifications-bell"
 
 type NavbarProps = {
   participantLabel?: "Teams" | "Players"
@@ -31,6 +32,7 @@ export function Navbar({
     { href: "/players", label: t.navbar.players },
     { href: "/schedule", label: t.navbar.schedule },
     { href: "/results", label: t.navbar.results },
+    { href: "/news", label: t.navbar.news },
   ]
 
   return (
@@ -78,12 +80,14 @@ export function Navbar({
             ))}
             <div className="flex items-center gap-4">
               <LanguageSwitcher />
+              {userProfile && <NotificationsBell userProfile={userProfile} />}
               <AuthControl userProfile={userProfile} />
             </div>
           </div>
 
           <div className="flex items-center gap-3 md:hidden">
             <LanguageSwitcher />
+            {userProfile && <NotificationsBell userProfile={userProfile} />}
             <MobileAuthAvatar userProfile={userProfile} />
             <button
               className="flex flex-col gap-1.5"

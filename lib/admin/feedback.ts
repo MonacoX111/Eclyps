@@ -254,3 +254,28 @@ export function getParticipantFeedback(searchParams?: Pick<AdminSearchParams, "p
 
   return { tone: "error", message }
 }
+
+export function getNewsFeedback(searchParams?: Pick<AdminSearchParams, "newsError" | "newsSuccess">): AdminFeedback | null {
+  if (searchParams?.newsSuccess === "created") return { tone: "success", message: "News post created." }
+  if (searchParams?.newsSuccess === "updated") return { tone: "success", message: "News post updated." }
+  if (searchParams?.newsSuccess === "published") return { tone: "success", message: "News post published." }
+  if (searchParams?.newsSuccess === "archived") return { tone: "success", message: "News post archived." }
+  if (searchParams?.newsSuccess === "deleted") return { tone: "success", message: "News post deleted." }
+  if (!searchParams?.newsError) return null
+
+  const message =
+    {
+      "invalid-title": "Title must not be empty.",
+      "invalid-slug": "Slug must use lowercase letters, numbers, and hyphens.",
+      "invalid-content": "Content must not be empty.",
+      "invalid-status": "Status must be draft, published, or archived.",
+      "invalid-published-at": "Published date must be valid.",
+      "missing-id": "News post id is missing.",
+      "confirm-published-delete": "Confirm deletion before deleting a published post.",
+      "admin-client-unavailable":
+        "News mutations require a server-only Supabase admin client.",
+      "mutation-failed": "News post change could not be saved. Please try again.",
+    }[searchParams.newsError] ?? "News post change could not be saved."
+
+  return { tone: "error", message }
+}

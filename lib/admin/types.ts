@@ -38,6 +38,8 @@ export type AdminSearchParams = {
   activeSuccess?: string
   participantError?: string
   participantSuccess?: string
+  newsError?: string
+  newsSuccess?: string
 }
 
 export type AdminFormAction = (formData: FormData) => Promise<void>

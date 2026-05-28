@@ -15,6 +15,7 @@ const rawTranslations = {
       bracket: "Сітка",
       schedule: "Розклад",
       results: "Результати",
+      news: "Новини",
       loginDiscord: "Увійти через Discord",
       logout: "Вийти",
     },
@@ -425,6 +426,7 @@ const rawTranslations = {
       bracket: "Bracket",
       schedule: "Schedule",
       results: "Results",
+      news: "News",
       loginDiscord: "Login with Discord",
       logout: "Logout",
     },
@@ -832,4 +834,3 @@ type DeepStringify<T> = T extends string
 export type TranslationSchema = DeepStringify<typeof rawTranslations.uk>
 
 export const translations: Record<Language, TranslationSchema> = rawTranslations
-

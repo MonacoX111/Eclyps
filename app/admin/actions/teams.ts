@@ -10,6 +10,7 @@ import {
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseRequiredIdFormData, parseTeamFormData } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
+import { createNotification } from "@/lib/notifications/create-notification"
 
 export async function createTeam(formData: FormData) {
   await requireAdminSession()
@@ -127,6 +128,12 @@ export async function approveTeam(formData: FormData) {
     redirect("/admin?teamError=admin-client-unavailable#teams")
   }
 
+  const { data: team } = await supabaseAdmin
+    .from("teams")
+    .select("owner_user_id, name")
+    .eq("id", parsedId.data.id)
+    .maybeSingle()
+
   const { error } = await runSupabaseMutation("approve team", () =>
     supabaseAdmin.from("teams").update({ status: "approved" }).eq("id", parsedId.data.id),
   )
@@ -134,6 +141,18 @@ export async function approveTeam(formData: FormData) {
   if (error) {
     logMutationError("approve team", error)
     redirect("/admin?teamError=mutation-failed#teams")
+  }
+
+  if (team && team.owner_user_id) {
+    createNotification({
+      userProfileId: team.owner_user_id,
+      teamId: parsedId.data.id,
+      type: "team_approved",
+      title: "Team Approved",
+      message: `Your team "${team.name}" has been approved.`,
+    }).catch((err) => {
+      console.error("Failed to create team approval notification:", err)
+    })
   }
 
   revalidatePath("/admin")
@@ -154,6 +173,12 @@ export async function rejectTeam(formData: FormData) {
     redirect("/admin?teamError=admin-client-unavailable#teams")
   }
 
+  const { data: team } = await supabaseAdmin
+    .from("teams")
+    .select("owner_user_id, name")
+    .eq("id", parsedId.data.id)
+    .maybeSingle()
+
   const { error } = await runSupabaseMutation("reject team", () =>
     supabaseAdmin.from("teams").update({ status: "rejected" }).eq("id", parsedId.data.id),
   )
@@ -161,6 +186,18 @@ export async function rejectTeam(formData: FormData) {
   if (error) {
     logMutationError("reject team", error)
     redirect("/admin?teamError=mutation-failed#teams")
+  }
+
+  if (team && team.owner_user_id) {
+    createNotification({
+      userProfileId: team.owner_user_id,
+      teamId: parsedId.data.id,
+      type: "team_rejected",
+      title: "Team Rejected",
+      message: `Your team "${team.name}" has been rejected.`,
+    }).catch((err) => {
+      console.error("Failed to create team rejection notification:", err)
+    })
   }
 
   revalidatePath("/admin")

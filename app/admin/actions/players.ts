@@ -6,6 +6,7 @@ import { logMutationError } from "@/lib/admin/errors"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parsePlayerFormData, parseRequiredIdFormData } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
+import { createNotification } from "@/lib/notifications/create-notification"
 
 export async function createPlayer(formData: FormData) {
   await requireAdminSession()
@@ -79,10 +80,10 @@ export async function reviewPlayer(formData: FormData) {
     redirect("/admin?playerError=admin-client-unavailable#players")
   }
 
-  // Fetch the player's current seed first
+  // Fetch the player's current details first
   const { data: player, error: fetchError } = await supabaseAdmin
     .from("players")
-    .select("seed")
+    .select("seed, owner_user_id, name")
     .eq("id", parsedId.data.id)
     .maybeSingle()
 
@@ -141,6 +142,27 @@ export async function reviewPlayer(formData: FormData) {
   if (!success) {
     logMutationError("review player update", lastError)
     redirect("/admin?playerError=mutation-failed#players")
+  }
+
+  // Trigger notification if the status changed and player has an owner profile
+  if (player && player.owner_user_id) {
+    if (status === "approved" || status === "rejected") {
+      const type = status === "approved" ? "player_approved" : "player_rejected"
+      const title = status === "approved" ? "Player Profile Approved" : "Player Profile Rejected"
+      const message = status === "approved"
+        ? `Your player profile "${player.name}" has been approved.`
+        : `Your player profile "${player.name}" has been rejected.`
+
+      createNotification({
+        userProfileId: player.owner_user_id,
+        playerId: parsedId.data.id,
+        type,
+        title,
+        message,
+      }).catch((err) => {
+        console.error("Failed to create player review notification:", err)
+      })
+    }
   }
 
   revalidatePath("/admin")

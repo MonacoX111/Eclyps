@@ -15,4 +15,10 @@ export { assignBracketSlot, generateBracketTemplate, updateBracketMatch, updateB
 export { createMatch, deleteMatch, updateMatch } from "./actions/matches"
 export { createResult, deleteResult, updateResult } from "./actions/results"
 export { deleteParticipant, addParticipant } from "./actions/participants"
-
+export {
+  archiveNewsPost,
+  createNewsPost,
+  deleteNewsPost,
+  publishNewsPost,
+  updateNewsPost,
+} from "./actions/news"

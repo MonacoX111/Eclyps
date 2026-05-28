@@ -5,6 +5,7 @@ import { DisputesPanel } from "@/components/admin/disputes-panel"
 import { PlayerApplicationsPanel } from "@/components/admin/player-applications-panel"
 import { PlayersPanel } from "@/components/admin/players-panel"
 import { ParticipantsPanel } from "@/components/admin/participants-panel"
+import { NewsPanel } from "@/components/admin/news-panel"
 import { RegistrationsPanel } from "@/components/admin/registrations-panel"
 import { ResultsPanel } from "@/components/admin/results-panel"
 import { TeamsPanel } from "@/components/admin/teams-panel"
@@ -14,6 +15,7 @@ import {
   getActiveTournamentFeedback,
   getDisputeFeedback,
   getMatchFeedback,
+  getNewsFeedback,
   getPlayerApplicationFeedback,
   getPlayerFeedback,
   getParticipantFeedback,
@@ -23,6 +25,7 @@ import {
   getTournamentFeedback,
 } from "@/lib/admin/feedback"
 import { getAdminMatches } from "@/lib/admin/matches"
+import { getAdminNewsPosts } from "@/lib/admin/news"
 import { getAdminDisputes } from "@/lib/admin/disputes"
 import { getAdminParticipants } from "@/lib/admin/participants"
 import { getAdminPlayerApplications } from "@/lib/admin/player-applications"
@@ -80,6 +83,11 @@ const adminSections = [
     title: "Active Tournament",
     description: "Choose which tournament appears on the public homepage.",
   },
+  {
+    id: "news",
+    title: "News",
+    description: "Manage public Eclyps announcements and articles.",
+  },
 ] as const
 
 export async function AdminDashboard({
@@ -97,6 +105,7 @@ export async function AdminDashboard({
     { disputes, error: disputeError },
     { matches, error: matchError },
     { results, error: resultError },
+    { posts: newsPosts, error: newsError },
   ] = await Promise.all([
     getAdminTournaments(),
     getAdminTeams(),
@@ -107,6 +116,7 @@ export async function AdminDashboard({
     getAdminDisputes(),
     getAdminMatches(),
     getAdminResults(),
+    getAdminNewsPosts(),
   ])
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
@@ -235,6 +245,12 @@ export async function AdminDashboard({
         tournaments={tournaments}
         fetchError={tournamentError}
         feedback={getActiveTournamentFeedback(searchParams)}
+      />
+
+      <NewsPanel
+        posts={newsPosts}
+        fetchError={newsError}
+        feedback={getNewsFeedback(searchParams)}
       />
     </div>
   )
