@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { AdminLoginOverlay } from "@/components/admin/admin-login-overlay"
+import { isAdminAuthenticatedAction } from "@/app/admin/actions"
 
 export function AdminShortcut() {
   const [isOpen, setIsOpen] = useState(false)
@@ -21,7 +22,13 @@ export function AdminShortcut() {
 
       if (event.ctrlKey && event.altKey && event.key.toLowerCase() === "e") {
         event.preventDefault()
-        setIsOpen(true)
+        isAdminAuthenticatedAction().then((authenticated) => {
+          if (authenticated) {
+            window.location.href = "/admin"
+          } else {
+            setIsOpen(true)
+          }
+        })
       }
     }
 

@@ -114,7 +114,7 @@ export function getAdminSessionCookieOptions(maxAge = ADMIN_SESSION_MAX_AGE_SECO
     httpOnly: true,
     sameSite: "strict" as const,
     secure: getPublicEnv().isProduction,
-    path: "/admin",
+    path: "/",
     maxAge,
   }
 }
@@ -122,7 +122,7 @@ export function getAdminSessionCookieOptions(maxAge = ADMIN_SESSION_MAX_AGE_SECO
 export function getAdminSessionDeleteCookieOptions() {
   return {
     name: ADMIN_SESSION_COOKIE,
-    path: "/admin",
+    path: "/",
   }
 }
 

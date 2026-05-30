@@ -14,6 +14,7 @@ import {
   getAdminSessionDeleteCookieOptions,
   getAdminUserAgent,
   isValidAdminPassword,
+  isValidAdminSession,
   recordFailedAdminLogin,
   revokeAdminSession,
 } from "@/lib/admin-auth"
@@ -111,4 +112,10 @@ export async function getAdminAuthHealthAction() {
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
   return getAdminAuthHealth(sessionCookie)
+}
+
+export async function isAdminAuthenticatedAction() {
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
+  return isValidAdminSession(sessionCookie)
 }
