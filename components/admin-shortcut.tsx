@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { AdminLoginOverlay } from "@/components/admin/admin-login-overlay"
 
 export function AdminShortcut() {
+  const [isOpen, setIsOpen] = useState(false)
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target
@@ -17,7 +20,8 @@ export function AdminShortcut() {
       }
 
       if (event.ctrlKey && event.altKey && event.key.toLowerCase() === "e") {
-        window.location.href = "/admin"
+        event.preventDefault()
+        setIsOpen(true)
       }
     }
 
@@ -28,5 +32,9 @@ export function AdminShortcut() {
     }
   }, [])
 
-  return null
+  return (
+    <>
+      <AdminLoginOverlay isOpen={isOpen} onClose={() => setIsOpen(false)} />
+    </>
+  )
 }

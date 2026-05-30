@@ -1,4 +1,4 @@
-export { loginAdmin, logoutAdmin } from "./actions/auth"
+export { loginAdmin, logoutAdmin, checkAdminPassword, getAdminAuthHealthAction } from "./actions/auth"
 export {
   createTournament,
   deleteTournament,

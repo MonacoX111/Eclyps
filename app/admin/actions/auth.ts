@@ -7,6 +7,7 @@ import {
   checkAdminLoginRateLimit,
   clearAdminLoginRateLimit,
   createAdminSession,
+  getAdminAuthHealth,
   getAdminAuthReadiness,
   getAdminLoginIdentifier,
   getAdminSessionCookieOptions,
@@ -78,4 +79,36 @@ export async function logoutAdmin() {
   cookieStore.delete(getAdminSessionDeleteCookieOptions())
 
   redirect("/admin")
+}
+
+export async function checkAdminPassword(password: string) {
+  const readiness = await getAdminAuthReadiness()
+  if (!readiness.ok) {
+    return { ok: false, error: readiness.reason === "storage" ? "storage" : "unavailable" }
+  }
+
+  const headersList = await headers()
+  const identifier = getAdminLoginIdentifier(headersList)
+  const rateLimit = await checkAdminLoginRateLimit(identifier)
+
+  if (!rateLimit.allowed) {
+    return {
+      ok: false,
+      error: "rate-limited",
+      retryAfter: rateLimit.retryAfterSeconds?.toString()
+    }
+  }
+
+  if (!(await isValidAdminPassword(password))) {
+    await recordFailedAdminLogin(identifier)
+    return { ok: false, error: "invalid" }
+  }
+
+  return { ok: true }
+}
+
+export async function getAdminAuthHealthAction() {
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value
+  return getAdminAuthHealth(sessionCookie)
 }
