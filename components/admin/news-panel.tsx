@@ -1,3 +1,5 @@
+"use client"
+
 import type { AdminNewsPost, NewsStatus } from "@/lib/admin/news"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import {
@@ -16,6 +18,7 @@ import {
   recordClassName,
 } from "@/components/admin/admin-section"
 import { AdminField, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
+import { useLanguage } from "@/components/language-provider"
 
 const categories = ["announcement", "tournament", "update", "patch_notes"]
 
@@ -28,25 +31,26 @@ export function NewsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t } = useLanguage()
   return (
     <AdminSection
       id="news"
-      title="News"
-      description="Create and manage public announcements, tournament news, updates, and articles."
+      title={t.admin.news.title}
+      description={t.admin.news.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="news posts"
     >
       <div className={panelGridClassName}>
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Create post</h3>
-          <NewsForm action={createNewsPost} submitLabel="Create post" />
+          <h3 className="text-lg font-medium">{t.admin.news.createPost}</h3>
+          <NewsForm action={createNewsPost} submitLabel={t.admin.news.createPost} />
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Existing posts</h3>
+          <h3 className="text-lg font-medium">{t.admin.news.existingPosts}</h3>
           {posts.length === 0 ? (
-            <AdminEmptyState>No news posts exist in Supabase yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.news.noPosts}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {posts.map((post) => (
@@ -61,6 +65,34 @@ export function NewsPanel({
 }
 
 function NewsRecord({ post }: { post: AdminNewsPost }) {
+  const { t, lang } = useLanguage()
+
+  const getDisplayCategory = (cat: string | null) => {
+    if (!cat) return ""
+    if (lang === "uk") {
+      switch (cat) {
+        case "announcement": return "Оголошення"
+        case "tournament": return "Турнір"
+        case "update": return "Оновлення"
+        case "patch_notes": return "Патч-нотатки"
+        default: return cat
+      }
+    }
+    return cat
+  }
+
+  const getDisplayStatus = (status: string) => {
+    if (lang === "uk") {
+      switch (status) {
+        case "draft": return "Чернетка"
+        case "published": return "Опубліковано"
+        case "archived": return "Архівовано"
+        default: return status
+      }
+    }
+    return status
+  }
+
   return (
     <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
@@ -70,18 +102,18 @@ function NewsRecord({ post }: { post: AdminNewsPost }) {
             <p className="mt-1 break-words text-sm text-white/55">/{post.slug}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className={pillClassName}>{post.status}</span>
-            {post.category && <span className={pillClassName}>{post.category}</span>}
-            {post.published_at && <span className={pillClassName}>{formatAdminDate(post.published_at)}</span>}
+            <span className={pillClassName}>{getDisplayStatus(post.status)}</span>
+            {post.category && <span className={pillClassName}>{getDisplayCategory(post.category)}</span>}
+            {post.published_at && <span className={pillClassName}>{formatAdminDate(post.published_at, lang)}</span>}
           </div>
         </div>
       </summary>
 
       <div className="mt-4 border-t border-white/10 pt-4">
-        <NewsForm action={updateNewsPost} submitLabel="Save changes" post={post} />
+        <NewsForm action={updateNewsPost} submitLabel={t.admin.news.saveChanges} post={post} />
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {post.status !== "published" && <SimplePostAction action={publishNewsPost} id={post.id} label="Publish" />}
-          {post.status !== "archived" && <SimplePostAction action={archiveNewsPost} id={post.id} label="Archive" />}
+          {post.status !== "published" && <SimplePostAction action={publishNewsPost} id={post.id} label={t.admin.news.publish} />}
+          {post.status !== "archived" && <SimplePostAction action={archiveNewsPost} id={post.id} label={t.admin.news.archive} />}
           <DeleteNewsForm post={post} />
         </div>
       </div>
@@ -98,13 +130,14 @@ function NewsForm({
   submitLabel: string
   post?: AdminNewsPost
 }) {
+  const { t } = useLanguage()
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {post && <input type="hidden" name="id" value={post.id} />}
-      <AdminField label="Title">
+      <AdminField label={t.admin.news.titleField}>
         <input name="title" defaultValue={post?.title ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label="Slug">
+      <AdminField label={t.admin.news.slugField}>
         <input
           name="slug"
           defaultValue={post?.slug ?? ""}
@@ -114,7 +147,7 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Category">
+      <AdminField label={t.admin.news.categoryField}>
         <input
           name="category"
           list="news-categories"
@@ -123,13 +156,13 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Author">
+      <AdminField label={t.admin.news.authorField}>
         <input name="author_name" defaultValue={post?.author_name ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Status">
+      <AdminField label={t.admin.news.statusField}>
         <NewsStatusSelect value={post?.status} />
       </AdminField>
-      <AdminField label="Published at">
+      <AdminField label={t.admin.news.publishedAtField}>
         <input
           name="published_at"
           type="datetime-local"
@@ -137,14 +170,14 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Cover image URL">
+      <AdminField label={t.admin.news.coverImageField}>
         <input name="cover_image_url" defaultValue={post?.cover_image_url ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Excerpt">
+      <AdminField label={t.admin.news.excerptField}>
         <textarea name="excerpt" defaultValue={post?.excerpt ?? ""} rows={3} className={inputClassName} />
       </AdminField>
       <label className="space-y-2 text-sm text-white/75 sm:col-span-2">
-        <span className="block">Content</span>
+        <span className="block">{t.admin.news.contentField}</span>
         <textarea
           name="content"
           defaultValue={post?.content ?? ""}
@@ -164,11 +197,12 @@ function NewsForm({
 }
 
 function NewsStatusSelect({ value = "draft" }: { value?: NewsStatus }) {
+  const { lang } = useLanguage()
   return (
     <select name="status" defaultValue={value} className={inputClassName}>
-      <option value="draft">Draft</option>
-      <option value="published">Published</option>
-      <option value="archived">Archived</option>
+      <option value="draft">{lang === "uk" ? "Чернетка" : "Draft"}</option>
+      <option value="published">{lang === "uk" ? "Опубліковано" : "Published"}</option>
+      <option value="archived">{lang === "uk" ? "Архівовано" : "Archived"}</option>
     </select>
   )
 }
@@ -196,20 +230,21 @@ function SimplePostAction({
 }
 
 function DeleteNewsForm({ post }: { post: AdminNewsPost }) {
+  const { t } = useLanguage()
   return (
     <form action={deleteNewsPost} className="space-y-3">
       <input type="hidden" name="id" value={post.id} />
       {post.status === "published" && (
         <label className="flex items-start gap-2 text-xs leading-5 text-white/60">
           <input name="confirm_delete_published" type="checkbox" className="mt-1" />
-          Confirm published delete
+          {t.admin.news.confirmDelete}
         </label>
       )}
       <button
         type="submit"
         className="w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10"
       >
-        Delete
+        {t.admin.news.delete}
       </button>
     </form>
   )
@@ -224,11 +259,11 @@ function toDateTimeLocalValue(value: string | null | undefined) {
   return date.toISOString().slice(0, 16)
 }
 
-function formatAdminDate(value: string) {
+function formatAdminDate(value: string, lang: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

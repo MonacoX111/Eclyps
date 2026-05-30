@@ -1,3 +1,5 @@
+"use client"
+
 import Image from "next/image"
 import { reviewDispute } from "@/app/admin/actions"
 import type { AdminDispute } from "@/lib/admin/disputes"
@@ -11,6 +13,7 @@ import {
   recordClassName,
 } from "@/components/admin/admin-section"
 import { inputClassName } from "@/components/admin/admin-form-fields"
+import { useLanguage } from "@/components/language-provider"
 
 export function DisputesPanel({
   disputes,
@@ -21,6 +24,7 @@ export function DisputesPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t } = useLanguage()
   const activeDisputes = disputes.filter(
     (dispute) => dispute.status === "open" || dispute.status === "under_review",
   )
@@ -31,17 +35,17 @@ export function DisputesPanel({
   return (
     <AdminSection
       id="disputes"
-      title="Disputes"
-      description="Review player and captain reports without changing match results automatically."
+      title={t.admin.disputes.title}
+      description={t.admin.disputes.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="disputes"
     >
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Open disputes</h3>
+          <h3 className="text-lg font-medium">{t.admin.disputes.openDisputes}</h3>
           {activeDisputes.length === 0 ? (
-            <AdminEmptyState>No open disputes.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.disputes.noOpen}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {activeDisputes.map((dispute) => (
@@ -52,9 +56,9 @@ export function DisputesPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Recent resolutions</h3>
+          <h3 className="text-lg font-medium">{t.admin.disputes.recentResolutions}</h3>
           {resolvedDisputes.length === 0 ? (
-            <AdminEmptyState>No resolved disputes yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.disputes.noResolved}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {resolvedDisputes.map((dispute) => (
@@ -75,21 +79,50 @@ function DisputeRecord({
   dispute: AdminDispute
   showActions?: boolean
 }) {
+  const { t, lang } = useLanguage()
+
+  const getDisplayStatus = (status: string) => {
+    if (lang === "uk") {
+      switch (status) {
+        case "open": return "Відкритий"
+        case "under_review": return "На розгляді"
+        case "resolved": return "Вирішено"
+        case "rejected": return "Відхилено"
+        default: return status
+      }
+    }
+    return status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
+  const getDisplayType = (type: string) => {
+    if (lang === "uk") {
+      switch (type) {
+        case "score_conflict": return "Конфлікт рахунку"
+        case "cheating": return "Читерство"
+        case "toxic_behavior": return "Токсична поведінка"
+        case "no_show": return "Неявка"
+        case "connection_issue": return "Проблеми із підключенням"
+        default: return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
+      }
+    }
+    return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
   return (
     <div className={recordClassName}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h4 className="break-words font-medium">{dispute.title}</h4>
           <p className="mt-1 break-words text-sm text-white/55">
-            {formatMatch(dispute)} {"\u2022"} {dispute.tournament?.name ?? "Unknown tournament"}
+            {formatMatch(dispute)} {"\u2022"} {dispute.tournament?.name ?? t.admin.disputes.unknownTournament}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className={pillClassName}>{formatDisputeType(dispute.dispute_type)}</span>
-            <span className={pillClassName}>{formatStatus(dispute.status)}</span>
+            <span className={pillClassName}>{getDisplayType(dispute.dispute_type)}</span>
+            <span className={pillClassName}>{getDisplayStatus(dispute.status)}</span>
             <span className={pillClassName}>{formatDisplayDateTime(dispute.created_at)}</span>
             {dispute.reporter_participant ? (
               <span className={pillClassName}>
-                Reporter participant: {dispute.reporter_participant.display_name}
+                {t.admin.disputes.reporterParticipant}{dispute.reporter_participant.display_name}
               </span>
             ) : null}
           </div>
@@ -105,7 +138,7 @@ function DisputeRecord({
                 className="h-5 w-5 rounded-full object-cover"
               />
             ) : null}
-            Discord: {dispute.reporter_profile.discord_username}
+            {t.admin.disputes.discordLabel}{dispute.reporter_profile.discord_username}
           </div>
         ) : null}
       </div>
@@ -121,13 +154,13 @@ function DisputeRecord({
           rel="noreferrer"
           className="mt-3 inline-flex text-sm text-primary transition hover:text-primary/80"
         >
-          Evidence link
+          {t.admin.disputes.evidenceLink}
         </a>
       ) : null}
 
       {dispute.admin_note ? (
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
-          Admin note: {dispute.admin_note}
+          {t.admin.disputes.adminNote}{dispute.admin_note}
         </div>
       ) : null}
 
@@ -137,27 +170,28 @@ function DisputeRecord({
 }
 
 function DisputeReviewForm({ dispute }: { dispute: AdminDispute }) {
+  const { t, lang } = useLanguage()
   return (
     <form action={reviewDispute} className="mt-4 grid gap-3 border-t border-white/10 pt-4">
       <input type="hidden" name="id" value={dispute.id} />
       <label className="grid gap-2 text-sm text-white/70">
-        <span>Status</span>
+        <span>{t.admin.disputes.statusField}</span>
         <select name="status" defaultValue={dispute.status} className={inputClassName}>
-          <option value="open">Open</option>
-          <option value="under_review">Under review</option>
-          <option value="resolved">Resolved</option>
-          <option value="rejected">Rejected</option>
+          <option value="open">{lang === "uk" ? "Відкритий" : "Open"}</option>
+          <option value="under_review">{lang === "uk" ? "На розгляді" : "Under review"}</option>
+          <option value="resolved">{lang === "uk" ? "Вирішено" : "Resolved"}</option>
+          <option value="rejected">{lang === "uk" ? "Відхилено" : "Rejected"}</option>
         </select>
       </label>
       <label className="grid gap-2 text-sm text-white/70">
-        <span>Admin note</span>
+        <span>{t.admin.disputes.adminNoteField}</span>
         <textarea name="admin_note" defaultValue={dispute.admin_note ?? ""} rows={3} className={inputClassName} />
       </label>
       <button
         type="submit"
         className="rounded-xl bg-emerald-300 px-4 py-3 text-sm font-medium text-black transition hover:bg-emerald-200"
       >
-        Save dispute
+        {t.admin.disputes.saveDispute}
       </button>
     </form>
   )
@@ -167,12 +201,4 @@ function formatMatch(dispute: AdminDispute) {
   const left = dispute.match?.team1 ?? "TBD"
   const right = dispute.match?.team2 ?? "TBD"
   return `${left} vs ${right}${dispute.match?.round ? `, ${dispute.match.round}` : ""}`
-}
-
-function formatStatus(status: AdminDispute["status"]) {
-  return status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
-function formatDisputeType(type: string) {
-  return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
 }

@@ -1,3 +1,5 @@
+"use client"
+
 import { reviewRegistration } from "@/app/admin/actions"
 import Image from "next/image"
 import type { AdminRegistration } from "@/lib/admin/registrations"
@@ -11,6 +13,7 @@ import {
   pillClassName,
   recordClassName,
 } from "@/components/admin/admin-section"
+import { useLanguage } from "@/components/language-provider"
 
 export function RegistrationsPanel({
   registrations,
@@ -25,6 +28,7 @@ export function RegistrationsPanel({
   feedback: AdminFeedback | null
   filter?: string
 }) {
+  const { t, lang } = useLanguage()
   const tournamentNames = createTournamentNameMap(tournaments)
   const activeFilter = normalizeRegistrationFilter(filter)
   const filteredRegistrations = filterRegistrations(registrations, activeFilter)
@@ -38,32 +42,44 @@ export function RegistrationsPanel({
   return (
     <AdminSection
       id="registrations"
-      title="Registrations"
-      description="Review tournament signups before they become approved participants."
+      title={t.admin.registrations.title}
+      description={t.admin.registrations.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="registrations"
     >
       <div className="mt-5 flex flex-wrap gap-2 text-xs">
-        {registrationFilters.map((item) => (
-          <a
-            key={item.value}
-            href={`/admin?registrationFilter=${item.value}#registrations`}
-            className={`rounded-full border px-3 py-1.5 transition ${
-              item.value === activeFilter
-                ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
-                : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
-            }`}
-          >
-            {item.label}
-          </a>
-        ))}
+        {registrationFilters.map((item) => {
+          const label =
+            item.value === "all"
+              ? (lang === "uk" ? "Всі" : "All")
+              : item.value === "pending"
+              ? (lang === "uk" ? "На розгляді" : "Pending")
+              : item.value === "approved"
+              ? (lang === "uk" ? "Схвалено" : "Approved")
+              : item.value === "checked-in"
+              ? (lang === "uk" ? "Пройшли чек-ін" : "Checked in")
+              : (lang === "uk" ? "Не пройшли чек-ін" : "Not checked in")
+          return (
+            <a
+              key={item.value}
+              href={`/admin?registrationFilter=${item.value}#registrations`}
+              className={`rounded-full border px-3 py-1.5 transition ${
+                item.value === activeFilter
+                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                  : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+              }`}
+            >
+              {label}
+            </a>
+          )
+        })}
       </div>
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Pending registrations</h3>
+          <h3 className="text-lg font-medium">{t.admin.registrations.pendingRegistrations}</h3>
           {pendingRegistrations.length === 0 ? (
-            <AdminEmptyState>No pending registrations.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.registrations.noPending}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {pendingRegistrations.map((registration) => (
@@ -72,7 +88,7 @@ export function RegistrationsPanel({
                   registration={registration}
                   tournamentName={
                     tournamentNames.get(registration.tournament_id) ??
-                    "Unknown tournament"
+                    t.admin.registrations.unknownTournament
                   }
                   showActions
                 />
@@ -82,9 +98,9 @@ export function RegistrationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Recent decisions</h3>
+          <h3 className="text-lg font-medium">{t.admin.registrations.recentDecisions}</h3>
           {reviewedRegistrations.length === 0 ? (
-            <AdminEmptyState>No reviewed registrations yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.registrations.noReviewed}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {reviewedRegistrations.map((registration) => (
@@ -93,7 +109,7 @@ export function RegistrationsPanel({
                   registration={registration}
                   tournamentName={
                     tournamentNames.get(registration.tournament_id) ??
-                    "Unknown tournament"
+                    t.admin.registrations.unknownTournament
                   }
                 />
               ))}
@@ -114,22 +130,43 @@ function RegistrationRecord({
   tournamentName: string
   showActions?: boolean
 }) {
+  const { t, lang } = useLanguage()
+  const displayParticipantType =
+    registration.participant_type === "player"
+      ? t.admin.registrations.playerType
+      : t.admin.registrations.teamType
+
+  const status = registration.status
+  const displayStatus =
+    status === "approved"
+      ? (lang === "uk" ? "Схвалено" : "Approved")
+      : status === "rejected"
+      ? (lang === "uk" ? "Відхилено" : "Rejected")
+      : (lang === "uk" ? "На розгляді" : "Pending")
+
+  const displayCheckInStatus =
+    registration.check_in_status === "checked_in"
+      ? t.admin.registrations.checkedInStatus
+      : t.admin.registrations.notCheckedInStatus
+
   return (
     <div className={recordClassName}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h4 className="break-words font-medium">{registration.display_name}</h4>
           <p className="mt-1 break-words text-sm text-white/55">
-            {tournamentName} {"\u2022"} {formatType(registration.participant_type)}
+            {tournamentName} {"\u2022"} {displayParticipantType}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {registration.registration_type ? (
               <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1 text-emerald-300 font-medium">
-                {registration.registration_type === "player" ? "Global Player" : "Global Team"}
+                {registration.registration_type === "player"
+                  ? t.admin.registrations.globalPlayer
+                  : t.admin.registrations.globalTeam}
               </span>
             ) : (
               <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white/50">
-                Legacy Signup
+                {t.admin.registrations.legacySignup}
               </span>
             )}
             {registration.owner_profile ? (
@@ -143,15 +180,15 @@ function RegistrationRecord({
                     className="h-[18px] w-[18px] rounded-full object-cover"
                   />
                 ) : null}
-                Discord: {registration.owner_profile.discord_username}
+                {t.admin.registrations.discordLabel}{registration.owner_profile.discord_username}
               </span>
             ) : null}
             <span className={getCheckInPillClassName(registration.check_in_status)}>
-              {formatCheckInStatus(registration.check_in_status)}
+              {displayCheckInStatus}
             </span>
             {registration.checked_in_at ? (
               <span className={pillClassName}>
-                Checked in {formatDateTime(registration.checked_in_at)}
+                {t.admin.registrations.checkedIn}{formatDateTime(registration.checked_in_at, lang)}
               </span>
             ) : null}
             {registration.region ? (
@@ -165,7 +202,7 @@ function RegistrationRecord({
             ) : null}
           </div>
         </div>
-        <span className={pillClassName}>{formatStatus(registration.status)}</span>
+        <span className={pillClassName}>{displayStatus}</span>
       </div>
 
       {registration.participant_type === "team" && registration.roster.length > 0 ? (
@@ -177,12 +214,12 @@ function RegistrationRecord({
           <RegistrationDecisionForm
             id={registration.id}
             status="approved"
-            label="Approve"
+            label={t.admin.registrations.approve}
           />
           <RegistrationDecisionForm
             id={registration.id}
             status="rejected"
-            label="Reject"
+            label={t.admin.registrations.reject}
             danger
           />
         </div>
@@ -196,6 +233,7 @@ function RegistrationRoster({
 }: {
   roster: AdminRegistration["roster"]
 }) {
+  const { t } = useLanguage()
   const mainPlayers = roster.filter((entry) => entry.roster_role === "main")
   const substitutes = roster.filter((entry) => entry.roster_role === "substitute")
   const captain = roster.find((entry) => entry.is_captain)
@@ -204,15 +242,15 @@ function RegistrationRoster({
     <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium uppercase tracking-[0.18em] text-primary/80">
-          Roster
+          {t.admin.registrations.roster}
         </span>
         {captain ? (
-          <span className={pillClassName}>Captain: {captain.nickname}</span>
+          <span className={pillClassName}>{t.admin.registrations.captainLabel}{captain.nickname}</span>
         ) : null}
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <RosterGroup title="Main players" entries={mainPlayers} />
-        <RosterGroup title="Substitutes" entries={substitutes} emptyLabel="No substitutes" />
+        <RosterGroup title={t.admin.registrations.mainPlayers} entries={mainPlayers} />
+        <RosterGroup title={t.admin.registrations.substitutes} entries={substitutes} emptyLabel={t.admin.registrations.noSubstitutes} />
       </div>
     </div>
   )
@@ -227,11 +265,12 @@ function RosterGroup({
   entries: AdminRegistration["roster"]
   emptyLabel?: string
 }) {
+  const { t } = useLanguage()
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.18em] text-white/45">{title}</p>
       {entries.length === 0 ? (
-        <p className="mt-2 text-sm text-white/45">{emptyLabel ?? "No entries"}</p>
+        <p className="mt-2 text-sm text-white/45">{emptyLabel ?? t.admin.registrations.noEntries}</p>
       ) : (
         <div className="mt-2 flex flex-wrap gap-2">
           {entries.map((entry) => (
@@ -273,14 +312,6 @@ function RegistrationDecisionForm({
       </button>
     </form>
   )
-}
-
-function formatType(type: AdminRegistration["participant_type"]) {
-  return type === "player" ? "Player" : "Team"
-}
-
-function formatStatus(status: AdminRegistration["status"]) {
-  return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
 const registrationFilters = [
@@ -326,21 +357,17 @@ function filterRegistrations(
   return registrations
 }
 
-function formatCheckInStatus(status: AdminRegistration["check_in_status"]) {
-  return status === "checked_in" ? "Checked in" : "Not checked in"
-}
-
 function getCheckInPillClassName(status: AdminRegistration["check_in_status"]) {
   return status === "checked_in"
     ? "rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-emerald-100"
     : pillClassName
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, lang: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",

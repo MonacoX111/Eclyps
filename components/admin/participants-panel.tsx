@@ -16,6 +16,7 @@ import {
   recordClassName,
   panelGridClassName,
 } from "@/components/admin/admin-section"
+import { useLanguage } from "@/components/language-provider"
 
 export function ParticipantsPanel({
   participants,
@@ -32,6 +33,7 @@ export function ParticipantsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t, lang } = useLanguage()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<"all" | "team" | "player">("all")
@@ -55,12 +57,15 @@ export function ParticipantsPanel({
 
     return matchesSearch && matchesTournament && matchesType
   })
+  const activeParticipantsLabel = (
+    t.admin.participants.activeParticipantsLabel ?? "Active participants ({count})"
+  ).replace("{count}", String(filteredParticipants.length))
 
   return (
     <AdminSection
       id="participants"
-      title="Tournament Participants"
-      description="Manage tournament memberships, view seedings, and add or remove participants safely without deleting global profiles."
+      title={t.admin.participants.title}
+      description={t.admin.participants.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="participants"
@@ -68,41 +73,41 @@ export function ParticipantsPanel({
       <div className={panelGridClassName}>
         {/* Left Column: Manual Participant Add Form */}
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium text-white/90">Add participant</h3>
+          <h3 className="text-lg font-medium text-white/90">{t.admin.participants.addParticipant}</h3>
           <p className="mt-1 text-xs text-white/45 leading-relaxed">
-            Manually registers an existing global player or team profile into a tournament.
+            {t.admin.participants.addParticipantDesc}
           </p>
 
           <form action={addParticipant} className="mt-4 space-y-4">
-            <AdminField label="Tournament">
-              <select name="tournament_id" required className={inputClassName}>
+            <AdminField label={t.admin.participants.tournamentField}>
+              <select name="tournament_id" required className={inputClassName} defaultValue="">
                 <option value="" disabled>
-                  Select tournament
+                  {t.admin.participants.selectTournament}
                 </option>
-                {tournaments.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name ?? "Untitled tournament"}
+                {tournaments.map((tournamentItem) => (
+                  <option key={tournamentItem.id} value={tournamentItem.id}>
+                    {tournamentItem.name ?? t.admin.participants.untitledTournament}
                   </option>
                 ))}
               </select>
             </AdminField>
 
-            <AdminField label="Participant Type">
+            <AdminField label={t.admin.participants.participantTypeField}>
               <select
                 name="participant_type"
                 value={addType}
                 onChange={(e) => setAddType(e.target.value as "player" | "team")}
                 className={inputClassName}
               >
-                <option value="player">Player</option>
-                <option value="team">Team</option>
+                <option value="player">{t.admin.participants.playerType}</option>
+                <option value="team">{t.admin.participants.teamType}</option>
               </select>
             </AdminField>
 
-            <AdminField label={addType === "player" ? "Global Player" : "Global Team"}>
+            <AdminField label={addType === "player" ? t.admin.participants.globalPlayer : t.admin.participants.globalTeam}>
               <select name="participant_id" defaultValue="" required className={inputClassName}>
                 <option value="" disabled>
-                  Select {addType === "player" ? "player" : "team"}
+                  {addType === "player" ? t.admin.participants.selectPlayer : t.admin.participants.selectTeam}
                 </option>
                 {addType === "player"
                   ? players.map((p) => (
@@ -110,15 +115,15 @@ export function ParticipantsPanel({
                         {p.display_name} {p.discord_username ? `(${p.discord_username})` : ""}
                       </option>
                     ))
-                  : teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name ?? "Untitled team"}
+                  : teams.map((teamItem) => (
+                      <option key={teamItem.id} value={teamItem.id}>
+                        {teamItem.name ?? t.admin.participants.untitledTeam}
                       </option>
                     ))}
               </select>
             </AdminField>
 
-            <AdminField label="Seed (Optional)">
+            <AdminField label={t.admin.participants.seedField}>
               <input
                 name="seed"
                 type="number"
@@ -134,7 +139,7 @@ export function ParticipantsPanel({
                 type="submit"
                 className="w-full rounded-xl bg-emerald-300 px-4 py-3 font-medium text-black transition hover:bg-emerald-200 cursor-pointer text-sm"
               >
-                Add to Tournament
+                {t.admin.participants.addToTournament}
               </button>
             </div>
           </form>
@@ -145,7 +150,7 @@ export function ParticipantsPanel({
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white/90">
-                Active Participants ({filteredParticipants.length})
+                {activeParticipantsLabel}
               </h3>
             </div>
 
@@ -155,7 +160,7 @@ export function ParticipantsPanel({
                 {/* Search input */}
                 <input
                   type="text"
-                  placeholder="Search by participant..."
+                  placeholder={t.admin.participants.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full max-w-[200px] rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none transition focus:border-primary/60"
@@ -163,16 +168,16 @@ export function ParticipantsPanel({
 
                 {/* Tournament dropdown filter */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-white/45">Tournament:</span>
+                  <span className="text-[10px] text-white/45">{t.admin.participants.tournamentLabel}</span>
                   <select
                     value={selectedTournamentId}
                     onChange={(e) => setSelectedTournamentId(e.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none transition focus:border-primary/60 cursor-pointer"
                   >
-                    <option value="all">All</option>
+                    <option value="all">{lang === "uk" ? "Всі" : "All"}</option>
                     {tournaments.map((tournament) => (
                       <option key={tournament.id} value={tournament.id}>
-                        {tournament.name ?? "Untitled tournament"}
+                        {tournament.name ?? t.admin.participants.untitledTournament}
                       </option>
                     ))}
                   </select>
@@ -181,31 +186,39 @@ export function ParticipantsPanel({
 
               {/* Participant Type Filters */}
               <div className="flex items-center gap-1 text-[10px]">
-                <span className="text-white/45 mr-1">Type:</span>
-                {(["all", "team", "player"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setTypeFilter(filter)}
-                    className={`rounded-full border px-2 py-0.5 transition cursor-pointer ${
-                      typeFilter === filter
-                        ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
-                        : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
-                    }`}
-                  >
-                    {filter === "all" ? "All" : filter === "team" ? "Teams" : "Players"}
-                  </button>
-                ))}
+                <span className="text-white/45 mr-1">{lang === "uk" ? "Тип:" : "Type:"}</span>
+                {(["all", "team", "player"] as const).map((filter) => {
+                  const label =
+                    filter === "all"
+                      ? (lang === "uk" ? "Всі" : "All")
+                      : filter === "team"
+                      ? (lang === "uk" ? "Команди" : "Teams")
+                      : (lang === "uk" ? "Гравці" : "Players")
+                  return (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setTypeFilter(filter)}
+                      className={`rounded-full border px-2 py-0.5 transition cursor-pointer ${
+                        typeFilter === filter
+                          ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                          : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             {filteredParticipants.length === 0 ? (
-              <AdminEmptyState>No participants match the selected filters.</AdminEmptyState>
+              <AdminEmptyState>{t.admin.participants.noParticipantsFilters}</AdminEmptyState>
             ) : (
               <div className="mt-2 space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {filteredParticipants.map((participant) => {
                   const tournamentName =
-                    tournamentNames.get(participant.tournament_id) ?? "Unknown tournament"
+                    tournamentNames.get(participant.tournament_id) ?? t.admin.participants.unknownTournament
 
                   return (
                     <div key={participant.id} className={recordClassName}>
@@ -234,7 +247,9 @@ export function ParticipantsPanel({
                                     : "border-indigo-500/20 bg-indigo-500/10 text-indigo-300"
                                 }`}
                               >
-                                {participant.participant_type}
+                                {participant.participant_type === "team"
+                                  ? t.admin.participants.teamType
+                                  : t.admin.participants.playerType}
                               </span>
                             </h4>
 
@@ -250,7 +265,7 @@ export function ParticipantsPanel({
                                 <>
                                   <span>•</span>
                                   <span className="text-[10px] text-white/35">
-                                    Added {new Date(participant.created_at).toLocaleDateString()}
+                                    {t.admin.participants.addedLabel}{new Date(participant.created_at).toLocaleDateString()}
                                   </span>
                                 </>
                               )}
@@ -261,7 +276,7 @@ export function ParticipantsPanel({
                         {/* Right column: Seed badge and Safe Removal button */}
                         <div className="flex flex-wrap items-center gap-2.5 sm:self-center">
                           <span className={pillClassName}>
-                            Seed {participant.seed ?? "???"}
+                            {t.admin.participants.seedLabel}{participant.seed ?? "???"}
                           </span>
 
                           <form action={deleteParticipant}>
@@ -270,7 +285,7 @@ export function ParticipantsPanel({
                               type="submit"
                               className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 cursor-pointer"
                             >
-                              Remove
+                              {t.admin.participants.remove}
                             </button>
                           </form>
                         </div>

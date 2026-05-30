@@ -1,3 +1,5 @@
+"use client"
+
 import type { AdminPlayer } from "@/lib/admin/players"
 import type { AdminResult } from "@/lib/admin/results"
 import type { AdminTeam } from "@/lib/admin/teams"
@@ -8,6 +10,7 @@ import { createResult, deleteResult, updateResult } from "@/app/admin/actions"
 import { ResultParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
+import { useLanguage } from "@/components/language-provider"
 
 export function ResultsPanel({
   results,
@@ -24,6 +27,7 @@ export function ResultsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t } = useLanguage()
   const tournamentNames = createTournamentNameMap(tournaments)
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
@@ -31,18 +35,18 @@ export function ResultsPanel({
   return (
     <AdminSection
       id="results"
-      title="Results"
-      description="Create, update, and remove result rows. Team values are stored as text."
+      title={t.admin.results.title}
+      description={t.admin.results.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="results"
     >
       <div className={panelGridClassName}>
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Create result</h3>
+          <h3 className="text-lg font-medium">{t.admin.results.createResult}</h3>
           <ResultForm
             action={createResult}
-            submitLabel="Create result"
+            submitLabel={t.admin.results.createResult}
             tournaments={tournaments}
             teamNames={teamNames}
             playerNames={playerNames}
@@ -50,9 +54,9 @@ export function ResultsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Existing results</h3>
+          <h3 className="text-lg font-medium">{t.admin.results.existingResults}</h3>
           {results.length === 0 ? (
-            <AdminEmptyState>No results exist in Supabase yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.results.noResults}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {results.map((result) => (
@@ -64,8 +68,8 @@ export function ResultsPanel({
                   playerNames={playerNames}
                   tournamentName={
                     result.tournament_id
-                      ? tournamentNames.get(result.tournament_id) ?? "Unknown tournament"
-                      : "Unassigned"
+                      ? tournamentNames.get(result.tournament_id) ?? t.admin.results.unknownTournament
+                      : t.admin.results.unassigned
                   }
                 />
               ))}
@@ -90,16 +94,17 @@ function ResultRecord({
   playerNames: string[]
   tournamentName: string
 }) {
+  const { t } = useLanguage()
   return (
     <details className={recordClassName}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h4 className="break-words font-medium">{result.team ?? "Untitled result"}</h4>
+            <h4 className="break-words font-medium">{result.team ?? t.admin.results.untitledResult}</h4>
             <p className="mt-1 break-words text-sm text-white/55">{tournamentName}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className={pillClassName}>Placement {result.placement ?? "???"}</span>
+            <span className={pillClassName}>{t.admin.results.placementLabel}{result.placement ?? "???"}</span>
             {result.label && <span className={pillClassName}>{result.label}</span>}
           </div>
         </div>
@@ -108,7 +113,7 @@ function ResultRecord({
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
           <ResultForm
             action={updateResult}
-            submitLabel="Save changes"
+            submitLabel={t.admin.results.saveChanges}
             tournaments={tournaments}
             teamNames={teamNames}
             playerNames={playerNames}
@@ -136,6 +141,7 @@ function ResultForm({
   playerNames: string[]
   result?: AdminResult
 }) {
+  const { t } = useLanguage()
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {result && <input type="hidden" name="id" value={result.id} />}
@@ -146,19 +152,19 @@ function ResultForm({
         playerNames={playerNames}
         team={result?.team}
       />
-      <AdminField label="Placement">
+      <AdminField label={t.admin.results.placementField}>
         <input name="placement" type="number" min={1} step={1} defaultValue={result?.placement ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label="Label">
+      <AdminField label={t.admin.results.labelField}>
         <input name="label" defaultValue={result?.label ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="MVP">
+      <AdminField label={t.admin.results.mvpField}>
         <input name="mvp" defaultValue={result?.mvp ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Scoreline">
+      <AdminField label={t.admin.results.scorelineField}>
         <input name="scoreline" defaultValue={result?.scoreline ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Note">
+      <AdminField label={t.admin.results.noteField}>
         <input name="note" defaultValue={result?.note ?? ""} className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />

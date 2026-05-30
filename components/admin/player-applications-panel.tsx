@@ -1,3 +1,5 @@
+"use client"
+
 import Image from "next/image"
 import { reviewPlayerApplication } from "@/app/admin/actions"
 import type { AdminPlayerApplication } from "@/lib/admin/player-applications"
@@ -9,6 +11,7 @@ import {
   pillClassName,
   recordClassName,
 } from "@/components/admin/admin-section"
+import { useLanguage } from "@/components/language-provider"
 
 export function PlayerApplicationsPanel({
   applications,
@@ -19,6 +22,7 @@ export function PlayerApplicationsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t } = useLanguage()
   const pendingApplications = applications.filter(
     (application) => application.status === "pending",
   )
@@ -29,17 +33,17 @@ export function PlayerApplicationsPanel({
   return (
     <AdminSection
       id="player-applications"
-      title="Player Applications"
-      description="Approve Discord users into the Eclyps player pool before tournament registration."
+      title={t.admin.applications.title}
+      description={t.admin.applications.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="player applications"
     >
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Pending applications</h3>
+          <h3 className="text-lg font-medium">{t.admin.applications.pendingApplications}</h3>
           {pendingApplications.length === 0 ? (
-            <AdminEmptyState>No pending player applications.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.applications.noPending}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {pendingApplications.map((application) => (
@@ -54,9 +58,9 @@ export function PlayerApplicationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Recent decisions</h3>
+          <h3 className="text-lg font-medium">{t.admin.applications.recentDecisions}</h3>
           {reviewedApplications.length === 0 ? (
-            <AdminEmptyState>No reviewed applications yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.applications.noReviewed}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {reviewedApplications.map((application) => (
@@ -80,6 +84,15 @@ function ApplicationRecord({
   application: AdminPlayerApplication
   showActions?: boolean
 }) {
+  const { t, lang } = useLanguage()
+  const status = application.status
+  const displayStatus =
+    status === "approved"
+      ? (lang === "uk" ? "Схвалено" : "Approved")
+      : status === "rejected"
+      ? (lang === "uk" ? "Відхилено" : "Rejected")
+      : (lang === "uk" ? "На розгляді" : "Pending")
+
   return (
     <div className={recordClassName}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -105,7 +118,7 @@ function ApplicationRecord({
                 {application.requested_nickname}
               </h4>
               <p className="mt-1 truncate text-sm text-white/55">
-                {application.owner_profile?.discord_username ?? "Unknown Discord user"}
+                {application.owner_profile?.discord_username ?? t.admin.applications.unknownDiscord}
               </p>
             </div>
           </div>
@@ -115,7 +128,7 @@ function ApplicationRecord({
             ) : null}
             {application.created_at ? (
               <span className={pillClassName}>
-                {new Date(application.created_at).toLocaleDateString("en-US", {
+                {new Date(application.created_at).toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -124,7 +137,7 @@ function ApplicationRecord({
             ) : null}
           </div>
         </div>
-        <span className={pillClassName}>{formatStatus(application.status)}</span>
+        <span className={pillClassName}>{displayStatus}</span>
       </div>
 
       {showActions ? (
@@ -132,12 +145,12 @@ function ApplicationRecord({
           <ApplicationDecisionForm
             id={application.id}
             status="approved"
-            label="Approve Player"
+            label={t.admin.applications.approvePlayer}
           />
           <ApplicationDecisionForm
             id={application.id}
             status="rejected"
-            label="Reject"
+            label={t.admin.applications.reject}
             danger
           />
         </div>
@@ -173,8 +186,4 @@ function ApplicationDecisionForm({
       </button>
     </form>
   )
-}
-
-function formatStatus(status: AdminPlayerApplication["status"]) {
-  return status.charAt(0).toUpperCase() + status.slice(1)
 }

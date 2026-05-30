@@ -7,6 +7,7 @@ import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
+import { useLanguage } from "@/components/language-provider"
 
 export function PlayersPanel({
   players,
@@ -18,6 +19,7 @@ export function PlayersPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t, lang } = useLanguage()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all")
 
@@ -36,8 +38,8 @@ export function PlayersPanel({
   return (
     <AdminSection
       id="players"
-      title="Players"
-      description="Verify Discord users, approve profiles, and manage global players."
+      title={t.admin.players.title}
+      description={t.admin.players.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="players"
@@ -45,44 +47,54 @@ export function PlayersPanel({
       <div className={panelGridClassName}>
         {/* Creation panel */}
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Create player</h3>
-          <p className="mt-1 text-xs text-white/45">Creates a new global player profile.</p>
-          <PlayerForm action={createPlayer} submitLabel="Create player" />
+          <h3 className="text-lg font-medium">{t.admin.players.createPlayer}</h3>
+          <p className="mt-1 text-xs text-white/45">{t.admin.players.createPlayerDesc}</p>
+          <PlayerForm action={createPlayer} submitLabel={t.admin.players.createPlayer} />
         </article>
 
         {/* List panel */}
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium font-semibold">Global players list</h3>
+          <h3 className="text-lg font-medium font-semibold">{t.admin.players.globalPlayersList}</h3>
 
           {/* Client-side search and status filters */}
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <input
               type="text"
-              placeholder="Search by display name or Discord..."
+              placeholder={t.admin.players.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full max-w-xs rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white outline-none transition focus:border-primary/60"
             />
             <div className="flex flex-wrap gap-1 text-[11px]">
-              {(["all", "pending", "approved", "rejected"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setStatusFilter(filter)}
-                  className={`rounded-full border px-2.5 py-1 transition cursor-pointer ${
-                    statusFilter === filter
-                      ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
-                      : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
-                  }`}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                </button>
-              ))}
+              {(["all", "pending", "approved", "rejected"] as const).map((filter) => {
+                const label =
+                  filter === "all"
+                    ? (lang === "uk" ? "Всі" : "All")
+                    : filter === "pending"
+                    ? (lang === "uk" ? "На розгляді" : "Pending")
+                    : filter === "approved"
+                    ? (lang === "uk" ? "Схвалено" : "Approved")
+                    : (lang === "uk" ? "Відхилено" : "Rejected")
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setStatusFilter(filter)}
+                    className={`rounded-full border px-2.5 py-1 transition cursor-pointer ${
+                      statusFilter === filter
+                        ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
+                        : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           {filteredPlayers.length === 0 ? (
-            <AdminEmptyState>No players match the current filters.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.players.noPlayersFilters}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {filteredPlayers.map((player) => (
@@ -104,11 +116,18 @@ function PlayerRecord({
 }: {
   player: AdminPlayer
 }) {
+  const { t, lang } = useLanguage()
   const showRealName = Boolean(
     player.real_name && player.real_name !== player.display_name,
   )
 
   const status = player.status ?? "approved"
+  const displayStatus =
+    status === "approved"
+      ? (lang === "uk" ? "Схвалено" : "Approved")
+      : status === "rejected"
+      ? (lang === "uk" ? "Відхилено" : "Rejected")
+      : (lang === "uk" ? "На розгляді" : "Pending")
 
   return (
     <details className={recordClassName}>
@@ -136,7 +155,7 @@ function PlayerRecord({
                     ? "border-red-500/20 bg-red-500/10 text-red-300"
                     : "border-amber-500/20 bg-amber-500/10 text-amber-300"
                 }`}>
-                  {status}
+                  {displayStatus}
                 </span>
               </h4>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
@@ -150,18 +169,18 @@ function PlayerRecord({
               <div className="mt-2 flex flex-wrap gap-1.5 items-center">
                 {player.discord_username && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-indigo-400/20 bg-indigo-400/10 px-2 py-0.5 text-[9px] text-indigo-200">
-                    Discord: {player.discord_username}
+                    {t.admin.players.discordLabel}{player.discord_username}
                   </span>
                 )}
                 {player.created_at && (
                   <span className="text-[9px] text-white/35">
-                    Joined {new Date(player.created_at).toLocaleDateString()}
+                    {t.admin.players.joinedLabel}{new Date(player.created_at).toLocaleDateString()}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <span className={pillClassName}>Seed {player.seed ?? "???"}</span>
+          <span className={pillClassName}>{t.admin.players.seedLabel}{player.seed ?? "???"}</span>
         </div>
       </summary>
 
@@ -177,7 +196,7 @@ function PlayerRecord({
                 value="approved"
                 className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-300 cursor-pointer"
               >
-                Approve Player
+                {t.admin.players.approvePlayer}
               </button>
             )}
             {status !== "rejected" && (
@@ -187,7 +206,7 @@ function PlayerRecord({
                 value="rejected"
                 className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/20 cursor-pointer"
               >
-                Reject Player
+                {t.admin.players.rejectPlayer}
               </button>
             )}
             {status !== "pending" && (
@@ -197,14 +216,14 @@ function PlayerRecord({
                 value="pending"
                 className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/20 cursor-pointer"
               >
-                Restore to Pending
+                {t.admin.players.restoreToPending}
               </button>
             )}
           </form>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <PlayerForm action={updatePlayer} submitLabel="Save changes" player={player} />
+          <PlayerForm action={updatePlayer} submitLabel={t.admin.players.saveChanges} player={player} />
           <DeleteForm action={deletePlayer} id={player.id} />
         </div>
       </div>
@@ -221,16 +240,17 @@ function PlayerForm({
   submitLabel: string
   player?: AdminPlayer
 }) {
+  const { t } = useLanguage()
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {player && <input type="hidden" name="id" value={player.id} />}
-      <AdminField label="Real name">
+      <AdminField label={t.admin.players.realNameField}>
         <input name="name" defaultValue={player?.name ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label="Nickname / display name">
+      <AdminField label={t.admin.players.nicknameField}>
         <input name="nickname" defaultValue={player?.nickname ?? player?.display_name ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Region">
+      <AdminField label={t.admin.players.regionField}>
         <input
           name="region"
           defaultValue={player?.region ?? ""}
@@ -238,13 +258,13 @@ function PlayerForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Seed">
+      <AdminField label={t.admin.players.seedField}>
         <input name="seed" type="number" min={1} step={1} defaultValue={player?.seed ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Wins">
+      <AdminField label={t.admin.players.winsField}>
         <input name="wins" type="number" min={0} step={1} defaultValue={player?.wins ?? 0} required className={inputClassName} />
       </AdminField>
-      <AdminField label="Losses">
+      <AdminField label={t.admin.players.lossesField}>
         <input name="losses" type="number" min={0} step={1} defaultValue={player?.losses ?? 0} required className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} />

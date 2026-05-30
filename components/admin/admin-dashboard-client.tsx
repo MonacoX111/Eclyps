@@ -83,7 +83,7 @@ export function AdminDashboardClient({
   searchParams,
   feedbacks
 }: AdminDashboardClientProps) {
-  const { t, lang } = useLanguage()
+  const { t, lang, setLanguage } = useLanguage()
 
   // Tab setup
   const [activeTab, setActiveTab] = useState("overview")
@@ -220,15 +220,36 @@ export function AdminDashboardClient({
     <div className="flex min-h-screen bg-background text-white">
       {/* 1. Left Sidebar - Desktop only */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-30 bg-black/40 border-r border-white/10 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-white/5">
-          <div className="h-7 w-7 rounded-lg bg-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(52,211,153,0.4)]">
-            <Shield className="h-4 w-4 text-black" />
+        <div className="flex items-center justify-between gap-2 px-4 py-6 border-b border-white/5">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-7 w-7 rounded-lg bg-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(52,211,153,0.4)] shrink-0">
+              <Shield className="h-4 w-4 text-black" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-extrabold text-xs tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70 truncate">
+                {t.admin.subtitle}
+              </h1>
+              <p className="text-[9px] font-bold text-emerald-400 tracking-[0.2em] uppercase">Control Panel</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-extrabold text-sm tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70">
-              {t.admin.subtitle}
-            </h1>
-            <p className="text-[9px] font-bold text-emerald-400 tracking-[0.2em] uppercase">Control Panel</p>
+          {/* Language Switcher */}
+          <div className="flex items-center gap-0.5 bg-white/5 p-0.5 rounded-lg border border-white/5 shrink-0">
+            <button
+              onClick={() => setLanguage("uk")}
+              className={`px-1 py-0.5 rounded text-[9px] font-bold cursor-pointer transition ${
+                lang === "uk" ? "bg-emerald-400 text-black shadow-sm" : "text-white/60 hover:text-white"
+              }`}
+            >
+              UA
+            </button>
+            <button
+              onClick={() => setLanguage("en")}
+              className={`px-1 py-0.5 rounded text-[9px] font-bold cursor-pointer transition ${
+                lang === "en" ? "bg-emerald-400 text-black shadow-sm" : "text-white/60 hover:text-white"
+              }`}
+            >
+              EN
+            </button>
           </div>
         </div>
 
@@ -294,22 +315,43 @@ export function AdminDashboardClient({
               transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
               className="relative w-72 max-w-[80vw] bg-neutral-950 border-r border-white/10 flex flex-col h-full"
             >
-              <div className="flex items-center justify-between px-5 py-5 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="h-7 w-7 rounded-lg bg-emerald-400 flex items-center justify-center">
+              <div className="flex items-center justify-between px-4 py-5 border-b border-white/5 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-400 flex items-center justify-center shrink-0">
                     <Shield className="h-4 w-4 text-black" />
                   </div>
-                  <div>
-                    <h1 className="font-extrabold text-sm tracking-wider uppercase text-white">{t.admin.subtitle}</h1>
+                  <div className="min-w-0">
+                    <h1 className="font-extrabold text-xs tracking-wider uppercase text-white truncate">{t.admin.subtitle}</h1>
                     <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Mobile Panel</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-1 rounded-lg border border-white/10 text-white/60 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Language Switcher */}
+                  <div className="flex items-center gap-0.5 bg-white/5 p-0.5 rounded-lg border border-white/5">
+                    <button
+                      onClick={() => setLanguage("uk")}
+                      className={`px-1 py-0.5 rounded text-[9px] font-bold cursor-pointer transition ${
+                        lang === "uk" ? "bg-emerald-400 text-black shadow-sm" : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      UA
+                    </button>
+                    <button
+                      onClick={() => setLanguage("en")}
+                      className={`px-1 py-0.5 rounded text-[9px] font-bold cursor-pointer transition ${
+                        lang === "en" ? "bg-emerald-400 text-black shadow-sm" : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      EN
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="p-1 rounded-lg border border-white/10 text-white/60 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">

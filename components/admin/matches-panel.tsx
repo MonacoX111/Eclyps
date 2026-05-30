@@ -1,3 +1,5 @@
+"use client"
+
 import type { AdminMatch } from "@/lib/admin/matches"
 import type { AdminParticipant } from "@/lib/admin/participants"
 import type { AdminPlayer } from "@/lib/admin/players"
@@ -17,6 +19,7 @@ import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, u
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
+import { useLanguage } from "@/components/language-provider"
 
 export function MatchesPanel({
   matches,
@@ -35,29 +38,29 @@ export function MatchesPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
+  const { t, lang } = useLanguage()
   const tournamentNames = createTournamentNameMap(tournaments)
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
-  const normalMatches = matches.filter((match) => !match.bracket_id)
   const bracketMatches = matches.filter((match) => match.bracket_id)
 
   return (
     <AdminSection
       id="matches"
-      title="Matches"
-      description="Create, update, and remove matches. Team values are stored as text."
+      title={t.admin.matches.title}
+      description={t.admin.matches.description}
       feedback={feedback}
       fetchError={fetchError}
       fetchLabel="matches"
     >
       <div className={panelGridClassName}>
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Bracket template</h3>
+          <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
           <BracketTemplateForm tournaments={tournaments} />
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Bracket editor</h3>
+          <h3 className="text-lg font-medium">{t.admin.matches.bracketEditor}</h3>
           <BracketEditor
             matches={bracketMatches}
             participants={participants}
@@ -66,10 +69,10 @@ export function MatchesPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Create match</h3>
+          <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
           <MatchForm
             action={createMatch}
-            submitLabel="Create match"
+            submitLabel={t.admin.matches.createMatch}
             tournaments={tournaments}
             teamNames={teamNames}
             playerNames={playerNames}
@@ -77,9 +80,9 @@ export function MatchesPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">Existing matches</h3>
+          <h3 className="text-lg font-medium">{t.admin.matches.existingMatches}</h3>
           {matches.length === 0 ? (
-            <AdminEmptyState>No matches exist in Supabase yet.</AdminEmptyState>
+            <AdminEmptyState>{t.admin.matches.noMatchesDb}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
               {matches.map((match) => (
@@ -91,8 +94,8 @@ export function MatchesPanel({
                   playerNames={playerNames}
                   tournamentName={
                     match.tournament_id
-                      ? tournamentNames.get(match.tournament_id) ?? "Unknown tournament"
-                      : "Unassigned"
+                      ? tournamentNames.get(match.tournament_id) ?? t.admin.matches.unknownTournament
+                      : t.admin.matches.unassigned
                   }
                 />
               ))}
@@ -109,29 +112,29 @@ function BracketTemplateForm({
 }: {
   tournaments: AdminTournament[]
 }) {
+  const { t, lang } = useLanguage()
   return (
     <form action={generateBracketTemplate} className="mt-4 grid gap-3 sm:grid-cols-2">
       <TournamentSelect tournaments={tournaments} />
-      <AdminField label="Bracket size">
+      <AdminField label={t.admin.matches.bracketSizeField}>
         <select name="bracket_size" defaultValue="8" className={inputClassName}>
-          <option value="2">2 participants</option>
-          <option value="4">4 participants</option>
-          <option value="8">8 participants</option>
-          <option value="16">16 participants</option>
+          <option value="2">{lang === "uk" ? "2 учасники" : "2 participants"}</option>
+          <option value="4">{lang === "uk" ? "4 учасники" : "4 participants"}</option>
+          <option value="8">{lang === "uk" ? "8 учасників" : "8 participants"}</option>
+          <option value="16">{lang === "uk" ? "16 учасників" : "16 participants"}</option>
         </select>
       </AdminField>
       <label className="flex gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/65 sm:col-span-2">
         <input
           name="confirm_regenerate"
           type="checkbox"
-          className="mt-1 h-4 w-4 accent-emerald-300"
+          className="mt-1 h-4 w-4 accent-emerald-300 animate-none shrink-0"
         />
         <span>
-          Regenerate if bracket matches already exist for this tournament.
-          Existing non-bracket matches are preserved.
+          {t.admin.matches.regenerateDesc}
         </span>
       </label>
-      <SubmitButton label="Generate bracket template" disabled={tournaments.length === 0} />
+      <SubmitButton label={t.admin.matches.generateBracket} disabled={tournaments.length === 0} />
     </form>
   )
 }
@@ -145,10 +148,24 @@ function BracketEditor({
   participants: AdminParticipant[]
   tournamentNames: Map<string, string>
 }) {
+  const { t, lang } = useLanguage()
   const bracketMatches = matches.filter((match) => match.bracket_id)
 
   if (bracketMatches.length === 0) {
-    return <AdminEmptyState>No generated bracket template exists yet.</AdminEmptyState>
+    return <AdminEmptyState>{t.admin.matches.noBracketTemplate}</AdminEmptyState>
+  }
+
+  const getDisplayBracketStatus = (statusStr: BracketLifecycleStatus) => {
+    if (lang === "uk") {
+      return statusStr === "template"
+        ? "Шаблон"
+        : statusStr === "locked"
+        ? "Заблоковано"
+        : statusStr === "active"
+        ? "Активна"
+        : "Завершена"
+    }
+    return formatBracketStatus(statusStr)
   }
 
   return (
@@ -164,15 +181,15 @@ function BracketEditor({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h4 className="font-medium">
-                  {tournamentNames.get(bracket.tournamentId) ?? "Unknown tournament"}
+                  {tournamentNames.get(bracket.tournamentId) ?? t.admin.matches.unknownTournament}
                 </h4>
                 <p className="mt-1 text-sm text-white/50">
-                  {formatBracketStatus(bracket.status)} bracket
+                  {getDisplayBracketStatus(bracket.status)} {lang === "uk" ? "сітка" : "bracket"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className={pillClassName}>{formatBracketStatus(bracket.status)}</span>
-                <span className={pillClassName}>{bracket.matches.length} matches</span>
+                <span className={pillClassName}>{getDisplayBracketStatus(bracket.status)}</span>
+                <span className={pillClassName}>{bracket.matches.length}{t.admin.matches.matchesCount}</span>
               </div>
             </div>
 
@@ -224,6 +241,7 @@ function BracketStatusControls({
   status: string
   hasActiveMatches: boolean
 }) {
+  const { t } = useLanguage()
   const isLocked = isLockedBracketStatus(status)
 
   return (
@@ -237,7 +255,7 @@ function BracketStatusControls({
           disabled={isLocked || hasActiveMatches}
           className="w-full rounded-xl bg-emerald-300 px-3 py-2 text-sm font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
         >
-          Lock bracket
+          {t.admin.matches.lockBracket}
         </button>
       </form>
       <form action={updateBracketStatus}>
@@ -249,7 +267,7 @@ function BracketStatusControls({
           disabled={status !== "locked" || hasActiveMatches}
           className="w-full rounded-xl border border-white/10 px-3 py-2 text-sm text-white/80 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:text-white/35"
         >
-          Unlock bracket
+          {t.admin.matches.unlockBracket}
         </button>
       </form>
     </div>
@@ -263,8 +281,9 @@ function ParticipantPool({
   participants: AdminParticipant[]
   assignedIds: Set<string>
 }) {
+  const { t } = useLanguage()
   if (participants.length === 0) {
-    return <p className="mt-4 text-sm text-white/45">No participants exist for this tournament yet.</p>
+    return <p className="mt-4 text-sm text-white/45">{t.admin.matches.noParticipants}</p>
   }
 
   return (
@@ -275,7 +294,7 @@ function ParticipantPool({
           className={`${pillClassName} ${assignedIds.has(participant.id) ? "opacity-50" : ""}`}
         >
           {participant.display_name}
-          {assignedIds.has(participant.id) ? " (assigned)" : ""}
+          {assignedIds.has(participant.id) ? t.admin.matches.assigned : ""}
         </span>
       ))}
     </div>
@@ -293,18 +312,19 @@ function BracketMatchCard({
   participants: AdminParticipant[]
   assignedIds: Set<string>
 }) {
+  const { t } = useLanguage()
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/45">
-        <span>{match.round ?? match.bracket_round ?? "Bracket round"}</span>
-        <span>Position {match.bracket_position ?? "???"}</span>
+        <span>{match.round ?? match.bracket_round ?? t.admin.matches.bracketRound}</span>
+        <span>{t.admin.matches.positionLabel}{match.bracket_position ?? "???"}</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <BracketSlotForm
           match={match}
           slot={1}
           value={match.participant_1_id}
-          label={match.team1 ?? "Empty slot"}
+          label={match.team1 ?? t.admin.matches.emptySlot}
           bracketStatus={bracketStatus}
           participants={participants}
           assignedIds={assignedIds}
@@ -313,7 +333,7 @@ function BracketMatchCard({
           match={match}
           slot={2}
           value={match.participant_2_id}
-          label={match.team2 ?? "Empty slot"}
+          label={match.team2 ?? t.admin.matches.emptySlot}
           bracketStatus={bracketStatus}
           participants={participants}
           assignedIds={assignedIds}
@@ -331,6 +351,7 @@ function BracketMatchResultForm({
   match: AdminMatch
   bracketStatus: BracketLifecycleStatus
 }) {
+  const { t } = useLanguage()
   const isTemplateBracket = bracketStatus === "template"
   const isBracketEditable = isLockedBracketStatus(bracketStatus)
   const hasParticipants = Boolean(match.participant_1_id && match.participant_2_id)
@@ -342,12 +363,12 @@ function BracketMatchResultForm({
       <input type="hidden" name="match_id" value={match.id} />
       {isTemplateBracket && (
         <p className="text-xs text-white/45 sm:col-span-2">
-          Lock bracket before starting matches.
+          {t.admin.matches.lockDesc}
         </p>
       )}
       <StatusSelect value={match.status} disabled={disabled} />
       <WinnerSelect match={match} disabled={disabled} />
-      <AdminField label="Score 1">
+      <AdminField label={t.admin.matches.score1Field}>
         <input
           name="score1"
           type="number"
@@ -358,7 +379,7 @@ function BracketMatchResultForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Score 2">
+      <AdminField label={t.admin.matches.score2Field}>
         <input
           name="score2"
           type="number"
@@ -369,7 +390,7 @@ function BracketMatchResultForm({
           className={inputClassName}
         />
       </AdminField>
-      <SubmitButton label="Save match" disabled={disabled} />
+      <SubmitButton label={t.admin.matches.saveMatch} disabled={disabled} />
     </form>
   )
 }
@@ -391,6 +412,7 @@ function BracketSlotForm({
   participants: AdminParticipant[]
   assignedIds: Set<string>
 }) {
+  const { t } = useLanguage()
   const disabled = match.status === "finished" || isLockedBracketStatus(bracketStatus)
 
   return (
@@ -399,14 +421,14 @@ function BracketSlotForm({
       <input type="hidden" name="match_id" value={match.id} />
       <input type="hidden" name="slot" value={slot} />
       <label className="block space-y-2 text-sm text-white/75">
-        <span className="block">Slot {slot}: {label}</span>
+        <span className="block">{t.admin.matches.slotLabel} {slot}: {label}</span>
         <select
           name="participant_id"
           defaultValue={value ?? ""}
           disabled={disabled}
           className={inputClassName}
         >
-          <option value="">Empty slot</option>
+          <option value="">{t.admin.matches.emptySlot}</option>
           {participants.map((participant) => {
             const assignedElsewhere = assignedIds.has(participant.id) && participant.id !== value
 
@@ -417,7 +439,7 @@ function BracketSlotForm({
                 disabled={assignedElsewhere}
               >
                 {participant.display_name}
-                {assignedElsewhere ? " (assigned)" : ""}
+                {assignedElsewhere ? t.admin.matches.assigned : ""}
               </option>
             )
           })}
@@ -428,7 +450,7 @@ function BracketSlotForm({
         disabled={disabled}
         className="w-full rounded-xl bg-emerald-300 px-3 py-2 text-sm font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
       >
-        Save slot
+        {t.admin.matches.saveSlot}
       </button>
     </form>
   )
@@ -447,6 +469,7 @@ function MatchRecord({
   playerNames: string[]
   tournamentName: string
 }) {
+  const { t } = useLanguage()
   const isBracketMatch = Boolean(match.bracket_id)
 
   return (
@@ -458,7 +481,7 @@ function MatchRecord({
               {match.team1 ?? "TBD"} vs {match.team2 ?? "TBD"}
             </h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {tournamentName} {"\u2022"} {match.round ?? match.bracket_round ?? "No round"}
+              {tournamentName} {"\u2022"} {match.round ?? match.bracket_round ?? t.admin.matches.noRound}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs items-center">
@@ -467,14 +490,14 @@ function MatchRecord({
                 ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-300"
                 : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
             }`}>
-              {isBracketMatch ? "Bracket" : "Manual"}
+              {isBracketMatch ? t.admin.matches.bracketType : t.admin.matches.manualType}
             </span>
             <span className={pillClassName}>{formatStatus(match.status)}</span>
             <span className={pillClassName}>
               {match.score1 ?? "???"} : {match.score2 ?? "???"}
             </span>
             {match.match_order !== null && (
-              <span className={pillClassName}>Order {match.match_order}</span>
+              <span className={pillClassName}>{t.admin.matches.orderLabel}{match.match_order}</span>
             )}
             <span className={pillClassName}>
               {formatMatchScheduleTime({
@@ -489,16 +512,16 @@ function MatchRecord({
       <div className="mt-4 border-t border-white/10 pt-4">
         {isBracketMatch && (
           <div className="mb-4 rounded-xl border border-indigo-500/20 bg-indigo-950/40 p-4 text-sm text-indigo-200 leading-relaxed">
-            <p className="font-semibold text-white">Bracket Match Details</p>
+            <p className="font-semibold text-white">{t.admin.matches.bracketDetailsTitle}</p>
             <p className="mt-2 text-xs text-white/60">
-              This match is part of a bracket. Structural fields (tournament, participants, round) are locked here and managed by the bracket system. You can update schedules, scores, status, and other metadata below.
+              {t.admin.matches.bracketDetailsDesc}
             </p>
           </div>
         )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
           <MatchForm
             action={updateMatch}
-            submitLabel="Save changes"
+            submitLabel={t.admin.matches.saveChanges}
             tournaments={tournaments}
             teamNames={teamNames}
             playerNames={playerNames}
@@ -529,6 +552,7 @@ function MatchForm({
   match?: AdminMatch
   mode?: "standard" | "bracket"
 }) {
+  const { t } = useLanguage()
   const isBracket = mode === "bracket"
 
   return (
@@ -544,23 +568,23 @@ function MatchForm({
 
           <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:col-span-2 text-sm space-y-2">
             <div>
-              <span className="text-white/45 font-medium">Tournament: </span>
+              <span className="text-white/45 font-medium">{t.admin.matches.tournamentField}: </span>
               <span className="text-white/80">{
                 match?.tournament_id
-                  ? tournaments.find(t => t.id === match.tournament_id)?.name ?? "Unknown Tournament"
-                  : "Unassigned"
+                  ? tournaments.find(tItem => tItem.id === match.tournament_id)?.name ?? t.admin.matches.unknownTournament
+                  : t.admin.matches.unassigned
               }</span>
             </div>
             <div>
-              <span className="text-white/45 font-medium">Round: </span>
-              <span className="text-white/80">{match?.round ?? match?.bracket_round ?? "Bracket Round"}</span>
+              <span className="text-white/45 font-medium">{t.admin.matches.roundField}: </span>
+              <span className="text-white/80">{match?.round ?? match?.bracket_round ?? t.admin.matches.bracketRound}</span>
             </div>
             <div>
-              <span className="text-white/45 font-medium">Participant 1: </span>
+              <span className="text-white/45 font-medium">{t.admin.matches.participant1Field}: </span>
               <span className="text-emerald-300 font-semibold">{match?.team1 ?? "TBD"}</span>
             </div>
             <div>
-              <span className="text-white/45 font-medium">Participant 2: </span>
+              <span className="text-white/45 font-medium">{t.admin.matches.participant2Field}: </span>
               <span className="text-emerald-300 font-semibold">{match?.team2 ?? "TBD"}</span>
             </div>
           </div>
@@ -568,7 +592,7 @@ function MatchForm({
       ) : (
         <>
           <TournamentSelect tournaments={tournaments} value={match?.tournament_id} />
-          <AdminField label="Round">
+          <AdminField label={t.admin.matches.roundField}>
             <input name="round" defaultValue={match?.round ?? ""} className={inputClassName} />
           </AdminField>
           <MatchParticipantFields
@@ -580,15 +604,15 @@ function MatchForm({
           />
         </>
       )}
-      <AdminField label="Score 1">
+      <AdminField label={t.admin.matches.score1Field}>
         <input name="score1" type="number" defaultValue={match?.score1 ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label="Score 2">
+      <AdminField label={t.admin.matches.score2Field}>
         <input name="score2" type="number" defaultValue={match?.score2 ?? ""} className={inputClassName} />
       </AdminField>
       <StatusSelect value={match?.status} />
       <WinnerSelect match={match} />
-      <AdminField label="Schedule date">
+      <AdminField label={t.admin.matches.scheduleDateField}>
         <input
           name="schedule_date"
           type="date"
@@ -596,7 +620,7 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Schedule time">
+      <AdminField label={t.admin.matches.scheduleTimeField}>
         <input
           name="schedule_time"
           type="time"
@@ -604,14 +628,14 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Timezone">
+      <AdminField label={t.admin.matches.timezoneField}>
         <input
           name="timezone"
           defaultValue={match?.timezone ?? DEFAULT_MATCH_TIMEZONE}
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Schedule note">
+      <AdminField label={t.admin.matches.scheduleNoteField}>
         <input
           name="schedule_note"
           defaultValue={match?.schedule_note ?? ""}
@@ -619,7 +643,7 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label="Match order">
+      <AdminField label={t.admin.matches.matchOrderField}>
         <input name="match_order" type="number" min={1} step={1} defaultValue={match?.match_order ?? ""} required className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
@@ -628,8 +652,9 @@ function MatchForm({
 }
 
 function WinnerSelect({ match, disabled = false }: { match?: AdminMatch; disabled?: boolean }) {
+  const { t } = useLanguage()
   return (
-    <AdminField label="Winner">
+    <AdminField label={t.admin.matches.winnerField}>
       <select
         name="winner_selection"
         defaultValue={
@@ -644,9 +669,9 @@ function WinnerSelect({ match, disabled = false }: { match?: AdminMatch; disable
         disabled={disabled}
         className={inputClassName}
       >
-        <option value="">Auto / none</option>
-        <option value="participant_1">{match?.team1 ?? "Participant 1"}</option>
-        <option value="participant_2">{match?.team2 ?? "Participant 2"}</option>
+        <option value="">{t.admin.matches.autoNone}</option>
+        <option value="participant_1">{match?.team1 ?? t.admin.matches.participant1}</option>
+        <option value="participant_2">{match?.team2 ?? t.admin.matches.participant2}</option>
       </select>
     </AdminField>
   )
