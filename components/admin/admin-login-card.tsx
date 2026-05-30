@@ -1,3 +1,5 @@
+"use client"
+
 import { loginAdmin } from "@/app/admin/actions"
 import { AdminLoginForm } from "@/app/admin/login-form"
 import type { AdminAuthHealth } from "@/lib/admin/types"

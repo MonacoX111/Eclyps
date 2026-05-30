@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFormAction } from "@/lib/admin/types"

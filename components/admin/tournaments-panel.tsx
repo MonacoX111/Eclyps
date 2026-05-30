@@ -1,3 +1,5 @@
+"use client"
+
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/admin/formatters"
