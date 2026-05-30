@@ -78,7 +78,7 @@ export async function logoutAdmin() {
 
   cookieStore.delete(getAdminSessionDeleteCookieOptions())
 
-  redirect("/admin")
+  redirect("/")
 }
 
 export async function checkAdminPassword(password: string) {
