@@ -204,30 +204,36 @@ function AuthControl({
   }
 
   return (
-    <form
-      action={logoutDiscord}
-      className={`flex items-center gap-3 ${mobile ? "justify-between" : ""}`}
-    >
-      <div className="flex min-w-0 items-center gap-2">
+    <div className={`flex items-center gap-3 ${mobile ? "justify-between w-full" : ""}`}>
+      <a
+        href="/account"
+        className="flex min-w-0 items-center gap-2 hover:text-primary transition group cursor-pointer"
+      >
         <Avatar userProfile={userProfile} />
-        <span className="max-w-36 truncate text-sm font-medium text-white/80">
+        <span className="max-w-36 truncate text-sm font-medium text-white/80 group-hover:text-primary transition">
           {userProfile.discord_username}
         </span>
-      </div>
-      <button
-        type="submit"
-        className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-primary/40 hover:text-primary cursor-pointer"
-      >
-        {t.navbar.logout}
-      </button>
-    </form>
+      </a>
+      <form action={logoutDiscord} className="shrink-0">
+        <button
+          type="submit"
+          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-primary/40 hover:text-primary cursor-pointer"
+        >
+          {t.navbar.logout}
+        </button>
+      </form>
+    </div>
   )
 }
 
 function MobileAuthAvatar({ userProfile }: { userProfile: UserProfile | null }) {
   if (!userProfile) return null
 
-  return <Avatar userProfile={userProfile} />
+  return (
+    <a href="/account" className="cursor-pointer hover:opacity-80 transition shrink-0">
+      <Avatar userProfile={userProfile} />
+    </a>
+  )
 }
 
 function Avatar({ userProfile }: { userProfile: UserProfile }) {
