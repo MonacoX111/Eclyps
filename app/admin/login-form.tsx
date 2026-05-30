@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useFormStatus } from "react-dom"
+import { Eye, EyeOff } from "lucide-react"
 import type { AdminAuthHealth } from "@/lib/admin/types"
 import { useLanguage } from "@/components/language-provider"
 
@@ -20,6 +21,7 @@ export function AdminLoginForm({
 }: AdminLoginFormProps) {
   const { t, lang } = useLanguage()
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const retryAfterLabel = formatRetryAfter(retryAfter, lang)
 
   return (
@@ -28,17 +30,31 @@ export function AdminLoginForm({
         <label htmlFor="password" className="text-sm text-white/80">
           {lang === "uk" ? "Пароль" : "Password"}
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder={lang === "uk" ? "Введіть пароль..." : "Enter password..."}
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none transition focus:border-emerald-300/60"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder={lang === "uk" ? "Введіть пароль..." : "Enter password..."}
+            className="w-full rounded-xl border border-white/10 bg-black/30 pl-4 pr-12 py-3 text-white outline-none transition focus:border-emerald-300/60"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-white/5"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4.5 w-4.5" />
+            ) : (
+              <Eye className="h-4.5 w-4.5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {error === "invalid" && (
