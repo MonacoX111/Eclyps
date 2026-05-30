@@ -548,7 +548,85 @@ const rawTranslations = {
         timeHoursAgo: "год. тому",
         timeYesterday: "учора",
         timeDaysAgo: "дн. тому",
-      }
+      },
+    },
+    admin: {
+        title: "Панель адміністратора",
+        subtitle: "Eclyps Admin",
+        description: "Керування турнірами, командами, гравцями, сіткою та диспутами.",
+        backToSite: "← На сайт",
+        logout: "Вийти",
+        tabs: {
+          overview: "Огляд",
+          tournaments: "Турніри",
+          applications: "Заявки",
+          players: "Гравці",
+          teams: "Команди",
+          participants: "Учасники турніру",
+          matches: "Матчі",
+          bracket: "Сітка",
+          results: "Результати",
+          disputes: "Диспути",
+          news: "Новини",
+          settings: "Налаштування"
+        },
+        badges: {
+          pending: "На розгляді",
+          approved: "Схвалено",
+          rejected: "Відхилено",
+          active: "Активний",
+          finished: "Завершено",
+          draft: "Чернетка"
+        },
+        overview: {
+          activeTournament: "Активний турнір",
+          pendingPlayers: "Заявки гравців",
+          pendingTeams: "Заявки команд",
+          pendingRegistrations: "Реєстрації на турнір",
+          openDisputes: "Відкриті диспути",
+          upcomingMatches: "Майбутні матчі",
+          viewDetails: "Детальніше",
+          recentActivity: "Нещодавня активність",
+          lastAdminActivity: "Остання активність",
+          lastApprovedPlayer: "Схвалено гравця",
+          lastApprovedTeam: "Схвалено команду",
+          lastRegistration: "Реєстрація на турнір",
+          lastDisputeUpdate: "Оновлення диспуту",
+          noActivity: "Нещодавніх дій не зафіксовано."
+        },
+        emptyState: {
+          general: "Поки що немає записів у базі даних.",
+          tournaments: "Турнірів у базі даних поки що немає.",
+          teams: "Команд у базі даних поки що немає.",
+          players: "Гравців у базі даних поки що немає.",
+          participants: "Учасників для обраного турніру поки що немає.",
+          applications: "Заявок гравців поки що немає.",
+          registrations: "Реєстрацій на турнір поки що немає.",
+          disputes: "Диспутів поки що немає.",
+          matches: "Матчів у базі даних поки що немає.",
+          bracket: "Шаблон турнірної сітки ще не згенеровано.",
+          results: "Результатів у базі даних поки що немає.",
+          news: "Новин у базі даних поки що немає."
+        },
+        dangerousAction: "Увага! Ця дія є незворотною та видалить усі пов'язані дані.",
+        login: {
+          title: "Вхід для адміністратора",
+          desc: "Введіть пароль адміністратора для продовження.",
+          placeholder: "Введіть пароль...",
+          button: "Увійти"
+        },
+        settings: {
+          title: "Налаштування та стан системи",
+          description: "Діагностика підключення до сервісів, статус авторизації та конфігурація оточення.",
+          authStatus: "Статус авторизації",
+          authOk: "Авторизовано успішно",
+          envCheck: "Перевірка конфігурації",
+          envOk: "Параметри оточення налаштовані правильно",
+          dbLatency: "Затримка бази даних",
+          apiLatency: "Затримка API",
+          healthy: "Працює",
+          unhealthy: "Проблема"
+        }
     },
   },
   en: {
@@ -1098,7 +1176,85 @@ const rawTranslations = {
         timeHoursAgo: "h ago",
         timeYesterday: "yesterday",
         timeDaysAgo: "d ago",
-      }
+      },
+    },
+    admin: {
+        title: "Admin Dashboard",
+        subtitle: "Eclyps Admin",
+        description: "Manage tournaments, teams, players, brackets, and disputes.",
+        backToSite: "← Back to site",
+        logout: "Log out",
+        tabs: {
+          overview: "Overview",
+          tournaments: "Tournaments",
+          applications: "Applications",
+          players: "Players",
+          teams: "Teams",
+          participants: "Tournament Participants",
+          matches: "Matches",
+          bracket: "Bracket",
+          results: "Results",
+          disputes: "Disputes",
+          news: "News",
+          settings: "Settings"
+        },
+        badges: {
+          pending: "Pending",
+          approved: "Approved",
+          rejected: "Rejected",
+          active: "Active",
+          finished: "Finished",
+          draft: "Draft"
+        },
+        overview: {
+          activeTournament: "Active Tournament",
+          pendingPlayers: "Player Applications",
+          pendingTeams: "Team Applications",
+          pendingRegistrations: "Tournament Registrations",
+          openDisputes: "Open Disputes",
+          upcomingMatches: "Upcoming Matches",
+          viewDetails: "View Details",
+          recentActivity: "Recent Activity",
+          lastAdminActivity: "Last Admin Activity",
+          lastApprovedPlayer: "Last Approved Player",
+          lastApprovedTeam: "Last Approved Team",
+          lastRegistration: "Last Registration",
+          lastDisputeUpdate: "Last Dispute Update",
+          noActivity: "No recent actions recorded."
+        },
+        emptyState: {
+          general: "No records exist in the database yet.",
+          tournaments: "No tournaments exist in the database yet.",
+          teams: "No teams exist in the database yet.",
+          players: "No players exist in the database yet.",
+          participants: "No participants exist for this tournament yet.",
+          applications: "No player applications found.",
+          registrations: "No tournament registrations found.",
+          disputes: "No disputes found.",
+          matches: "No matches exist in the database yet.",
+          bracket: "No generated tournament bracket template exists yet.",
+          results: "No results exist in the database yet.",
+          news: "No news articles found."
+        },
+        dangerousAction: "Warning! This action is irreversible and will delete all associated data.",
+        login: {
+          title: "Admin Access",
+          desc: "Enter the admin password to continue.",
+          placeholder: "Enter password...",
+          button: "Login"
+        },
+        settings: {
+          title: "System Diagnostics & Settings",
+          description: "Verify authentication health, database status, and API metrics.",
+          authStatus: "Auth Status",
+          authOk: "Authenticated successfully",
+          envCheck: "Configuration Check",
+          envOk: "Environment parameters are configured correctly",
+          dbLatency: "Database Latency",
+          apiLatency: "API Latency",
+          healthy: "Healthy",
+          unhealthy: "Problem"
+        }
     },
   },
 } as const

@@ -2,6 +2,7 @@ import type React from "react"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFormAction } from "@/lib/admin/types"
 import { normalizeStatus } from "@/lib/admin/formatters"
+import { useLanguage } from "@/components/language-provider"
 
 export const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-white outline-none transition focus:border-emerald-300/60"
@@ -22,15 +23,17 @@ export function TournamentSelect({
   tournaments: AdminTournament[]
   value?: string | null
 }) {
+  const { lang } = useLanguage()
+
   return (
-    <AdminField label="Tournament">
+    <AdminField label={lang === "uk" ? "Турнір" : "Tournament"}>
       <select name="tournament_id" defaultValue={value ?? ""} required className={inputClassName}>
         <option value="" disabled>
-          Select tournament
+          {lang === "uk" ? "Оберіть турнір" : "Select tournament"}
         </option>
         {tournaments.map((tournament) => (
           <option key={tournament.id} value={tournament.id}>
-            {tournament.name ?? "Untitled tournament"}
+            {tournament.name ?? (lang === "uk" ? "Турнір без назви" : "Untitled tournament")}
           </option>
         ))}
       </select>
@@ -45,17 +48,19 @@ export function StatusSelect({
   value?: string | null
   disabled?: boolean
 }) {
+  const { lang } = useLanguage()
+
   return (
-    <AdminField label="Status">
+    <AdminField label={lang === "uk" ? "Статус" : "Status"}>
       <select
         name="status"
         defaultValue={normalizeStatus(value)}
         disabled={disabled}
         className={inputClassName}
       >
-        <option value="upcoming">Upcoming</option>
-        <option value="live">Live</option>
-        <option value="finished">Finished</option>
+        <option value="upcoming">{lang === "uk" ? "Майбутній" : "Upcoming"}</option>
+        <option value="live">{lang === "uk" ? "Наживо" : "Live"}</option>
+        <option value="finished">{lang === "uk" ? "Завершено" : "Finished"}</option>
       </select>
     </AdminField>
   )
@@ -76,14 +81,16 @@ export function SubmitButton({ label, disabled }: { label: string; disabled?: bo
 }
 
 export function DeleteForm({ action, id }: { action: AdminFormAction; id: string }) {
+  const { lang } = useLanguage()
+
   return (
     <form action={action} className="self-end">
       <input type="hidden" name="id" value={id} />
       <button
         type="submit"
-        className="w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10"
+        className="w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10 cursor-pointer"
       >
-        Delete
+        {lang === "uk" ? "Видалити" : "Delete"}
       </button>
     </form>
   )

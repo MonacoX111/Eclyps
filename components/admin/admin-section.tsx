@@ -1,5 +1,8 @@
+"use client"
+
 import type React from "react"
 import type { AdminFeedback } from "@/lib/admin/types"
+import { useLanguage } from "@/components/language-provider"
 
 export const panelGridClassName =
   "mt-6 grid gap-5 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]"
@@ -25,21 +28,23 @@ export function AdminSection({
   fetchLabel: string
   children: React.ReactNode
 }) {
+  const { lang } = useLanguage()
+
   return (
     <section id={id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur">
-      <PanelHeader title={title} description={description} />
+      <PanelHeader title={title} description={description} lang={lang} />
       <FeedbackBlock feedback={feedback} />
-      <FetchError message={fetchError} label={fetchLabel} />
+      <FetchError message={fetchError} label={fetchLabel} lang={lang} />
       {children}
     </section>
   )
 }
 
-function PanelHeader({ title, description }: { title: string; description: string }) {
+function PanelHeader({ title, description, lang }: { title: string; description: string; lang: string }) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs uppercase tracking-[0.24em] text-emerald-300/70">
-        Live module
+        {lang === "uk" ? "Активний модуль" : "Live module"}
       </p>
       <h2 className="text-2xl font-semibold">{title}</h2>
       <p className="text-sm leading-6 text-white/60">{description}</p>
@@ -63,12 +68,14 @@ function FeedbackBlock({ feedback }: { feedback: AdminFeedback | null }) {
   )
 }
 
-function FetchError({ message, label }: { message: string | null; label: string }) {
+function FetchError({ message, label, lang }: { message: string | null; label: string; lang: string }) {
   if (!message) return null
 
   return (
     <div className="mt-5 rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-100">
-      Unable to load {label} from Supabase: {message}
+      {lang === "uk"
+        ? `Не вдалося завантажити ${label} з Supabase: ${message}`
+        : `Unable to load ${label} from Supabase: ${message}`}
     </div>
   )
 }
