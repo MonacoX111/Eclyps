@@ -5,12 +5,14 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Bell, Check, Inbox, Calendar, UserCheck, ShieldAlert, Users, CheckCircle2, X } from "lucide-react"
 import { getUserNotifications, markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { useLanguage } from "@/components/language-provider"
 
 type NotificationsBellProps = {
   userProfile: UserProfile
 }
 
 export function NotificationsBell({ userProfile }: NotificationsBellProps) {
+  const { t, lang } = useLanguage()
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -108,7 +110,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
       case "match_scheduled":
         return <Calendar className="h-4 w-4 text-cyan-400" />
       default:
-        return <Bell className="h-4 w-4 text-primary" />
+        return <Bell className="h-4 w-4 text-emerald-400" />
     }
   }
 
@@ -121,7 +123,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
           if (!open) fetchNotifications()
         }}
         className="relative p-2 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition duration-200 cursor-pointer"
-        aria-label="View Notifications"
+        aria-label={t.account.notifications.ariaView}
       >
         <Bell className="h-[18px] w-[18px]" />
 
@@ -157,13 +159,13 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 bg-white/2">
-              <span className="text-sm font-semibold tracking-wide text-white">Notifications</span>
+              <span className="text-sm font-semibold tracking-wide text-white">{t.account.notifications.title}</span>
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="text-xs font-medium text-primary hover:text-primary/80 transition cursor-pointer"
+                  className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
                 >
-                  Mark all read
+                  {t.account.notifications.markAllRead}
                 </button>
               )}
             </div>
@@ -172,8 +174,8 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
             <div className="flex-1 overflow-y-auto max-h-[300px] scrollbar-thin">
               {loading ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-2">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  <span className="text-xs text-white/40">Loading notifications...</span>
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                  <span className="text-xs text-white/40">{t.account.notifications.loading}</span>
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="py-16 px-4 flex flex-col items-center justify-center text-center gap-3">
@@ -181,8 +183,8 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                     <Inbox className="h-6 w-6" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-white/80">All caught up!</span>
-                    <span className="text-xs text-white/40 max-w-48 mx-auto">No notifications right now.</span>
+                    <span className="text-sm font-semibold text-white/80">{t.account.notifications.allCaughtUp}</span>
+                    <span className="text-xs text-white/40 max-w-48 mx-auto">{t.account.notifications.allCaughtUpDesc}</span>
                   </div>
                 </div>
               ) : (
@@ -193,7 +195,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                       <div
                         key={notification.id}
                         className={`flex gap-3 p-4 transition duration-200 relative ${
-                          isUnread ? "bg-primary/2 hover:bg-primary/5" : "hover:bg-white/2"
+                          isUnread ? "bg-white/[0.01] hover:bg-white/[0.03]" : "hover:bg-white/2"
                         }`}
                       >
                         {/* Type Icon */}
@@ -212,7 +214,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                               {notification.title}
                             </span>
                             <span className="text-[9px] text-white/30 shrink-0">
-                              {formatTimeAgo(notification.created_at)}
+                              {formatTimeAgo(notification.created_at, t, lang)}
                             </span>
                           </div>
                           <p className="text-[11px] text-white/60 leading-relaxed break-words">
@@ -224,8 +226,8 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                         {isUnread && (
                           <button
                             onClick={(e) => handleMarkAsRead(notification.id, e)}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-white/10 text-white/30 hover:text-primary transition cursor-pointer"
-                            title="Mark as read"
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-white/10 text-white/30 hover:text-emerald-400 transition cursor-pointer"
+                            title={t.account.notifications.markReadTooltip}
                           >
                             <Check className="h-3 w-3" />
                           </button>
@@ -246,22 +248,22 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
 /**
  * Super lightweight helper to format human-readable relative time
  */
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, t: any, lang: string): string {
   try {
     const past = new Date(dateStr)
     const now = new Date()
     const diffMs = now.getTime() - past.getTime()
 
-    if (diffMs < 60000) return "just now"
+    if (diffMs < 60000) return t.account.notifications.timeJustNow
     const diffMins = Math.floor(diffMs / 60000)
-    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffMins < 60) return `${diffMins}${t.account.notifications.timeMinsAgo}`
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffHours < 24) return `${diffHours}${t.account.notifications.timeHoursAgo}`
     const diffDays = Math.floor(diffHours / 24)
-    if (diffDays === 1) return "yesterday"
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays === 1) return t.account.notifications.timeYesterday
+    if (diffDays < 7) return `${diffDays}${t.account.notifications.timeDaysAgo}`
 
-    return past.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    return past.toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", { month: "short", day: "numeric" })
   } catch {
     return ""
   }

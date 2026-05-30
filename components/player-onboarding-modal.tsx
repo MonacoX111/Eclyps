@@ -13,6 +13,8 @@ type PlayerOnboardingModalProps = {
   userProfile: UserProfile | null
   hasApprovedPlayer: boolean
   hasApplication: boolean
+  forceOpen?: boolean
+  onClose?: () => void
 }
 
 const inputClassName =
@@ -25,6 +27,8 @@ export function PlayerOnboardingModal({
   userProfile,
   hasApprovedPlayer,
   hasApplication,
+  forceOpen = false,
+  onClose,
 }: PlayerOnboardingModalProps) {
   const [isApplying, setIsApplying] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
@@ -32,10 +36,10 @@ export function PlayerOnboardingModal({
 
   if (
     !userProfile ||
-    userProfile.onboarding_seen_at ||
+    (userProfile.onboarding_seen_at && !forceOpen) ||
     hasApprovedPlayer ||
     hasApplication ||
-    isHidden
+    (isHidden && !forceOpen)
   ) {
     return null
   }
@@ -43,9 +47,13 @@ export function PlayerOnboardingModal({
   return (
     <div className="fixed inset-0 z-[80] grid place-items-center px-4 py-8">
       <m.div
-        className="absolute inset-0 bg-black/70 backdrop-blur-md"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
+        onClick={() => {
+          setIsHidden(true)
+          onClose?.()
+        }}
       />
       <m.div
         className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-primary/25 bg-[oklch(0.08_0.015_180/0.96)] p-6 shadow-[0_0_80px_rgba(0,200,150,0.18)]"
@@ -53,6 +61,19 @@ export function PlayerOnboardingModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.35, ease: "easeOut" }}
       >
+        <button
+          type="button"
+          onClick={() => {
+            setIsHidden(true)
+            onClose?.()
+          }}
+          className="absolute right-4 top-4 rounded-full p-1 text-white/50 hover:bg-white/10 hover:text-white transition cursor-pointer z-10"
+          aria-label="Close"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
           style={{
@@ -118,7 +139,10 @@ export function PlayerOnboardingModal({
               </button>
               <form
                 action={dismissPlayerOnboarding}
-                onSubmit={() => setIsHidden(true)}
+                onSubmit={() => {
+                  setIsHidden(true)
+                  onClose?.()
+                }}
               >
                 <button
                   type="submit"

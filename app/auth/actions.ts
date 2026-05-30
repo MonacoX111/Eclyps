@@ -27,7 +27,7 @@ export async function loginWithDiscord() {
   })
 
   if (error || !data.url) {
-    redirect("/?registrationError=discord-login-failed#registration")
+    redirect("/registration?registrationError=discord-login-failed#registration")
   }
 
   redirect(data.url)

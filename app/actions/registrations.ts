@@ -17,19 +17,19 @@ export async function submitTournamentRegistration(formData: FormData) {
   const parsed = parsePublicRegistrationFormData(formData)
 
   if (!parsed.ok) {
-    redirect(`/?registrationError=${parsed.error}#registration`)
+    redirect(`/registration?registrationError=${parsed.error}#registration`)
   }
   const registrationTypeQuery = `registrationType=${parsed.data.participant_type}`
   const userProfile = await getCurrentUserProfile()
 
   if (!userProfile) {
-    redirect(`/?registrationError=discord-login-required&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=discord-login-required&${registrationTypeQuery}#registration`)
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
 
   if (!supabaseAdmin) {
-    redirect(`/?registrationError=admin-client-unavailable&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=admin-client-unavailable&${registrationTypeQuery}#registration`)
   }
 
   const approvedPlayer = await findApprovedOwnedPlayer(userProfile.id)
@@ -37,7 +37,7 @@ export async function submitTournamentRegistration(formData: FormData) {
   if (!approvedPlayer) {
     const pendingApplication = await findPendingPlayerApplication(userProfile.id)
     redirect(
-      `/?registrationError=${
+      `/registration?registrationError=${
         pendingApplication ? "player-application-pending" : "player-approval-required"
       }&${registrationTypeQuery}#registration`,
     )
@@ -50,22 +50,22 @@ export async function submitTournamentRegistration(formData: FormData) {
     .maybeSingle()
 
   if (tournamentError || !tournament) {
-    redirect(`/?registrationError=invalid-tournament-id&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=invalid-tournament-id&${registrationTypeQuery}#registration`)
   }
 
   if (tournament.status !== "upcoming") {
-    redirect(`/?registrationError=registration-closed&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=registration-closed&${registrationTypeQuery}#registration`)
   }
 
   if (
     tournament.participant_type !== "team" &&
     tournament.participant_type !== "player"
   ) {
-    redirect(`/?registrationError=invalid-participant-type&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=invalid-participant-type&${registrationTypeQuery}#registration`)
   }
 
   if (parsed.data.participant_type !== tournament.participant_type) {
-    redirect(`/?registrationError=wrong-participant-type&registrationType=${tournament.participant_type}#registration`)
+    redirect(`/registration?registrationError=wrong-participant-type&registrationType=${tournament.participant_type}#registration`)
   }
 
   const approvedCount = await countApprovedParticipants(
@@ -80,13 +80,13 @@ export async function submitTournamentRegistration(formData: FormData) {
     .eq("status", "pending")
 
   if (pendingCountError) {
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
   }
 
   const capacity = typeof tournament.team_count === "number" ? tournament.team_count : null
 
   if (capacity !== null && approvedCount + (pendingCount ?? 0) >= capacity) {
-    redirect(`/?registrationError=registration-full&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=registration-full&${registrationTypeQuery}#registration`)
   }
 
   let finalPlayerId: string | null = null
@@ -108,17 +108,17 @@ export async function submitTournamentRegistration(formData: FormData) {
       .maybeSingle()
 
     if (existingRegErr) {
-      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
     }
 
     if (existingReg) {
-      redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=already-registered&${registrationTypeQuery}#registration`)
     }
   } else {
     // Team registration
     const teamId = formData.get("team_id") as string | null
     if (!teamId || teamId.trim().length === 0) {
-      redirect(`/?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
     }
 
     finalTeamId = teamId.trim()
@@ -131,7 +131,7 @@ export async function submitTournamentRegistration(formData: FormData) {
       .maybeSingle()
 
     if (teamFetchError || !teamData) {
-      redirect(`/?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=invalid-team-id&${registrationTypeQuery}#registration`)
     }
 
     // Do NOT trust client-selected names, resolve from verified DB record!
@@ -140,13 +140,13 @@ export async function submitTournamentRegistration(formData: FormData) {
     // 2. Validate captain role/ownership via canManageTeam helper
     const isManager = await canManageTeam(finalTeamId, approvedPlayer.id)
     if (!isManager) {
-      redirect(`/?registrationError=permission-denied&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=permission-denied&${registrationTypeQuery}#registration`)
     }
 
     // 3. Validate eligibility using canRegisterTeamForTournament helper
     const eligibility = await canRegisterTeamForTournament(finalTeamId)
     if (!eligibility.allowed) {
-      redirect(`/?registrationError=team-ineligible&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=team-ineligible&${registrationTypeQuery}#registration`)
     }
 
     // 4. Duplicate team check: check both new team_id and legacy source_team_id
@@ -160,11 +160,11 @@ export async function submitTournamentRegistration(formData: FormData) {
       .maybeSingle()
 
     if (existingRegErr) {
-      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
     }
 
     if (existingReg) {
-      redirect(`/?registrationError=already-registered&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=already-registered&${registrationTypeQuery}#registration`)
     }
   }
 
@@ -185,15 +185,15 @@ export async function submitTournamentRegistration(formData: FormData) {
 
   if (error) {
     if (error.code === "23505") {
-      redirect(`/?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=duplicate-registration&${registrationTypeQuery}#registration`)
     }
 
-    redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+    redirect(`/registration?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
   }
 
   if (parsed.data.participant_type === "team") {
     if (!roster || typeof createdRegistration?.id !== "string") {
-      redirect(`/?registrationError=invalid-roster&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=invalid-roster&${registrationTypeQuery}#registration`)
     }
 
     const rosterRows = [
@@ -233,12 +233,13 @@ export async function submitTournamentRegistration(formData: FormData) {
         .delete()
         .eq("id", createdRegistration.id)
 
-      redirect(`/?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
+      redirect(`/registration?registrationError=mutation-failed&${registrationTypeQuery}#registration`)
     }
   }
 
   revalidatePath("/")
-  redirect(`/?registrationSuccess=submitted&${registrationTypeQuery}#registration`)
+  revalidatePath("/registration")
+  redirect(`/registration?registrationSuccess=submitted&${registrationTypeQuery}#registration`)
 }
 
 function normalizeRosterNickname(value: string) {

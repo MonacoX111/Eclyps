@@ -8,19 +8,19 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 export async function submitPlayerApplication(formData: FormData) {
   const userProfile = await getCurrentUserProfile()
   if (!userProfile) {
-    redirect("/?registrationError=discord-login-required#registration")
+    redirect("/registration?registrationError=discord-login-required#registration")
   }
 
   const requestedNickname = readRequiredFormString(formData, "requested_nickname")
   const requestedRegion = readOptionalFormString(formData, "requested_region")
 
   if (!requestedNickname) {
-    redirect("/?registrationError=invalid-player-application#registration")
+    redirect("/registration?registrationError=invalid-player-application#registration")
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
-    redirect("/?registrationError=admin-client-unavailable#registration")
+    redirect("/registration?registrationError=admin-client-unavailable#registration")
   }
 
   await markOnboardingSeen(userProfile.id)
@@ -33,11 +33,11 @@ export async function submitPlayerApplication(formData: FormData) {
     .maybeSingle()
 
   if (approvedPlayerError && !isMissingApplicationStorageError(approvedPlayerError)) {
-    redirect("/?registrationError=mutation-failed#registration")
+    redirect("/registration?registrationError=mutation-failed#registration")
   }
 
   if (approvedPlayer) {
-    redirect("/?registrationSuccess=player-approved#registration")
+    redirect("/registration?registrationSuccess=player-approved#registration")
   }
 
   const { data: pendingApplication, error: pendingError } = await supabaseAdmin
@@ -49,11 +49,11 @@ export async function submitPlayerApplication(formData: FormData) {
     .maybeSingle()
 
   if (pendingError && !isMissingApplicationStorageError(pendingError)) {
-    redirect("/?registrationError=mutation-failed#registration")
+    redirect("/registration?registrationError=mutation-failed#registration")
   }
 
   if (pendingApplication) {
-    redirect("/?registrationSuccess=player-application-pending#registration")
+    redirect("/registration?registrationSuccess=player-application-pending#registration")
   }
 
   const { error } = await supabaseAdmin
@@ -66,11 +66,12 @@ export async function submitPlayerApplication(formData: FormData) {
     })
 
   if (error) {
-    redirect("/?registrationError=mutation-failed#registration")
+    redirect("/registration?registrationError=mutation-failed#registration")
   }
 
   revalidatePath("/")
-  redirect("/?registrationSuccess=player-application-submitted#registration")
+  revalidatePath("/registration")
+  redirect("/registration?registrationSuccess=player-application-submitted#registration")
 }
 
 export async function dismissPlayerOnboarding() {

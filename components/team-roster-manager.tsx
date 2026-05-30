@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { addTeamMember, removeTeamMember, updateTeamMemberRole } from "@/app/actions/teams"
+import { useLanguage } from "@/components/language-provider"
 
 const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white outline-none transition focus:border-emerald-500/60"
@@ -31,52 +32,53 @@ export function TeamRosterManager({
   initialError,
   initialSuccess,
 }: TeamRosterManagerProps) {
+  const { t, lang } = useLanguage()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialError) {
       const messages: Record<string, string> = {
-        "invalid-player-name": "Please enter a valid player name.",
-        "permission-denied": "You do not have permission to manage this roster.",
-        "player-not-found": "Player could not be found. Verify spelling or nickname.",
-        "player-not-approved": "This player profile is not approved by admins yet.",
-        "duplicate-member": "This player is already a member of your team.",
-        "remove-owner-blocked": "The team owner cannot be removed from the team.",
-        "owner-downgrade-blocked": "The team owner's role cannot be downgraded.",
-        "last-captain-blocked": "You cannot demote or remove the last captain of the team.",
-        "mutation-failed": "Failed to update roster. Please try again.",
-        "admin-client-unavailable": "Database service is temporarily unavailable.",
+        "invalid-player-name": t.account.roster.errors.invalidPlayerName,
+        "permission-denied": t.account.roster.errors.permissionDenied,
+        "player-not-found": t.account.roster.errors.playerNotFound,
+        "player-not-approved": t.account.roster.errors.playerNotApproved,
+        "duplicate-member": t.account.roster.errors.duplicateMember,
+        "remove-owner-blocked": t.account.roster.errors.removeOwnerBlocked,
+        "owner-downgrade-blocked": t.account.roster.errors.ownerDowngradeBlocked,
+        "last-captain-blocked": t.account.roster.errors.lastCaptainBlocked,
+        "mutation-failed": t.account.roster.errors.mutationFailed,
+        "admin-client-unavailable": t.account.roster.errors.unavailable,
       }
-      setErrorMessage(messages[initialError] ?? "Failed to update roster.")
+      setErrorMessage(messages[initialError] ?? t.account.roster.errors.mutationFailed)
       const timer = setTimeout(() => setErrorMessage(null), 5000)
       return () => clearTimeout(timer)
     }
 
     if (initialSuccess) {
       const messages: Record<string, string> = {
-        "added": "Player successfully added to the roster!",
-        "removed": "Player successfully removed from the roster.",
-        "role-updated": "Roster member role successfully updated.",
+        "added": t.account.roster.success.added,
+        "removed": t.account.roster.success.removed,
+        "role-updated": t.account.roster.success.roleUpdated,
       }
-      setSuccessMessage(messages[initialSuccess] ?? "Roster successfully updated.")
+      setSuccessMessage(messages[initialSuccess] ?? (lang === "uk" ? "Склад успішно оновлено." : "Roster successfully updated."))
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [initialError, initialSuccess])
+  }, [initialError, initialSuccess, lang, t])
 
   return (
     <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">
-            Roster management
+            {t.account.roster.managementLabel}
           </p>
-          <h3 className="mt-2 text-xl font-semibold text-white">Team Roster</h3>
+          <h3 className="mt-2 text-xl font-semibold text-white">{t.account.roster.title}</h3>
           <p className="mt-1 text-xs text-white/55">
             {isManager
-              ? "Add, remove, or modify roles of members in your team."
-              : "List of all active players enrolled in this team roster."}
+              ? t.account.roster.descManager
+              : t.account.roster.descViewer}
           </p>
         </div>
 
@@ -87,14 +89,14 @@ export function TeamRosterManager({
             <input
               name="player_identifier"
               required
-              placeholder="Enter player nickname..."
+              placeholder={t.account.roster.invitePlaceholder}
               className={inputClassName}
             />
             <button
               type="submit"
               className="rounded-xl bg-emerald-400 px-4 py-2 text-xs font-semibold text-black transition hover:bg-emerald-300 cursor-pointer whitespace-nowrap shadow-md shadow-emerald-950/20"
             >
-              Add Player
+              {t.account.roster.addButton}
             </button>
           </form>
         )}
@@ -115,7 +117,7 @@ export function TeamRosterManager({
       {/* Roster members list */}
       {members.length === 0 ? (
         <p className="mt-6 text-center text-xs text-white/45 py-6 font-medium">
-          No players enrolled in this team roster yet.
+          {t.account.roster.noPlayers}
         </p>
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -145,17 +147,17 @@ export function TeamRosterManager({
                       {member.display_name}
                       {isOwner && (
                         <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 text-[8px] font-extrabold text-emerald-300 uppercase tracking-wider">
-                          Owner
+                          {t.profile.meta.owner}
                         </span>
                       )}
                       {isCaptain && (
                         <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 text-[8px] font-extrabold text-amber-300 uppercase tracking-wider">
-                          Captain
+                          {t.profile.meta.captain}
                         </span>
                       )}
                       {!isCaptain && !isOwner && (
                         <span className="rounded-full bg-white/5 border border-white/10 px-1.5 py-0.5 text-[8px] font-extrabold text-white/60 uppercase tracking-wider">
-                          Member
+                          {t.profile.meta.member}
                         </span>
                       )}
                     </h4>
@@ -175,9 +177,9 @@ export function TeamRosterManager({
                             name="role"
                             value="member"
                             className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/60 hover:bg-white/5 cursor-pointer transition"
-                            title="Demote to Member"
+                            title={t.account.roster.tooltipDemote}
                           >
-                            Demote
+                            {t.account.roster.demoteButton}
                           </button>
                         )
                       ) : (
@@ -186,9 +188,9 @@ export function TeamRosterManager({
                           name="role"
                           value="captain"
                           className="rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 cursor-pointer transition"
-                          title="Promote to Captain"
+                          title={t.account.roster.tooltipPromote}
                         >
-                          Promote
+                          {t.account.roster.promoteButton}
                         </button>
                       )}
                     </form>
@@ -200,9 +202,9 @@ export function TeamRosterManager({
                         <button
                           type="submit"
                           className="rounded border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] text-red-300 hover:bg-red-500/10 cursor-pointer transition"
-                          title="Remove player from Roster"
+                          title={t.account.roster.tooltipRemove}
                         >
-                          Remove
+                          {t.account.roster.removeButton}
                         </button>
                       </form>
                     )}

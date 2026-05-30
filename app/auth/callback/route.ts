@@ -6,19 +6,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
-  const next = requestUrl.searchParams.get("next") ?? "/#registration"
+  const next = requestUrl.searchParams.get("next") ?? "/registration#registration"
   const hasPlayerApplicationIntent =
     request.cookies.get("eclyps_player_application_intent")?.value === "1"
 
   if (!code) {
-    return NextResponse.redirect(new URL("/?registrationError=discord-login-failed#registration", requestUrl.origin))
+    return NextResponse.redirect(new URL("/registration?registrationError=discord-login-failed#registration", requestUrl.origin))
   }
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
-    return NextResponse.redirect(new URL("/?registrationError=discord-login-failed#registration", requestUrl.origin))
+    return NextResponse.redirect(new URL("/registration?registrationError=discord-login-failed#registration", requestUrl.origin))
   }
 
   const { data } = await supabase.auth.getUser()

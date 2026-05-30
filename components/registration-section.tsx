@@ -7,6 +7,7 @@ import { checkInTournament } from "@/app/actions/check-ins"
 import { submitTournamentRegistration } from "@/app/actions/registrations"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
+import { PlayerOnboardingModal } from "@/components/player-onboarding-modal"
 import { useLanguage } from "@/components/language-provider"
 import type { PlatformUserState } from "@/lib/auth/player-state"
 import {
@@ -60,13 +61,10 @@ export function RegistrationSection({
 
   const visibleTournamentName = tournamentName?.trim() || t.registration.activeTournament
   
-  const disabledTitle = summary.isFull 
-    ? (lang === "uk" ? "Реєстрація заповнена." : "Registration is full.")
-    : (lang === "uk" ? "Реєстрація закрита." : "Registration is closed.")
-    
+  const disabledTitle = summary.isFull ? t.registration.disabled.isFullTitle : t.registration.disabled.isClosedTitle
   const disabledMessage = summary.isFull
-    ? (lang === "uk" ? `Цей турнір досяг максимальної кількості ${typeLabelPlural.toLowerCase()}.` : `This tournament has reached the maximum number of ${typeLabelPlural.toLowerCase()}.`)
-    : (lang === "uk" ? `Реєстрація закрита для цього турніру ${typeLabelPlural.toLowerCase()}.` : `Registration is closed for this ${typeLabelPlural.toLowerCase()} tournament.`)
+    ? (summary.participantType === "player" ? t.registration.disabled.isFullMessagePlayers : t.registration.disabled.isFullMessageTeams)
+    : (summary.participantType === "player" ? t.registration.disabled.isClosedMessagePlayers : t.registration.disabled.isClosedMessageTeams)
 
   const isTournamentPending = tournamentRegistration?.status === "pending"
   const isTournamentApproved = tournamentRegistration?.status === "approved"
@@ -82,6 +80,7 @@ export function RegistrationSection({
   const manageableTeams = platformState?.manageableTeams ?? []
   const approvedTeams = manageableTeams.filter((t) => t.status === "approved")
   
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false)
   const [selectedTeamId, setSelectedTeamId] = useState(approvedTeams[0]?.id ?? "")
 
   useEffect(() => {
@@ -108,7 +107,7 @@ export function RegistrationSection({
       <div className="mx-auto max-w-4xl">
         <SectionHeading eyebrow={t.registration.eyebrow} title={visibleTournamentName}>
           <span className="glass-card mt-4 inline-flex max-w-full break-words rounded-full px-4 py-1.5 text-center text-sm font-medium uppercase tracking-widest text-primary">
-            {t.registration.joinCompetitor} {participantLabel === "Players" ? t.navbar.players.toLowerCase() : t.navbar.teams.toLowerCase()} {t.registration.tournamentType}
+            {summary.participantType === "player" ? t.registration.joinPlayersTournament : t.registration.joinTeamsTournament}
           </span>
         </SectionHeading>
 
@@ -119,7 +118,7 @@ export function RegistrationSection({
                 {summary.statusLabel}
               </p>
               <p className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/65 uppercase tracking-wide">
-                {typeLabel} {t.registration.tournamentType}
+                {summary.participantType === "player" ? t.registration.playersTournamentLabel : t.registration.teamsTournamentLabel}
               </p>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <RegistrationStat label={t.registration.stats.approved} value={String(summary.approvedCount)} />
@@ -169,54 +168,48 @@ export function RegistrationSection({
 
             <form action={submitTournamentRegistration} className="grid gap-3 sm:grid-cols-2">
               {userProfile && !approvedPlayer ? (
-                <PlayerApplicationState status={applicationStatus} lang={lang} />
+                <PlayerApplicationState
+                  status={applicationStatus}
+                  lang={lang}
+                  onApplyClick={() => setShowOnboardingModal(true)}
+                />
               ) : null}
               {userProfile && approvedPlayer && summary.participantType === "team" && manageableTeams.length === 0 ? (
                 <div className="sm:col-span-2 rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-4">
                   <p className="text-sm font-semibold text-red-100">
-                    {lang === "uk" ? "Лише схвалені команди можуть реєструватися" : "Only approved teams can register for this tournament."}
+                    {t.registration.alerts.approvedTeamsOnly}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/70">
-                    {lang === "uk"
-                      ? "Ви не є власником або капітаном жодної команди. Створіть команду в розділі 'Команди' та зачекайте на схвалення адміністратора."
-                      : "You do not own or manage any global teams. Create a team in the 'Teams' tab and wait for admin approval."}
+                    {t.registration.alerts.noTeamsOwned}
                   </p>
                 </div>
               ) : null}
               {userProfile && approvedPlayer && summary.participantType === "team" && manageableTeams.length > 0 && approvedTeams.length === 0 ? (
                 <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
                   <p className="text-sm font-semibold text-amber-100">
-                    {lang === "uk" ? "Лише схвалені команди можуть реєструватися" : "Only approved teams can register for this tournament."}
+                    {t.registration.alerts.approvedTeamsOnly}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/70">
-                    {lang === "uk"
-                      ? "Ваші команди наразі очікують на схвалення адміністратора або були відхилені. Тільки схвалені команди мають право на участь."
-                      : "Your teams are currently pending admin approval or have been rejected. Only approved teams can register for this tournament."}
+                    {t.registration.alerts.teamsPendingApproval}
                   </p>
                 </div>
               ) : null}
               {userProfile && approvedPlayer && summary.participantType === "team" && selectedTeam && !selectedTeam.eligibility?.allowed ? (
                 <div className="sm:col-span-2 rounded-xl border border-red-300/20 bg-red-300/10 px-4 py-4">
                   <p className="text-sm font-semibold text-red-100">
-                    {lang === "uk" ? "Команда не відповідає вимогам" : "Team Registration Ineligible"}
+                    {t.registration.alerts.teamIneligible}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/70">
-                    {selectedTeam.eligibility?.reason === "no-captain-assigned" ? (
-                      lang === "uk" 
-                        ? "У цій команді немає призначеного капітана в складі."
-                        : "This team does not have an assigned captain in team members."
-                    ) : (
-                      lang === "uk"
-                        ? "Ця команда наразі не має права реєструватися."
-                        : "This team is currently not eligible to register."
-                    )}
+                    {selectedTeam.eligibility?.reason === "no-captain-assigned"
+                      ? t.registration.alerts.noCaptainAssigned
+                      : t.registration.alerts.genericIneligible}
                   </p>
                 </div>
               ) : null}
               {userProfile && approvedPlayer && summary.participantType === "team" && selectedTeam?.isRegistered ? (
                 <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
                   <p className="text-sm font-semibold text-amber-100">
-                    {lang === "uk" ? "Ця команда вже зареєстрована на цей турнір." : "This team is already registered for this tournament."}
+                    {t.registration.alerts.teamAlreadyRegistered}
                   </p>
                 </div>
               ) : null}
@@ -293,7 +286,7 @@ export function RegistrationSection({
                 }`}
               >
                 {summary.participantType === "team" ? (
-                  <RegistrationField label={lang === "uk" ? "Оберіть вашу команду" : "Select your team"}>
+                  <RegistrationField label={t.registration.alerts.selectYourTeam}>
                     <select
                       name="team_id"
                       value={selectedTeamId}
@@ -377,22 +370,31 @@ export function RegistrationSection({
                         : isTournamentApproved
                           ? t.registration.buttons.approved
                           : isTeamAlreadyRegistered
-                            ? (lang === "uk" ? "Команда вже зареєстрована" : "Team Already Registered")
+                            ? t.registration.alerts.submitButtonTeamRegistered
                             : approvedPlayer
-                              ? `${t.registration.buttons.register} ${typeLabel}`
+                              ? (summary.participantType === "player" 
+                                  ? (lang === "uk" ? "Зареєструвати гравця" : "Register Player")
+                                  : (lang === "uk" ? "Зареєструвати команду" : "Register Team"))
                               : userProfile
                                 ? applicationStatus === "pending"
                                   ? t.registration.buttons.playerPending
                                   : t.registration.buttons.playerRequired
                                 : t.registration.buttons.loginToRegister
                   }
-                  processingText={lang === "uk" ? "Обробка..." : "Processing..."}
+                  processingText={t.registration.alerts.processingText}
                 />
               </div>
             </form>
           </div>
         </div>
       </div>
+      <PlayerOnboardingModal
+        userProfile={userProfile}
+        hasApprovedPlayer={Boolean(approvedPlayer)}
+        hasApplication={Boolean(playerApplication && playerApplication.status === "pending")}
+        forceOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+      />
     </section>
   )
 }
@@ -571,9 +573,11 @@ function getCheckInCardClassName(tone: CheckInState["tone"]) {
 function PlayerApplicationState({
   status,
   lang,
+  onApplyClick,
 }: {
   status: "pending" | "approved" | "rejected" | null
   lang: "uk" | "en"
+  onApplyClick: () => void
 }) {
   const { t } = useLanguage()
 
@@ -585,7 +589,7 @@ function PlayerApplicationState({
         </p>
         <p className="mt-2 text-sm leading-6 text-white/70">
           {lang === "uk"
-            ? "Your player profile is waiting for admin approval."
+            ? "Ваша заявка гравця очікує на перевірку адміністратором."
             : "Your player profile is waiting for admin approval."}
         </p>
       </div>
@@ -594,27 +598,51 @@ function PlayerApplicationState({
 
   if (status === "rejected") {
     return (
-      <div className="sm:col-span-2 rounded-xl border border-red-300/25 bg-red-300/10 px-4 py-4">
-        <p className="text-sm font-semibold text-red-100">
-          {lang === "uk" ? "Профіль відхилено" : "Profile Application Rejected"}
-        </p>
-        <p className="mt-2 text-sm leading-6 text-white/70">
-          {lang === "uk"
-            ? "Your player profile application has been rejected by an admin. You cannot register."
-            : "Your player profile application has been rejected by an admin. You cannot register."}
-        </p>
+      <div className="sm:col-span-2 rounded-xl border border-red-300/25 bg-red-300/10 px-4 py-4 flex flex-col gap-4">
+        <div>
+          <p className="text-sm font-semibold text-red-100">
+            {lang === "uk" ? "Профіль відхилено" : "Profile Application Rejected"}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-white/70">
+            {lang === "uk"
+              ? "Ваша попередня заявка була відхилена адміністратором. Ви можете подати нову заявку."
+              : "Your previous player profile application has been rejected by an admin. You can submit a new application."}
+          </p>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={onApplyClick}
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-black transition hover:bg-primary/90 cursor-pointer shadow-[0_0_24px_rgba(0,200,150,0.18)]"
+          >
+            {t.playerOnboarding.apply}
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
-      <p className="text-sm font-semibold text-amber-100">
-        {t.registration.playerApplication.notFoundTitle}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-white/70">
-        {t.registration.playerApplication.notFoundMessage}
-      </p>
+    <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4 flex flex-col gap-4">
+      <div>
+        <p className="text-sm font-semibold text-amber-100">
+          {lang === "uk" ? "Необхідно створити профіль гравця" : "Player Profile Required"}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-white/70">
+          {lang === "uk"
+            ? "Ваш акаунт Discord підключено, але у вас ще немає схваленого профілю гравця або активної заявки. Подайте заявку зараз, щоб мати можливість реєструватися на турніри."
+            : "Your Discord account is connected, but you do not have an approved player profile or a pending application yet. Apply now to register for tournaments."}
+        </p>
+      </div>
+      <div>
+        <button
+          type="button"
+          onClick={onApplyClick}
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-black transition hover:bg-primary/90 cursor-pointer shadow-[0_0_24px_rgba(0,200,150,0.18)]"
+        >
+          {t.playerOnboarding.apply}
+        </button>
+      </div>
     </div>
   )
 }

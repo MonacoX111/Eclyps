@@ -10,17 +10,17 @@ export async function submitMatchDispute(formData: FormData) {
   const parsed = parseMatchDisputeFormData(formData)
 
   if (!parsed.ok) {
-    redirect(`/?disputeError=${parsed.error}#schedule`)
+    redirect(`/schedule?disputeError=${parsed.error}#schedule`)
   }
 
   const userProfile = await getCurrentUserProfile()
   if (!userProfile) {
-    redirect("/?disputeError=discord-login-required#schedule")
+    redirect("/schedule?disputeError=discord-login-required#schedule")
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
-    redirect("/?disputeError=service-unavailable#schedule")
+    redirect("/schedule?disputeError=service-unavailable#schedule")
   }
 
   const { data: match, error: matchError } = await supabaseAdmin
@@ -30,7 +30,7 @@ export async function submitMatchDispute(formData: FormData) {
     .maybeSingle()
 
   if (matchError || !match?.id || !match.tournament_id) {
-    redirect("/?disputeError=invalid-match#schedule")
+    redirect("/schedule?disputeError=invalid-match#schedule")
   }
 
   const participantIds = [match.participant_1_id, match.participant_2_id].filter(
@@ -38,7 +38,7 @@ export async function submitMatchDispute(formData: FormData) {
   )
 
   if (participantIds.length === 0) {
-    redirect("/?disputeError=match-not-ready#schedule")
+    redirect("/schedule?disputeError=match-not-ready#schedule")
   }
 
   const { data: registration, error: registrationError } = await supabaseAdmin
@@ -53,11 +53,11 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (registrationError) {
     console.error("Failed to resolve dispute reporter registration:", registrationError)
-    redirect("/?disputeError=service-unavailable#schedule")
+    redirect("/schedule?disputeError=service-unavailable#schedule")
   }
 
   if (!registration?.participant_id) {
-    redirect("/?disputeError=not-match-participant#schedule")
+    redirect("/schedule?disputeError=not-match-participant#schedule")
   }
 
   const participantType = match.participant_type === "player" ? "player" : "team"
@@ -75,7 +75,7 @@ export async function submitMatchDispute(formData: FormData) {
   })
 
   if (!ownsParticipant) {
-    redirect("/?disputeError=ownership-required#schedule")
+    redirect("/schedule?disputeError=ownership-required#schedule")
   }
 
   const { data: existingDispute, error: existingError } = await supabaseAdmin
@@ -89,11 +89,11 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (existingError) {
     console.error("Failed to check duplicate dispute:", existingError)
-    redirect("/?disputeError=service-unavailable#schedule")
+    redirect("/schedule?disputeError=service-unavailable#schedule")
   }
 
   if (existingDispute) {
-    redirect("/?disputeError=duplicate-open#schedule")
+    redirect("/schedule?disputeError=duplicate-open#schedule")
   }
 
   const { error } = await supabaseAdmin.from("match_disputes").insert({
@@ -115,16 +115,17 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (error) {
     if (error.code === "23505") {
-      redirect("/?disputeError=duplicate-open#schedule")
+      redirect("/schedule?disputeError=duplicate-open#schedule")
     }
 
     console.error("Failed to submit match dispute:", error)
-    redirect("/?disputeError=service-unavailable#schedule")
+    redirect("/schedule?disputeError=service-unavailable#schedule")
   }
 
   revalidatePath("/")
+  revalidatePath("/schedule")
   revalidatePath("/admin")
-  redirect("/?disputeSuccess=submitted#schedule")
+  redirect("/schedule?disputeSuccess=submitted#schedule")
 }
 
 async function verifyReporterOwnership({

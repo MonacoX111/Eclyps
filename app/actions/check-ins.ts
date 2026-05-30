@@ -10,19 +10,19 @@ export async function checkInTournament(formData: FormData) {
   const tournamentId = readFormString(formData.get("tournament_id"))
 
   if (!tournamentId) {
-    redirect("/?checkInError=invalid-tournament#registration")
+    redirect("/registration?checkInError=invalid-tournament#registration")
   }
 
   const userProfile = await getCurrentUserProfile()
 
   if (!userProfile) {
-    redirect("/?checkInError=discord-login-required#registration")
+    redirect("/registration?checkInError=discord-login-required#registration")
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
 
   if (!supabaseAdmin) {
-    redirect("/?checkInError=service-unavailable#registration")
+    redirect("/registration?checkInError=service-unavailable#registration")
   }
 
   const { data: registration, error: registrationError } = await supabaseAdmin
@@ -37,19 +37,19 @@ export async function checkInTournament(formData: FormData) {
 
   if (registrationError) {
     console.error("Failed to resolve registration for check-in:", registrationError)
-    redirect("/?checkInError=service-unavailable#registration")
+    redirect("/registration?checkInError=service-unavailable#registration")
   }
 
   if (!registration) {
-    redirect("/?checkInError=registration-required#registration")
+    redirect("/registration?checkInError=registration-required#registration")
   }
 
   if (registration.status !== "approved" || !registration.participant_id) {
-    redirect("/?checkInError=registration-pending#registration")
+    redirect("/registration?checkInError=registration-pending#registration")
   }
 
   if (registration.check_in_status === "checked_in") {
-    redirect("/?checkInSuccess=already-checked-in#registration")
+    redirect("/registration?checkInSuccess=already-checked-in#registration")
   }
 
   const { data: tournament, error: tournamentError } = await supabaseAdmin
@@ -59,15 +59,15 @@ export async function checkInTournament(formData: FormData) {
     .maybeSingle()
 
   if (tournamentError || !tournament) {
-    redirect("/?checkInError=invalid-tournament#registration")
+    redirect("/registration?checkInError=invalid-tournament#registration")
   }
 
   if (tournament.status !== "upcoming") {
-    redirect("/?checkInError=check-in-closed#registration")
+    redirect("/registration?checkInError=check-in-closed#registration")
   }
 
   if (tournament.participant_type !== registration.participant_type) {
-    redirect("/?checkInError=ownership-required#registration")
+    redirect("/registration?checkInError=ownership-required#registration")
   }
 
   const windowState = getCheckInWindowStateUtc({
@@ -78,8 +78,8 @@ export async function checkInTournament(formData: FormData) {
   if (windowState !== "open") {
     redirect(
       windowState === "soon"
-        ? "/?checkInError=check-in-not-open#registration"
-        : "/?checkInError=check-in-closed#registration",
+        ? "/registration?checkInError=check-in-not-open#registration"
+        : "/registration?checkInError=check-in-closed#registration",
     )
   }
 
@@ -92,7 +92,7 @@ export async function checkInTournament(formData: FormData) {
   })
 
   if (!ownsRegistration) {
-    redirect("/?checkInError=ownership-required#registration")
+    redirect("/registration?checkInError=ownership-required#registration")
   }
 
   const nowIso = new Date().toISOString()
@@ -112,16 +112,17 @@ export async function checkInTournament(formData: FormData) {
 
   if (updateError) {
     console.error("Failed to check in registration:", updateError)
-    redirect("/?checkInError=service-unavailable#registration")
+    redirect("/registration?checkInError=service-unavailable#registration")
   }
 
   if (!checkedInRegistration) {
-    redirect("/?checkInSuccess=already-checked-in#registration")
+    redirect("/registration?checkInSuccess=already-checked-in#registration")
   }
 
   revalidatePath("/")
+  revalidatePath("/registration")
   revalidatePath("/admin")
-  redirect("/?checkInSuccess=checked-in#registration")
+  redirect("/registration?checkInSuccess=checked-in#registration")
 }
 
 async function verifyOwnership({

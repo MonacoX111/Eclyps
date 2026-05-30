@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { Check, Calendar, UserCheck, ShieldAlert, Users, Bell, Inbox } from "lucide-react"
 import { markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
+import { useLanguage } from "@/components/language-provider"
 
 type AccountNotificationsListProps = {
   initialNotifications: NotificationRow[]
 }
 
 export function AccountNotificationsList({ initialNotifications }: AccountNotificationsListProps) {
+  const { t, lang } = useLanguage()
   const [notifications, setNotifications] = useState<NotificationRow[]>(initialNotifications)
 
   const unreadNotifications = notifications.filter((n) => !n.read_at)
@@ -68,13 +70,13 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
-        <h3 className="text-lg font-bold tracking-wide text-white">Latest Notifications</h3>
+        <h3 className="text-lg font-bold tracking-wide text-white">{t.account.notifications.latestTitle}</h3>
         {unreadNotifications.length > 0 && (
           <button
             onClick={handleMarkAllAsRead}
             className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
           >
-            Mark all read
+            {t.account.notifications.markAllRead}
           </button>
         )}
       </div>
@@ -85,8 +87,8 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
             <Inbox className="h-6 w-6" />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-white/80">No Notifications</span>
-            <span className="text-xs text-white/40 max-w-48 mx-auto">You're all caught up!</span>
+            <span className="text-sm font-semibold text-white/80">{t.account.notifications.noNotifications}</span>
+            <span className="text-xs text-white/40 max-w-48 mx-auto">{t.account.notifications.allCaughtUp}</span>
           </div>
         </div>
       ) : (
@@ -116,7 +118,7 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
                       {notification.title}
                     </span>
                     <span className="text-[9px] text-white/30 shrink-0">
-                      {formatTimeAgo(notification.created_at)}
+                      {formatTimeAgo(notification.created_at, t, lang)}
                     </span>
                   </div>
                   <p className="text-[11px] text-white/60 leading-relaxed break-words pr-2">
@@ -129,7 +131,7 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
                   <button
                     onClick={() => handleMarkAsRead(notification.id)}
                     className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-white/10 text-white/30 hover:text-emerald-400 transition cursor-pointer"
-                    title="Mark as read"
+                    title={t.account.notifications.markReadTooltip}
                   >
                     <Check className="h-3.5 w-3.5" />
                   </button>
@@ -143,22 +145,22 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
   )
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, t: any, lang: string): string {
   try {
     const past = new Date(dateStr)
     const now = new Date()
     const diffMs = now.getTime() - past.getTime()
 
-    if (diffMs < 60000) return "just now"
+    if (diffMs < 60000) return t.account.notifications.timeJustNow
     const diffMins = Math.floor(diffMs / 60000)
-    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffMins < 60) return `${diffMins}${t.account.notifications.timeMinsAgo}`
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffHours < 24) return `${diffHours}${t.account.notifications.timeHoursAgo}`
     const diffDays = Math.floor(diffHours / 24)
-    if (diffDays === 1) return "yesterday"
-    if (diffDays < 7) return `${diffDays}d ago`
+    if (diffDays === 1) return t.account.notifications.timeYesterday
+    if (diffDays < 7) return `${diffDays}${t.account.notifications.timeDaysAgo}`
 
-    return past.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    return past.toLocaleDateString(lang === "uk" ? "uk-UA" : "en-US", { month: "short", day: "numeric" })
   } catch {
     return ""
   }

@@ -24,7 +24,7 @@ export function CreateTeamModal({
   initialError,
   initialSuccess,
 }: CreateTeamModalProps) {
-  const { lang } = useLanguage()
+  const { t, lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -35,16 +35,16 @@ export function CreateTeamModal({
   useEffect(() => {
     if (initialError) {
       const messages: Record<string, string> = {
-        "discord-login-required": "You must log in with Discord first to create a team.",
-        "invalid-team-name": "Team name must be between 2 and 50 characters long.",
-        "player-profile-not-found": "Your global player profile could not be found. Try logging out and back in.",
-        "player-approval-required": "Your player profile is pending admin approval. You can create a team once verified!",
-        "duplicate-team-slug": "A team with a similar name already exists. Try a different name!",
-        "duplicate-team-ownership": "You already own a team with this name.",
-        "mutation-failed": "Failed to create team. Please try again.",
-        "admin-client-unavailable": "Database service is temporarily unavailable. Try again later.",
+        "discord-login-required": t.account.createTeam.errors.discordLogin,
+        "invalid-team-name": t.account.createTeam.errors.invalidName,
+        "player-profile-not-found": t.account.createTeam.errors.profileNotFound,
+        "player-approval-required": t.account.createTeam.errors.approvalRequired,
+        "duplicate-team-slug": t.account.createTeam.errors.duplicateSlug,
+        "duplicate-team-ownership": t.account.createTeam.errors.duplicateOwnership,
+        "mutation-failed": t.account.createTeam.errors.mutationFailed,
+        "admin-client-unavailable": t.account.createTeam.errors.unavailable,
       }
-      setErrorMessage(messages[initialError] ?? "Failed to create team. Please try again.")
+      setErrorMessage(messages[initialError] ?? t.account.createTeam.errors.mutationFailed)
       // Open modal if error is related to inputs
       if (initialError === "invalid-team-name" || initialError === "duplicate-team-slug") {
         setIsOpen(true)
@@ -62,7 +62,7 @@ export function CreateTeamModal({
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [initialError, initialSuccess, lang])
+  }, [initialError, initialSuccess, lang, t])
 
   return (
     <div className={`relative flex flex-col items-center ${isOpen ? "z-[100]" : "z-20"}`}>
@@ -86,15 +86,15 @@ export function CreateTeamModal({
             onClick={() => setIsOpen(true)}
             className="rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-emerald-300 cursor-pointer shadow-lg shadow-emerald-950/40"
           >
-            Create a Team
+            {t.account.createTeam.buttonLabel}
           </button>
         ) : (
           <button
             disabled
             className="rounded-xl border border-white/5 bg-white/[0.02] px-6 py-3 text-sm font-semibold text-white/40 cursor-not-allowed"
-            title="Wait for player profile approval"
+            title={lang === "uk" ? "Зачекайте на схвалення профілю гравця" : "Wait for player profile approval"}
           >
-            Create Team (Verification Required)
+            {t.account.createTeam.buttonDisabledLabel}
           </button>
         )
       ) : (
@@ -102,7 +102,7 @@ export function CreateTeamModal({
           href="/#registration"
           className="rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:text-white"
         >
-          Login with Discord to Create a Team
+          {t.account.createTeam.buttonLoginLabel}
         </a>
       )}
 
@@ -139,13 +139,13 @@ export function CreateTeamModal({
 
               <div className="relative">
                 <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">
-                  Global Teams
+                  {lang === "uk" ? "Глобальні Команди" : "Global Teams"}
                 </p>
                 <h2 className="mt-3 text-2xl font-bold text-white">
-                  Create Persistent Team
+                  {t.account.createTeam.modalTitle}
                 </h2>
                 <p className="mt-2 text-sm text-white/55 leading-6">
-                  Create a global team profile. As the creator, you will automatically be assigned as the team's Owner and Captain.
+                  {t.account.createTeam.modalDesc}
                 </p>
 
                 {errorMessage && (
@@ -156,25 +156,25 @@ export function CreateTeamModal({
 
                 <form action={createGlobalTeam} className="mt-6 grid gap-4" onSubmit={() => setErrorMessage(null)}>
                   <label className="space-y-2 text-sm text-white/75">
-                    <span className="block font-medium">Team Name</span>
+                    <span className="block font-medium">{t.account.createTeam.teamNameLabel}</span>
                     <input
                       name="name"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter a unique team name..."
+                      placeholder={t.account.createTeam.teamNamePlaceholder}
                       className={inputClassName}
                     />
                   </label>
 
                   <label className="space-y-2 text-sm text-white/75">
-                    <span className="block font-medium">Logo URL (Optional)</span>
+                    <span className="block font-medium">{t.account.createTeam.logoUrlLabel}</span>
                     <input
                       name="logo_url"
                       type="url"
                       value={logoUrl}
                       onChange={(e) => setLogoUrl(e.target.value)}
-                      placeholder="https://example.com/logo.png"
+                      placeholder={t.account.createTeam.logoUrlPlaceholder}
                       className={inputClassName}
                     />
                   </label>
@@ -184,7 +184,7 @@ export function CreateTeamModal({
                       type="submit"
                       className="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-black transition hover:bg-emerald-300 cursor-pointer"
                     >
-                      Create Team
+                      {t.account.createTeam.buttonLabel}
                     </button>
                     <button
                       type="button"
@@ -194,7 +194,7 @@ export function CreateTeamModal({
                       }}
                       className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 transition hover:border-white/20 hover:text-white cursor-pointer"
                     >
-                      Cancel
+                      {t.account.createTeam.cancelButton}
                     </button>
                   </div>
                 </form>

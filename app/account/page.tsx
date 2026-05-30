@@ -19,6 +19,7 @@ import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getUserNotifications } from "@/lib/notifications/actions"
 import { getHomepageData } from "@/lib/data/homepage"
+import { getTranslations } from "@/lib/i18n/server"
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -82,12 +83,13 @@ async function AccountDashboard({
   userProfileId: string
   userProfileAvatarUrl: string | null
 }) {
+  const t = await getTranslations()
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
     return (
       <div className="mx-auto max-w-lg mt-20 p-6 glass-card rounded-2xl text-center">
-        <h2 className="text-xl font-bold text-white">Service Unavailable</h2>
-        <p className="text-sm text-white/60 mt-2">Database connections are temporarily offline.</p>
+        <h2 className="text-xl font-bold text-white">{t.account.serviceUnavailable}</h2>
+        <p className="text-sm text-white/60 mt-2">{t.account.dbOffline}</p>
       </div>
     )
   }
@@ -102,9 +104,9 @@ async function AccountDashboard({
   if (playerError || !player) {
     return (
       <div className="mx-auto max-w-lg mt-20 p-6 glass-card rounded-2xl text-center border border-white/5 shadow-2xl">
-        <h2 className="text-xl font-bold text-white">Player Profile Missing</h2>
+        <h2 className="text-xl font-bold text-white">{t.account.profileMissing}</h2>
         <p className="text-sm text-white/60 mt-2">
-          Your global player profile is missing. Please try logging out and back in to re-sync your account.
+          {t.account.profileMissingDesc}
         </p>
       </div>
     )
@@ -138,9 +140,9 @@ async function AccountDashboard({
 
   if (memberships) {
     for (const m of memberships) {
-      const t = m.teams as any
-      if (t) {
-        const existing = teamMap.get(t.id)
+      const teamObj = m.teams as any
+      if (teamObj) {
+        const existing = teamMap.get(teamObj.id)
         // Highest role takes precedence: Owner > Captain > Member
         const role = existing?.role === "Owner"
           ? "Owner"
@@ -148,10 +150,10 @@ async function AccountDashboard({
             ? "Captain"
             : "Member"
 
-        teamMap.set(t.id, {
-          id: t.id,
-          name: t.name,
-          status: t.status || "approved",
+        teamMap.set(teamObj.id, {
+          id: teamObj.id,
+          name: teamObj.name,
+          status: teamObj.status || "approved",
           role,
         })
       }
@@ -178,7 +180,7 @@ async function AccountDashboard({
   const notifications = await getUserNotifications()
 
   // Sizing and styling tokens
-  const statusBadge = (status: string) => {
+  const statusBadgeClass = (status: string) => {
     switch (status) {
       case "approved":
         return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -189,7 +191,7 @@ async function AccountDashboard({
     }
   }
 
-  const roleBadge = (role: string) => {
+  const roleBadgeClass = (role: string) => {
     switch (role) {
       case "Owner":
         return "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20 font-bold"
@@ -206,19 +208,19 @@ async function AccountDashboard({
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-400">
-            Player Dashboard
+            {t.account.dashboard}
           </p>
           <h1 className="glow-text mt-2 text-3xl font-extrabold text-white md:text-4xl">
-            Welcome back, {player.nickname || player.name}
+            {t.account.welcomeBack}, {player.nickname || player.name}
           </h1>
-          <p className="text-xs text-white/50 mt-1">Manage your profiles, roster participations, and registrations.</p>
+          <p className="text-xs text-white/50 mt-1">{t.account.manageDescription}</p>
         </div>
         <div className="shrink-0">
           <Link
             href={`/players/${player.id}`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white/80 hover:text-white hover:border-white/20 transition cursor-pointer"
           >
-            <span>View Public Profile</span>
+            <span>{t.account.viewPublicProfile}</span>
             <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
@@ -235,22 +237,24 @@ async function AccountDashboard({
                 <h2 className="text-lg font-bold text-white leading-tight">
                   {player.display_name}
                 </h2>
-                <div className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider uppercase ${statusBadge(player.status)}`}>
-                  {player.status || "pending"}
+                <div className={`mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider uppercase ${statusBadgeClass(player.status || "pending")}`}>
+                  {(player.status === "approved" || player.status === "rejected" || player.status === "pending")
+                    ? t.profile.meta[player.status as "approved" | "rejected" | "pending"]
+                    : (player.status || t.profile.meta.pending)}
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-4">
               <div className="space-y-1">
-                <span className="block text-[10px] uppercase tracking-wider text-white/40">ELO Rating</span>
+                <span className="block text-[10px] uppercase tracking-wider text-white/40">{t.account.eloRating}</span>
                 <span className="block text-lg font-extrabold text-white flex items-center gap-1.5">
                   <Trophy className="h-4 w-4 text-amber-400" />
                   {player.rating ?? 1000}
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="block text-[10px] uppercase tracking-wider text-white/40">Record (W-L)</span>
+                <span className="block text-[10px] uppercase tracking-wider text-white/40">{t.account.record}</span>
                 <span className="block text-lg font-extrabold text-white">
                   {player.wins ?? 0} <span className="text-white/40 text-sm">/</span> {player.losses ?? 0}
                 </span>
@@ -260,20 +264,20 @@ async function AccountDashboard({
             <div className="space-y-3.5 text-xs text-white/70">
               {player.real_name && (
                 <div className="flex justify-between items-center">
-                  <span className="text-white/40">Real Name</span>
+                  <span className="text-white/40">{t.account.realName}</span>
                   <span className="font-semibold text-white">{player.real_name}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-white/40">Region</span>
+                <span className="text-white/40">{t.account.region}</span>
                 <span className="font-semibold text-white flex items-center gap-1">
                   <Globe className="h-3.5 w-3.5 text-white/50" />
-                  {player.region || "Not specified"}
+                  {player.region || t.account.notSpecified}
                 </span>
               </div>
               {player.seed !== null && (
                 <div className="flex justify-between items-center">
-                  <span className="text-white/40">Global Seed</span>
+                  <span className="text-white/40">{t.account.globalSeed}</span>
                   <span className="font-semibold text-primary font-mono">#{player.seed}</span>
                 </div>
               )}
@@ -296,8 +300,8 @@ async function AccountDashboard({
           <div className="glass-card rounded-2xl border border-white/5 p-6">
             <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">My Teams</h3>
-                <p className="text-xs text-white/40 mt-0.5">Rosters and teams you are registered with.</p>
+                <h3 className="text-lg font-bold text-white">{t.account.myTeams}</h3>
+                <p className="text-xs text-white/40 mt-0.5">{t.account.teamsDescription}</p>
               </div>
               <div className="shrink-0">
                 <CreateTeamModal
@@ -309,83 +313,105 @@ async function AccountDashboard({
 
             {teamsList.length === 0 ? (
               <div className="py-8 text-center text-xs text-white/45">
-                You are not registered in any team yet.
+                {t.account.noTeams}
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {teamsList.map((team) => (
-                  <Link
-                    key={team.id}
-                    href={`/teams/${team.id}`}
-                    className="p-4 rounded-xl border border-white/5 bg-white/2 hover:bg-white/5 transition flex items-center justify-between"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <span className="block font-bold text-white truncate text-sm hover:text-primary transition">
-                        {team.name}
-                      </span>
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${roleBadge(team.role)}`}>
-                          {team.role}
+                {teamsList.map((team) => {
+                  const displayRole = team.role === "Owner"
+                    ? t.profile.meta.owner
+                    : team.role === "Captain"
+                      ? t.profile.meta.captain
+                      : t.profile.meta.member;
+
+                  const displayTeamStatus = (team.status === "approved" || team.status === "rejected" || team.status === "pending")
+                    ? t.profile.meta[team.status as "approved" | "rejected" | "pending"]
+                    : (team.status || t.profile.meta.pending);
+
+                  return (
+                    <Link
+                      key={team.id}
+                      href={`/teams/${team.id}`}
+                      className="p-4 rounded-xl border border-white/5 bg-white/2 hover:bg-white/5 transition flex items-center justify-between"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="block font-bold text-white truncate text-sm hover:text-primary transition">
+                          {team.name}
                         </span>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${statusBadge(team.status)}`}>
-                          {team.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${roleBadgeClass(team.role)}`}>
+                            {displayRole}
+                          </span>
+                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${statusBadgeClass(team.status)}`}>
+                            {displayTeamStatus}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />
-                  </Link>
-                ))}
+                      <ChevronRight className="h-4 w-4 text-white/20 shrink-0" />
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>
 
           {/* Card: My Registrations */}
           <div className="glass-card rounded-2xl border border-white/5 p-6">
-            <h3 className="text-lg font-bold text-white border-b border-white/5 pb-3.5 mb-4">My Tournament Registrations</h3>
+            <h3 className="text-lg font-bold text-white border-b border-white/5 pb-3.5 mb-4">{t.account.myRegistrations}</h3>
 
             {registrations && registrations.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="text-white/40 uppercase tracking-wider border-b border-white/5">
-                      <th className="pb-3 font-semibold">Tournament</th>
-                      <th className="pb-3 font-semibold">Type</th>
-                      <th className="pb-3 font-semibold">Status</th>
-                      <th className="pb-3 font-semibold text-right">Bracket Placement</th>
+                      <th className="pb-3 font-semibold">{t.account.tableTournament}</th>
+                      <th className="pb-3 font-semibold">{t.account.tableType}</th>
+                      <th className="pb-3 font-semibold">{t.account.tableStatus}</th>
+                      <th className="pb-3 font-semibold text-right">{t.account.tableBracket}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {registrations.map((reg: any) => (
-                      <tr key={reg.id} className="text-white/80 hover:bg-white/[0.01] transition">
-                        <td className="py-3.5 font-bold text-white">
-                          {reg.tournaments?.name || "Tournament"}
-                        </td>
-                        <td className="py-3.5 capitalize">{reg.registration_type || "player"}</td>
-                        <td className="py-3.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadge(reg.status)}`}>
-                            {reg.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-right font-medium">
-                          {reg.status === "approved" && reg.participant_id ? (
-                            <span className="text-emerald-400 flex items-center justify-end gap-1 font-semibold">
-                              <UserCheck className="h-3.5 w-3.5" />
-                              Active Participant
+                    {registrations.map((reg: any) => {
+                      const displayRegType = reg.registration_type === "team"
+                        ? t.profile.meta.team
+                        : t.profile.meta.player;
+
+                      const displayRegStatus = (reg.status === "approved" || reg.status === "rejected" || reg.status === "pending")
+                        ? t.profile.meta[reg.status as "approved" | "rejected" | "pending"]
+                        : (reg.status || t.profile.meta.pending);
+
+                      return (
+                        <tr key={reg.id} className="text-white/80 hover:bg-white/[0.01] transition">
+                          <td className="py-3.5 font-bold text-white">
+                            {reg.tournaments?.name || t.profile.meta.tournament}
+                          </td>
+                          <td className="py-3.5 capitalize">{displayRegType}</td>
+                          <td className="py-3.5">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadgeClass(reg.status)}`}>
+                              {displayRegStatus}
                             </span>
-                          ) : reg.status === "approved" ? (
-                            <span className="text-emerald-400/60 font-medium">Linked</span>
-                          ) : (
-                            <span className="text-white/30">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3.5 text-right font-medium">
+                            {reg.status === "approved" && reg.participant_id ? (
+                              <span className="text-emerald-400 flex items-center justify-end gap-1 font-semibold">
+                                <UserCheck className="h-3.5 w-3.5" />
+                                {t.account.activeParticipant}
+                              </span>
+                            ) : reg.status === "approved" ? (
+                              <span className="text-emerald-400/60 font-medium">{t.account.linked}</span>
+                            ) : (
+                              <span className="text-white/30">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             ) : (
               <div className="py-8 text-center text-xs text-white/45">
-                You have not registered for any tournaments yet.
+                {t.account.noRegistrations}
               </div>
             )}
           </div>
