@@ -11,12 +11,14 @@ import { Results } from "@/components/results"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
 import type { PublicProfileData } from "@/lib/data/profiles"
+import type { UserProfile } from "@/lib/auth/user-profile"
 
 type PublicProfilePageProps = {
   data: PublicProfileData
+  userProfile?: UserProfile | null
 }
 
-export function PublicProfilePage({ data }: PublicProfilePageProps) {
+export function PublicProfilePage({ data, userProfile = null }: PublicProfilePageProps) {
   const { t } = useLanguage()
   const { profile } = data
   const isTeam = profile.kind === "team"
@@ -30,7 +32,7 @@ export function PublicProfilePage({ data }: PublicProfilePageProps) {
     <main className="relative min-h-screen overflow-x-hidden">
       <ParticleField />
       <MotionProvider>
-        <Navbar homeHref="/" navHrefPrefix="/" participantLabel="Teams" />
+        <Navbar homeHref="/" navHrefPrefix="/" participantLabel="Teams" userProfile={userProfile} />
         <section className="relative z-10 px-4 pb-16 pt-28 md:pt-36">
           <div className="mx-auto max-w-6xl">
             <Link
@@ -302,7 +304,15 @@ export function PublicProfileLoading() {
   )
 }
 
-export function PublicProfileError({ message, kind = "team" }: { message: string; kind?: "team" | "player" }) {
+export function PublicProfileError({
+  message,
+  kind = "team",
+  userProfile = null,
+}: {
+  message: string
+  kind?: "team" | "player"
+  userProfile?: UserProfile | null
+}) {
   const { t } = useLanguage()
   const eyebrow = kind === "player" ? t.profile.playerProfile : t.profile.teamProfile
 
@@ -310,7 +320,7 @@ export function PublicProfileError({ message, kind = "team" }: { message: string
     <main className="relative min-h-screen overflow-x-hidden">
       <ParticleField />
       <MotionProvider>
-        <Navbar homeHref="/" navHrefPrefix="/" participantLabel={kind === "player" ? "Players" : "Teams"} />
+        <Navbar homeHref="/" navHrefPrefix="/" participantLabel={kind === "player" ? "Players" : "Teams"} userProfile={userProfile} />
         <ProfileSectionEmpty
           eyebrow={eyebrow}
           title={t.profile.somethingWentOffline}

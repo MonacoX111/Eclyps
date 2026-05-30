@@ -18,15 +18,17 @@ export default async function PlayerProfilePage({
   params,
 }: PlayerProfilePageProps) {
   const { id } = await params
-  const data = await getPublicPlayerProfile(id)
+  const [data, userProfile] = await Promise.all([
+    getPublicPlayerProfile(id),
+    getCurrentUserProfile(),
+  ])
 
   if (!data) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} kind="player" />
+    return <PublicProfileError message={message} kind="player" userProfile={userProfile} />
   }
 
-  const userProfile = await getCurrentUserProfile()
   const isOwner = userProfile && userProfile.auth_user_id === data.profile.user_id
   const playerStatus = data.profile.status ?? "approved"
 
@@ -35,7 +37,7 @@ export default async function PlayerProfilePage({
   if (playerStatus !== "approved" && !isOwner) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} kind="player" />
+    return <PublicProfileError message={message} kind="player" userProfile={userProfile} />
   }
 
   let teams: TeamItem[] = []
@@ -149,7 +151,7 @@ export default async function PlayerProfilePage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <PublicProfilePage data={data} />
+      <PublicProfilePage data={data} userProfile={userProfile} />
       
       {isOwner && (
         <PlayerDashboard

@@ -22,15 +22,17 @@ type TeamProfilePageProps = {
 export default async function TeamProfilePage({ params, searchParams }: TeamProfilePageProps) {
   const { id } = await params
   const resolvedParams = await searchParams
-  const data = await getPublicTeamProfile(id)
+  const [data, userProfile] = await Promise.all([
+    getPublicTeamProfile(id),
+    getCurrentUserProfile(),
+  ])
 
   if (!data) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль команди недоступний." : "This team profile is not available."
-    return <PublicProfileError message={message} />
+    return <PublicProfileError message={message} userProfile={userProfile} />
   }
 
-  const userProfile = await getCurrentUserProfile()
   let isManager = false
   const ownerPlayerId = data.profile.owner_player_id ?? null
   const teamStatus = data.profile.status ?? "approved"
@@ -57,12 +59,12 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   if (teamStatus !== "approved" && !isManager) {
     const lang = await getLanguage()
     const message = lang === "uk" ? "Цей профіль команди недоступний." : "This team profile is not available."
-    return <PublicProfileError message={message} />
+    return <PublicProfileError message={message} userProfile={userProfile} />
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <PublicProfilePage data={data} />
+      <PublicProfilePage data={data} userProfile={userProfile} />
       
       <TeamRosterManager
         teamId={id}
