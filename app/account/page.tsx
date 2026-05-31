@@ -367,6 +367,9 @@ async function AccountDashboard({
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">{t.account.dashboard}</p>
               <h1 className="glow-text mt-2 truncate text-4xl font-black text-white sm:text-5xl">{displayName}</h1>
+              {player.real_name && player.real_name.trim() && player.real_name.trim().toLowerCase() !== displayName.trim().toLowerCase() && (
+                <p className="mt-1 truncate text-sm font-medium text-white/80">{player.real_name.trim()}</p>
+              )}
               <p className="mt-2 truncate text-sm text-white/60">{t.account.discordLabel}: {userProfile.discord_username}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider ${statusBadgeClass(player.status || "pending")}`}>
