@@ -153,15 +153,17 @@ export async function reviewPlayer(formData: FormData) {
         ? `Your player profile "${player.name}" has been approved.`
         : `Your player profile "${player.name}" has been rejected.`
 
-      createNotification({
-        userProfileId: player.owner_user_id,
-        playerId: parsedId.data.id,
-        type,
-        title,
-        message,
-      }).catch((err) => {
+      try {
+        await createNotification({
+          userProfileId: player.owner_user_id,
+          playerId: parsedId.data.id,
+          type,
+          title,
+          message,
+        })
+      } catch (err) {
         console.error("Failed to create player review notification:", err)
-      })
+      }
     }
   }
 

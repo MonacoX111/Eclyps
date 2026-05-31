@@ -85,72 +85,14 @@ export async function updateMatch(formData: FormData) {
 
   // Trigger match_scheduled notification if the scheduled_at value actually changes!
   if (existingMatch && existingMatch.scheduled_at !== matchData.data.scheduled_at) {
-    const participantIds = [existingMatch.participant_1_id, existingMatch.participant_2_id].filter(Boolean) as string[]
-    if (participantIds.length > 0) {
-      // Execute asynchronously to ensure the admin action redirection is not blocked
-      (async () => {
-        try {
-          const { data: participants } = await supabaseAdmin
-            .from("participants")
-            .select("id, participant_type, source_player_id, source_team_id")
-            .in("id", participantIds)
-
-          if (participants && participants.length > 0) {
-            const playerSourceIds = participants.filter(p => p.participant_type === "player" && p.source_player_id).map(p => p.source_player_id) as string[]
-            const teamSourceIds = participants.filter(p => p.participant_type === "team" && p.source_team_id).map(p => p.source_team_id) as string[]
-
-            const [playersRes, teamsRes, tournamentRes] = await Promise.all([
-              playerSourceIds.length > 0
-                ? supabaseAdmin.from("players").select("id, owner_user_id").in("id", playerSourceIds)
-                : { data: [] },
-              teamSourceIds.length > 0
-                ? supabaseAdmin.from("teams").select("id, owner_user_id").in("id", teamSourceIds)
-                : { data: [] },
-              supabaseAdmin.from("tournaments").select("name").eq("id", existingMatch.tournament_id).maybeSingle()
-            ])
-
-            const playerOwnerMap = new Map((playersRes.data ?? []).map(p => [p.id, p.owner_user_id]))
-            const teamOwnerMap = new Map((teamsRes.data ?? []).map(t => [t.id, t.owner_user_id]))
-            const tName = tournamentRes.data?.name || "Tournament"
-
-            const formattedTime = formatMatchScheduleTime({
-              scheduledAt: matchData.data.scheduled_at,
-              timezone: matchData.data.timezone,
-              scheduleNote: matchData.data.schedule_note
-            })
-
-            for (const participant of participants) {
-              let ownerId: string | null = null
-              let pId: string | null = null
-              let tId: string | null = null
-
-              if (participant.participant_type === "player" && participant.source_player_id) {
-                ownerId = playerOwnerMap.get(participant.source_player_id) || null
-                pId = participant.source_player_id
-              } else if (participant.participant_type === "team" && participant.source_team_id) {
-                ownerId = teamOwnerMap.get(participant.source_team_id) || null
-                tId = participant.source_team_id
-              }
-
-              if (ownerId) {
-                await createNotification({
-                  userProfileId: ownerId,
-                  playerId: pId,
-                  teamId: tId,
-                  tournamentId: existingMatch.tournament_id,
-                  matchId: parsedId.data.id,
-                  type: "match_scheduled",
-                  title: "Match Scheduled",
-                  message: `Your match in round ${existingMatch.round || ""} of "${tName}" has been scheduled/updated: ${formattedTime}.`,
-                })
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Failed to generate match scheduled notifications:", err)
-        }
-      })()
-    }
+    await sendMatchScheduledNotifications(
+      supabaseAdmin,
+      parsedId.data.id,
+      existingMatch,
+      matchData.data.scheduled_at,
+      matchData.data.timezone,
+      matchData.data.schedule_note
+    )
   }
 
   revalidatePath("/admin")
@@ -248,4 +190,94 @@ function createScheduledAt(scheduleDate: string | null, scheduleTime: string | n
   if (!scheduleDate || !scheduleTime) return null
 
   return new Date(`${scheduleDate}T${scheduleTime}:00.000Z`).toISOString()
+}
+
+async function sendMatchScheduledNotifications(
+  supabaseAdmin: any,
+  matchId: string,
+  existingMatch: {
+    tournament_id: string
+    participant_1_id: string | null
+    participant_2_id: string | null
+    round: string | null
+  },
+  newScheduledAt: string | null,
+  newTimezone: string | null,
+  newScheduleNote: string | null
+) {
+  try {
+    const participantIds = [existingMatch.participant_1_id, existingMatch.participant_2_id].filter(Boolean) as string[]
+    if (participantIds.length === 0) return
+
+    const { data: participants } = await supabaseAdmin
+      .from("participants")
+      .select("id, participant_type, source_player_id, source_team_id")
+      .in("id", participantIds)
+
+    if (participants && participants.length > 0) {
+      const playerSourceIds = participants.filter((p: any) => p.participant_type === "player" && p.source_player_id).map((p: any) => p.source_player_id) as string[]
+      const teamSourceIds = participants.filter((p: any) => p.participant_type === "team" && p.source_team_id).map((p: any) => p.source_team_id) as string[]
+
+      const [playersRes, teamsRes, tournamentRes] = await Promise.all([
+        playerSourceIds.length > 0
+          ? supabaseAdmin.from("players").select("id, owner_user_id").in("id", playerSourceIds)
+          : { data: [] },
+        teamSourceIds.length > 0
+          ? supabaseAdmin.from("teams").select("id, owner_user_id").in("id", teamSourceIds)
+          : { data: [] },
+        supabaseAdmin.from("tournaments").select("name").eq("id", existingMatch.tournament_id).maybeSingle()
+      ])
+
+      const playerOwnerMap = new Map<string, string | null>(
+        (playersRes.data ?? []).map((p: any) => [p.id, p.owner_user_id])
+      )
+      const teamOwnerMap = new Map<string, string | null>(
+        (teamsRes.data ?? []).map((t: any) => [t.id, t.owner_user_id])
+      )
+      const tName = tournamentRes.data?.name || "Tournament"
+
+      const formattedTime = formatMatchScheduleTime({
+        scheduledAt: newScheduledAt,
+        timezone: newTimezone,
+        scheduleNote: newScheduleNote
+      })
+
+      const notificationPromises = []
+
+      for (const participant of participants) {
+        let ownerId: string | null = null
+        let pId: string | null = null
+        let tId: string | null = null
+
+        if (participant.participant_type === "player" && participant.source_player_id) {
+          ownerId = playerOwnerMap.get(participant.source_player_id) || null
+          pId = participant.source_player_id
+        } else if (participant.participant_type === "team" && participant.source_team_id) {
+          ownerId = teamOwnerMap.get(participant.source_team_id) || null
+          tId = participant.source_team_id
+        }
+
+        if (ownerId) {
+          notificationPromises.push(
+            createNotification({
+              userProfileId: ownerId,
+              playerId: pId,
+              teamId: tId,
+              tournamentId: existingMatch.tournament_id,
+              matchId,
+              type: "match_scheduled",
+              title: "Match Scheduled",
+              message: `Your match in round ${existingMatch.round || ""} of "${tName}" has been scheduled/updated: ${formattedTime}.`,
+            })
+          )
+        }
+      }
+
+      if (notificationPromises.length > 0) {
+        await Promise.allSettled(notificationPromises)
+      }
+    }
+  } catch (err) {
+    console.error("Failed to generate match scheduled notifications:", err)
+  }
 }

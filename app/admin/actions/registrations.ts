@@ -55,17 +55,19 @@ export async function reviewRegistration(formData: FormData) {
         .maybeSingle()
 
       const tName = tournament?.name || "Tournament"
-      createNotification({
-        userProfileId: registration.user_profile_id,
-        playerId: registration.player_id || registration.source_player_id,
-        teamId: registration.team_id || registration.source_team_id,
-        tournamentId: registration.tournament_id,
-        type: "registration_rejected",
-        title: "Registration Rejected",
-        message: `Your registration for "${tName}" was rejected.`,
-      }).catch((err) => {
+      try {
+        await createNotification({
+          userProfileId: registration.user_profile_id,
+          playerId: registration.player_id || registration.source_player_id,
+          teamId: registration.team_id || registration.source_team_id,
+          tournamentId: registration.tournament_id,
+          type: "registration_rejected",
+          title: "Registration Rejected",
+          message: `Your registration for "${tName}" was rejected.`,
+        })
+      } catch (err) {
         console.error("Failed to create registration rejection notification:", err)
-      })
+      }
     }
 
     revalidateRegistrationPaths()
@@ -109,17 +111,19 @@ export async function reviewRegistration(formData: FormData) {
       .maybeSingle()
 
     const tName = tournament?.name || "Tournament"
-    createNotification({
-      userProfileId: registration.user_profile_id,
-      playerId: registration.player_id || registration.source_player_id,
-      teamId: registration.team_id || registration.source_team_id,
-      tournamentId: registration.tournament_id,
-      type: "registration_approved",
-      title: "Registration Approved",
-      message: `Your registration for "${tName}" has been approved!`,
-    }).catch((err) => {
+    try {
+      await createNotification({
+        userProfileId: registration.user_profile_id,
+        playerId: registration.player_id || registration.source_player_id,
+        teamId: registration.team_id || registration.source_team_id,
+        tournamentId: registration.tournament_id,
+        type: "registration_approved",
+        title: "Registration Approved",
+        message: `Your registration for "${tName}" has been approved!`,
+      })
+    } catch (err) {
       console.error("Failed to create registration approval notification:", err)
-    })
+    }
   }
 
   revalidateRegistrationPaths()

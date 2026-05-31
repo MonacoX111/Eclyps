@@ -6,6 +6,7 @@ import { Bell, Check, Inbox, Calendar, UserCheck, ShieldAlert, Users, CheckCircl
 import { getUserNotifications, markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { useLanguage } from "@/components/language-provider"
+import { getLocalizedNotification } from "@/lib/notifications/localize"
 
 type NotificationsBellProps = {
   userProfile: UserProfile
@@ -191,6 +192,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                 <div className="divide-y divide-white/5">
                   {notifications.map((notification) => {
                     const isUnread = !notification.read_at
+                    const { title, message } = getLocalizedNotification(notification, lang)
                     return (
                       <div
                         key={notification.id}
@@ -211,14 +213,14 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                                 isUnread ? "font-bold text-white" : "font-medium text-white/70"
                               }`}
                             >
-                              {notification.title}
+                              {title}
                             </span>
                             <span className="text-[9px] text-white/30 shrink-0">
                               {formatTimeAgo(notification.created_at, t, lang)}
                             </span>
                           </div>
                           <p className="text-[11px] text-white/60 leading-relaxed break-words">
-                            {notification.message}
+                            {message}
                           </p>
                         </div>
 

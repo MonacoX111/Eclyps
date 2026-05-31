@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Check, Calendar, UserCheck, ShieldAlert, Users, Bell, Inbox, ChevronRight } from "lucide-react"
 import { markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
 import { useLanguage } from "@/components/language-provider"
+import { getLocalizedNotification } from "@/lib/notifications/localize"
 
 type AccountNotificationsListProps = {
   initialNotifications: NotificationRow[]
@@ -115,6 +116,7 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
         <div className="divide-y divide-white/5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
           {visibleNotifications.map((notification) => {
             const isUnread = !notification.read_at
+            const { title, message } = getLocalizedNotification(notification, lang)
             return (
               <div
                 key={notification.id}
@@ -135,14 +137,14 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
                         isUnread ? "font-bold text-white" : "font-medium text-white/70"
                       }`}
                     >
-                      {notification.title}
+                      {title}
                     </span>
                     <span className="text-[9px] text-white/30 shrink-0">
                       {formatTimeAgo(notification.created_at, t, lang)}
                     </span>
                   </div>
                   <p className="text-[11px] text-white/60 leading-relaxed break-words pr-2">
-                    {notification.message}
+                    {message}
                   </p>
                 </div>
 
