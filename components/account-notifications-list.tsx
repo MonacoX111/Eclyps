@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Calendar, UserCheck, ShieldAlert, Users, Bell, Inbox } from "lucide-react"
+import { Check, Calendar, UserCheck, ShieldAlert, Users, Bell, Inbox, ChevronRight } from "lucide-react"
 import { markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
 import { useLanguage } from "@/components/language-provider"
 
@@ -12,8 +12,10 @@ type AccountNotificationsListProps = {
 export function AccountNotificationsList({ initialNotifications }: AccountNotificationsListProps) {
   const { t, lang } = useLanguage()
   const [notifications, setNotifications] = useState<NotificationRow[]>(initialNotifications)
+  const [showAll, setShowAll] = useState(false)
 
   const unreadNotifications = notifications.filter((n) => !n.read_at)
+  const visibleNotifications = showAll ? notifications : notifications.slice(0, 5)
 
   const handleMarkAsRead = async (id: string) => {
     // Optimistic Update: immediately set read_at in local state
@@ -70,15 +72,33 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between border-b border-white/5 pb-3">
-        <h3 className="text-lg font-bold tracking-wide text-white">{t.account.notifications.latestTitle}</h3>
-        {unreadNotifications.length > 0 && (
-          <button
-            onClick={handleMarkAllAsRead}
-            className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
-          >
-            {t.account.notifications.markAllRead}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-bold tracking-wide text-white">{t.account.notifications.latestTitle}</h3>
+          {unreadNotifications.length > 0 && (
+            <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+              {unreadNotifications.length}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {notifications.length > 5 && (
+            <button
+              onClick={() => setShowAll((value) => !value)}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-white/55 hover:text-white transition cursor-pointer"
+            >
+              {showAll ? t.account.notifications.viewLess : t.account.notifications.viewAll}
+              <ChevronRight className={`h-3 w-3 transition ${showAll ? "rotate-90" : ""}`} />
+            </button>
+          )}
+          {unreadNotifications.length > 0 && (
+            <button
+              onClick={handleMarkAllAsRead}
+              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
+            >
+              {t.account.notifications.markAllRead}
+            </button>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (
@@ -92,8 +112,8 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
           </div>
         </div>
       ) : (
-        <div className="divide-y divide-white/5 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin">
-          {notifications.map((notification) => {
+        <div className="divide-y divide-white/5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+          {visibleNotifications.map((notification) => {
             const isUnread = !notification.read_at
             return (
               <div

@@ -29,20 +29,52 @@ export async function createGlobalTeam(formData: FormData) {
     redirect("/teams?teamError=admin-client-unavailable")
   }
 
-  // 1. Resolve the approved global player profile for the user
-  const { data: player, error: playerError } = await supabaseAdmin
+  // 1. Resolve approved global player profiles for the user
+  const { data: playerRows, error: playerError } = await supabaseAdmin
     .from("players")
     .select("id, status")
-    .eq("user_id", userProfile.auth_user_id)
-    .limit(1)
-    .maybeSingle()
+    .or(`user_id.eq.${userProfile.auth_user_id},owner_user_id.eq.${userProfile.id}`)
 
-  if (playerError || !player) {
+  const linkedPlayers = playerRows ?? []
+  const player = linkedPlayers.find((row) => row.status === "approved") ?? linkedPlayers[0]
+  const linkedPlayerIds = Array.from(new Set(linkedPlayers.map((row) => row.id).filter(Boolean)))
+
+  if (playerError || !player || linkedPlayerIds.length === 0) {
     redirect("/teams?teamError=player-profile-not-found")
   }
 
   if (player.status !== "approved") {
     redirect("/teams?teamError=player-approval-required")
+  }
+
+  const { data: managedOwnedTeams, error: managedOwnedError } = await supabaseAdmin
+    .from("teams")
+    .select("id, status")
+    .in("owner_player_id", linkedPlayerIds)
+
+  if (managedOwnedError) {
+    redirect("/teams?teamError=mutation-failed")
+  }
+
+  const ownsActiveTeam = (managedOwnedTeams ?? []).some((team) => team.status !== "archived")
+
+  const { data: managedCaptainMemberships, error: managedCaptainError } = await supabaseAdmin
+    .from("team_members")
+    .select("team_id, teams:teams(id, status)")
+    .in("player_id", linkedPlayerIds)
+    .eq("role", "captain")
+
+  if (managedCaptainError) {
+    redirect("/teams?teamError=mutation-failed")
+  }
+
+  const captainsActiveTeam = (managedCaptainMemberships ?? []).some((membership) => {
+    const team = membership.teams as { status?: string | null } | null
+    return Boolean(team) && team?.status !== "archived"
+  })
+
+  if (ownsActiveTeam || captainsActiveTeam) {
+    redirect("/teams?teamError=already-manages-team")
   }
 
   const slug = generateTeamSlug(name)
@@ -88,6 +120,8 @@ export async function createGlobalTeam(formData: FormData) {
       slug,
       logo_url: logoUrl?.trim() || null,
       owner_player_id: player.id,
+      owner_user_id: userProfile.id,
+      captain_user_id: userProfile.id,
       status: "pending",
       tournament_id: null,
       wins: 0,

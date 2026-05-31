@@ -3,7 +3,7 @@ import {
   PublicProfilePage,
 } from "@/components/public-profile-page"
 import { getPublicTeamProfile } from "@/lib/data/profiles"
-import { getLanguage } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { canManageTeam } from "@/lib/auth/permissions"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
@@ -44,7 +44,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
       const { data: player } = await supabaseAdmin
         .from("players")
         .select("id")
-        .eq("user_id", userProfile.auth_user_id)
+        .or(`user_id.eq.${userProfile.auth_user_id},owner_user_id.eq.${userProfile.id}`)
         .limit(1)
         .maybeSingle()
 
@@ -62,10 +62,12 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
     return <PublicProfileError message={message} userProfile={userProfile} />
   }
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <PublicProfilePage data={data} userProfile={userProfile} />
-      
+  const t = await getTranslations()
+  const rosterManagement = isManager ? (
+    <div className="mt-6">
+      <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
+        {t.account.roster.managerBadge}
+      </div>
       <TeamRosterManager
         teamId={id}
         isManager={isManager}
@@ -74,6 +76,14 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         initialError={resolvedParams?.rosterError}
         initialSuccess={resolvedParams?.rosterSuccess}
       />
+    </div>
+  ) : null
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <PublicProfilePage data={data} userProfile={userProfile}>
+        {rosterManagement}
+      </PublicProfilePage>
     </div>
   )
 }

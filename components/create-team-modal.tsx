@@ -14,6 +14,7 @@ const containerClassName =
 type CreateTeamModalProps = {
   hasApprovedPlayer: boolean
   isLoggedIn: boolean
+  alreadyManagesTeam?: boolean
   initialError?: string
   initialSuccess?: string
 }
@@ -21,6 +22,7 @@ type CreateTeamModalProps = {
 export function CreateTeamModal({
   hasApprovedPlayer,
   isLoggedIn,
+  alreadyManagesTeam = false,
   initialError,
   initialSuccess,
 }: CreateTeamModalProps) {
@@ -41,6 +43,7 @@ export function CreateTeamModal({
         "player-approval-required": t.account.createTeam.errors.approvalRequired,
         "duplicate-team-slug": t.account.createTeam.errors.duplicateSlug,
         "duplicate-team-ownership": t.account.createTeam.errors.duplicateOwnership,
+        "already-manages-team": t.account.createTeam.errors.alreadyManagesTeam,
         "mutation-failed": t.account.createTeam.errors.mutationFailed,
         "admin-client-unavailable": t.account.createTeam.errors.unavailable,
       }
@@ -81,7 +84,14 @@ export function CreateTeamModal({
 
       {/* Button to open the Modal */}
       {isLoggedIn ? (
-        hasApprovedPlayer ? (
+        alreadyManagesTeam ? (
+          <button
+            disabled
+            className="rounded-xl border border-emerald-400/15 bg-emerald-400/[0.03] px-6 py-3 text-sm font-semibold text-emerald-200/60 cursor-not-allowed"
+          >
+            {t.account.createTeam.buttonManagedLabel}
+          </button>
+        ) : hasApprovedPlayer ? (
           <button
             onClick={() => setIsOpen(true)}
             className="rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-emerald-300 cursor-pointer shadow-lg shadow-emerald-950/40"

@@ -27,18 +27,40 @@ export default async function TeamsPage({ searchParams }: PageProps) {
   const isLoggedIn = Boolean(userProfile)
 
   let hasApprovedPlayer = false
+  let alreadyManagesTeam = false
   if (userProfile) {
     const supabaseAdmin = createSupabaseAdminClient()
     if (supabaseAdmin) {
-      const { data } = await supabaseAdmin
+      const { data: playerRows } = await supabaseAdmin
         .from("players")
         .select("id, status")
-        .eq("user_id", userProfile.auth_user_id)
-        .limit(1)
-        .maybeSingle()
+        .or(`user_id.eq.${userProfile.auth_user_id},owner_user_id.eq.${userProfile.id}`)
 
-      if (data && data.status === "approved") {
+      const linkedPlayers = playerRows ?? []
+      const linkedPlayerIds = Array.from(new Set(linkedPlayers.map((player) => player.id).filter(Boolean)))
+
+      if (linkedPlayers.some((player) => player.status === "approved")) {
         hasApprovedPlayer = true
+      }
+
+      if (linkedPlayerIds.length > 0) {
+        const { data: ownedTeams } = await supabaseAdmin
+          .from("teams")
+          .select("id, status")
+          .in("owner_player_id", linkedPlayerIds)
+
+        const { data: captainMemberships } = await supabaseAdmin
+          .from("team_members")
+          .select("team_id, teams:teams(id, status)")
+          .in("player_id", linkedPlayerIds)
+          .eq("role", "captain")
+
+        alreadyManagesTeam =
+          (ownedTeams ?? []).some((team) => team.status !== "archived") ||
+          (captainMemberships ?? []).some((membership) => {
+            const team = membership.teams as { status?: string | null } | null
+            return Boolean(team) && team?.status !== "archived"
+          })
       }
     }
   }
@@ -56,6 +78,7 @@ export default async function TeamsPage({ searchParams }: PageProps) {
           <CreateTeamModal
             isLoggedIn={isLoggedIn}
             hasApprovedPlayer={hasApprovedPlayer}
+            alreadyManagesTeam={alreadyManagesTeam}
             initialError={resolvedParams?.teamError}
             initialSuccess={resolvedParams?.teamSuccess}
           />

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { ArrowLeft, Shield, User } from "lucide-react"
 import { Footer } from "@/components/footer"
 import { MatchSchedule } from "@/components/match-schedule"
@@ -16,9 +17,10 @@ import type { UserProfile } from "@/lib/auth/user-profile"
 type PublicProfilePageProps = {
   data: PublicProfileData
   userProfile?: UserProfile | null
+  children?: ReactNode
 }
 
-export function PublicProfilePage({ data, userProfile = null }: PublicProfilePageProps) {
+export function PublicProfilePage({ data, userProfile = null, children }: PublicProfilePageProps) {
   const { t } = useLanguage()
   const { profile } = data
   const isTeam = profile.kind === "team"
@@ -123,6 +125,7 @@ export function PublicProfilePage({ data, userProfile = null }: PublicProfilePag
                 </div>
               </div>
             </div>
+            {children}
           </div>
         </section>
 

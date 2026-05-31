@@ -68,7 +68,7 @@ export function TeamRosterManager({
   }, [initialError, initialSuccess, lang, t])
 
   return (
-    <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur">
+    <section className="rounded-2xl border border-emerald-400/20 bg-white/[0.025] p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] backdrop-blur sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">
