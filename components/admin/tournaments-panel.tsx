@@ -1,7 +1,7 @@
-"use client"
-
+import { useState } from "react"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
+import { getGameConfig, getSupportedGames, normalizeGame } from "@/lib/games"
 import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/admin/formatters"
 import { createTournament, deleteTournament, updateTournament } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName } from "@/components/admin/admin-section"
@@ -62,6 +62,7 @@ export function TournamentsPanel({
 
 function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
   const { t, lang } = useLanguage()
+  const gameConfig = getGameConfig(tournament.game, tournament.game_mode)
 
   return (
     <details className={recordClassName}>
@@ -70,7 +71,7 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           <div className="min-w-0">
             <h4 className="break-words font-medium">{tournament.name ?? t.admin.tournaments.untitledTournament}</h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {tournament.game ?? t.admin.tournaments.unknownGame} {"\u2022"} {formatDisplayDate(tournament.event_date)}
+              {normalizeGame(tournament.game) === "CS2" && tournament.game_mode ? `CS2 (${gameConfig.name})` : (tournament.game ?? t.admin.tournaments.unknownGame)} {"\u2022"} {formatDisplayDate(tournament.event_date)}
             </p>
           </div>
 
@@ -143,6 +144,40 @@ function TournamentForm({
   tournament?: AdminTournament
 }) {
   const { t } = useLanguage()
+  const supportedGames = getSupportedGames()
+
+  const normalizedGame = normalizeGame(tournament?.game ?? "CS2")
+  const [selectedGame, setSelectedGame] = useState<string>(normalizedGame)
+  
+  const initialMode = tournament?.game_mode ?? (
+    tournament?.game && normalizeGame(tournament.game) === "CS2"
+      ? (tournament.participant_type === "player" ? "1v1" : "5v5")
+      : (tournament?.game ? getGameConfig(tournament.game).defaultModeId : "5v5")
+  )
+  const [selectedMode, setSelectedMode] = useState<string>(initialMode)
+
+  const [participantType, setParticipantType] = useState<"team" | "player">(
+    (tournament?.participant_type as "team" | "player") ?? 
+    (tournament?.game ? getGameConfig(tournament.game, initialMode).participantType : "team")
+  )
+
+  const handleGameChange = (gameValue: string) => {
+    setSelectedGame(gameValue)
+    const baseConfig = getGameConfig(gameValue)
+    const defaultMode = baseConfig.defaultModeId
+    setSelectedMode(defaultMode)
+    const modeConfig = getGameConfig(gameValue, defaultMode)
+    setParticipantType(modeConfig.participantType)
+  }
+
+  const handleModeChange = (modeValue: string) => {
+    setSelectedMode(modeValue)
+    const modeConfig = getGameConfig(selectedGame, modeValue)
+    setParticipantType(modeConfig.participantType)
+  }
+
+  const gameConfig = getGameConfig(selectedGame, selectedMode)
+
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {tournament && <input type="hidden" name="id" value={tournament.id} />}
@@ -152,21 +187,83 @@ function TournamentForm({
       </AdminField>
 
       <AdminField label={t.admin.tournaments.gameField}>
-        <input name="game" defaultValue={tournament?.game ?? ""} required className={inputClassName} />
+        <select
+          name="game"
+          value={selectedGame}
+          onChange={(e) => handleGameChange(e.target.value)}
+          required
+          className={inputClassName}
+        >
+          {supportedGames.map((game) => (
+            <option key={game} value={game} className="bg-neutral-900 text-white">
+              {game === "FC" ? "FC (EA Sports FC)" : getGameConfig(game).fullName}
+            </option>
+          ))}
+        </select>
       </AdminField>
+
+      {selectedGame === "CS2" ? (
+        <AdminField label="CS2 Format / Mode">
+          <select
+            name="game_mode"
+            value={selectedMode}
+            onChange={(e) => handleModeChange(e.target.value)}
+            required
+            className={inputClassName}
+          >
+            <option value="1v1" className="bg-neutral-900 text-white">1v1 Aim</option>
+            <option value="2v2" className="bg-neutral-900 text-white">2v2 Wingman</option>
+            <option value="5v5" className="bg-neutral-900 text-white">5v5 Classic</option>
+          </select>
+        </AdminField>
+      ) : (
+        <input type="hidden" name="game_mode" value={selectedMode} />
+      )}
+
+      {/* Dynamic Game Info Card */}
+      <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
+          {t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Конфігурація гри" : "Game Configuration"}: {gameConfig.fullName}
+        </p>
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-white/60 sm:grid-cols-4">
+          <div>
+            <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Формат учасників" : "Roster Format"}</dt>
+            <dd className="mt-1 font-medium text-white capitalize">{gameConfig.rosterLabel}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Кількість замін" : "Max Substitutes"}</dt>
+            <dd className="mt-1 font-medium text-white">{gameConfig.substitutes}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Тип рахунку" : "Score Format"}</dt>
+            <dd className="mt-1 font-medium text-white uppercase">{gameConfig.scoreFormat}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Формати матчів" : "Match Formats"}</dt>
+            <dd className="mt-1 font-medium text-white">{gameConfig.matchFormats.join(", ")}</dd>
+          </div>
+          {gameConfig.mapPool.length > 0 && (
+            <div className="col-span-2 sm:col-span-4">
+              <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Список мап" : "Map Pool"}</dt>
+              <dd className="mt-1 font-medium text-white break-words">{gameConfig.mapPool.join(", ")}</dd>
+            </div>
+          )}
+        </dl>
+      </div>
 
       <AdminField label={t.admin.tournaments.eventDateField}>
         <input name="event_date" type="date" defaultValue={tournament?.event_date ?? ""} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.formatField}>
-        <input name="format" defaultValue={tournament?.format ?? ""} className={inputClassName} />
+        <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.participantTypeField}>
         <select
           name="participant_type"
-          defaultValue={tournament?.participant_type ?? "player"}
+          value={participantType}
+          onChange={(e) => setParticipantType(e.target.value as "team" | "player")}
           className={inputClassName}
         >
           <option value="player">{t.admin.tournaments.playerTournamentOption}</option>

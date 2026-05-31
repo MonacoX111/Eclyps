@@ -85,9 +85,13 @@ export function AdminDashboardClient({
 }: AdminDashboardClientProps) {
   const { t, lang, setLanguage } = useLanguage()
 
-  // Tab setup
   const [activeTab, setActiveTab] = useState("overview")
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // On mount and searchParams changes, synchronize activeTab based on query params or error feedback
   useEffect(() => {
@@ -592,7 +596,9 @@ export function AdminDashboardClient({
                                 <div className="space-y-1 text-xs">
                                   <div className="flex items-center justify-between">
                                     <span className="font-bold text-white/90">{evt.title}</span>
-                                    <span className="text-[10px] font-mono text-white/30">{displayTime}</span>
+                                    <span className="text-[10px] font-mono text-white/30">
+                                      {mounted ? displayTime : ""}
+                                    </span>
                                   </div>
                                   <p className="text-white/50">{evt.name}</p>
                                 </div>

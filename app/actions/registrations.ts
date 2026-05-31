@@ -14,22 +14,40 @@ import { canManageTeam } from "@/lib/auth/permissions"
 import { canRegisterTeamForTournament } from "@/lib/teams/eligibility"
 
 export async function submitTournamentRegistration(formData: FormData) {
-  const parsed = parsePublicRegistrationFormData(formData)
+  const tournamentId = formData.get("tournament_id") as string | null
+  const registrationTypeQuery = `registrationType=${formData.get("participant_type")}`
+
+  if (!tournamentId) {
+    redirect(`/registration?registrationError=invalid-tournament-id&${registrationTypeQuery}#registration`)
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect(`/registration?registrationError=admin-client-unavailable&${registrationTypeQuery}#registration`)
+  }
+
+  // 1. Fetch tournament first to resolve game-specific rules
+  const { data: tournament, error: tournamentError } = await supabaseAdmin
+    .from("tournaments")
+    .select("id, team_count, status, participant_type, game, game_mode")
+    .eq("id", tournamentId)
+    .maybeSingle()
+
+  if (tournamentError || !tournament) {
+    redirect(`/registration?registrationError=invalid-tournament-id&${registrationTypeQuery}#registration`)
+  }
+
+  // 2. Validate registration payload dynamically
+  const parsed = parsePublicRegistrationFormData(formData, tournament.game, tournament.game_mode)
 
   if (!parsed.ok) {
     redirect(`/registration?registrationError=${parsed.error}#registration`)
   }
-  const registrationTypeQuery = `registrationType=${parsed.data.participant_type}`
+
   const userProfile = await getCurrentUserProfile()
 
   if (!userProfile) {
     redirect(`/registration?registrationError=discord-login-required&${registrationTypeQuery}#registration`)
-  }
-
-  const supabaseAdmin = createSupabaseAdminClient()
-
-  if (!supabaseAdmin) {
-    redirect(`/registration?registrationError=admin-client-unavailable&${registrationTypeQuery}#registration`)
   }
 
   const approvedPlayer = await findApprovedOwnedPlayer(userProfile.id)
@@ -41,16 +59,6 @@ export async function submitTournamentRegistration(formData: FormData) {
         pendingApplication ? "player-application-pending" : "player-approval-required"
       }&${registrationTypeQuery}#registration`,
     )
-  }
-
-  const { data: tournament, error: tournamentError } = await supabaseAdmin
-    .from("tournaments")
-    .select("id, team_count, status, participant_type")
-    .eq("id", parsed.data.tournament_id)
-    .maybeSingle()
-
-  if (tournamentError || !tournament) {
-    redirect(`/registration?registrationError=invalid-tournament-id&${registrationTypeQuery}#registration`)
   }
 
   if (tournament.status !== "upcoming") {

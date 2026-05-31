@@ -67,6 +67,16 @@ export async function generateBracketTemplate(formData: FormData) {
     }
   }
 
+  const { data: tournament, error: tournamentErr } = await supabaseAdmin
+    .from("tournaments")
+    .select("id, participant_type")
+    .eq("id", parsed.data.tournament_id)
+    .maybeSingle()
+
+  if (tournamentErr || !tournament) {
+    redirect("/admin?matchError=tournament-not-found#matches")
+  }
+
   const startingMatchOrder = await getNextMatchOrder(
     supabaseAdmin,
     parsed.data.tournament_id,
@@ -75,6 +85,7 @@ export async function generateBracketTemplate(formData: FormData) {
     tournamentId: parsed.data.tournament_id,
     bracketSize: parsed.data.bracket_size,
     startingMatchOrder,
+    participantType: tournament.participant_type as "team" | "player",
   })
 
   if (!hasValidNextMatchChain(matches)) {

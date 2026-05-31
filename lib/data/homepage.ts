@@ -43,6 +43,7 @@ export type HomepageTournament = {
   title: string | null
   display_name: string | null
   game: string | null
+  game_mode: string | null
   participant_type: "team" | "player" | null
   event_date: string | null
   format: string | null
@@ -472,6 +473,8 @@ async function createHomepageData({
         checkInOpensAt: tournament.check_in_opens_at,
         checkInClosesAt: tournament.check_in_closes_at,
         tournamentStatus: tournament.status,
+        game: tournament.game,
+        gameMode: tournament.game_mode,
       })
     : null
 
@@ -510,6 +513,7 @@ function normalizeHomepageTournament(
     title: readNullableString(row.title),
     display_name: readNullableString(row.display_name),
     game: readNullableString(row.game),
+    game_mode: readNullableString(row.game_mode),
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),

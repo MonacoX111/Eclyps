@@ -8,6 +8,7 @@ import {
 } from "@/lib/data/normalize"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { supabase } from "@/lib/supabase/client"
+import { getGameConfig } from "@/lib/games"
 
 export type RegistrationStatus = "pending" | "approved" | "rejected" | "cancelled"
 
@@ -25,6 +26,10 @@ export type TournamentRegistrationSummary = {
   isClosed: boolean
   isFull: boolean
   statusLabel: string
+  game: string | null
+  gameMode: string | null
+  teamSize: number
+  substitutes: number
 }
 
 export type TournamentRegistrationRecord = {
@@ -82,6 +87,8 @@ export async function getTournamentRegistrationSummary({
   checkInOpensAt,
   checkInClosesAt,
   tournamentStatus,
+  game,
+  gameMode,
 }: {
   tournamentId: string
   participantType: RegistrationParticipantType
@@ -89,6 +96,8 @@ export async function getTournamentRegistrationSummary({
   checkInOpensAt?: string | null
   checkInClosesAt?: string | null
   tournamentStatus: string | null
+  game?: string | null
+  gameMode?: string | null
 }): Promise<TournamentRegistrationSummary> {
   const [approvedCount, pendingCount] = await Promise.all([
     countApprovedParticipants(tournamentId, participantType),
@@ -100,6 +109,8 @@ export async function getTournamentRegistrationSummary({
       : null
   const isClosed = tournamentStatus !== "upcoming"
   const isFull = slotsLeft !== null && slotsLeft <= 0
+
+  const gameConfig = getGameConfig(game, gameMode)
 
   return {
     tournamentId,
@@ -113,6 +124,10 @@ export async function getTournamentRegistrationSummary({
     isClosed,
     isFull,
     statusLabel: isClosed ? "Registration Closed" : isFull ? "Registration Full" : "Registration Open",
+    game: game ?? null,
+    gameMode: gameMode ?? null,
+    teamSize: gameConfig.teamSize,
+    substitutes: gameConfig.substitutes,
   }
 }
 

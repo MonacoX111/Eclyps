@@ -5,6 +5,7 @@ import { BRACKET_SIZES } from "@/lib/brackets/template"
 import { parseKyivDateTimeInput } from "@/lib/check-ins/time"
 import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
 import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedule"
+import { getGameConfig } from "@/lib/games"
 
 const participantTypes = ["team", "player"] as const
 const registrationStatuses = ["approved", "rejected"] as const
@@ -31,6 +32,7 @@ export const activeTournamentSchema = z.object({
 export const tournamentSchema = z.object({
   name: requiredString(),
   game: requiredString(),
+  game_mode: optionalString(),
   participant_type: participantTypeSchema(),
   event_date: optionalString(),
   format: optionalString(),
@@ -156,51 +158,7 @@ export const publicRegistrationSchema = z.object({
   region: optionalString(),
 })
 
-const teamRosterSchema = z
-  .object({
-    captain_nickname: requiredString(),
-    main_players: z.array(requiredString()).length(5),
-    substitutes: z.array(optionalString()).max(2),
-  })
-  .superRefine((value, context) => {
-    const substitutes = value.substitutes.filter(
-      (nickname): nickname is string => Boolean(nickname),
-    )
-    const roster = [...value.main_players, ...substitutes]
-    const normalizedRoster = roster.map(normalizeRosterNickname)
-
-    if (roster.length < 5) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "invalid-roster-minimum",
-        path: ["main_players"],
-      })
-    }
-
-    if (roster.length > 7) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "invalid-roster-maximum",
-        path: ["substitutes"],
-      })
-    }
-
-    if (new Set(normalizedRoster).size !== normalizedRoster.length) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "duplicate-roster-player",
-        path: ["main_players"],
-      })
-    }
-
-    if (!normalizedRoster.includes(normalizeRosterNickname(value.captain_nickname))) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "invalid-roster-captain",
-        path: ["captain_nickname"],
-      })
-    }
-  })
+// Dynamic roster validation is performed during form parsing
 
 export const registrationDecisionSchema = z.object({
   id: requiredString(),
@@ -232,7 +190,11 @@ export type BracketTemplateInput = z.infer<typeof bracketTemplateSchema>
 export type BracketSlotAssignmentInput = z.infer<typeof bracketSlotAssignmentSchema>
 export type BracketStatusInput = z.infer<typeof bracketStatusSchema>
 export type BracketMatchUpdateInput = z.infer<typeof bracketMatchUpdateSchema>
-export type TeamRosterInput = z.infer<typeof teamRosterSchema>
+export type TeamRosterInput = {
+  captain_nickname: string
+  main_players: string[]
+  substitutes: string[]
+}
 export type PublicRegistrationInput = z.infer<typeof publicRegistrationSchema> & {
   roster: TeamRosterInput | null
 }
@@ -367,6 +329,8 @@ export function parseBracketMatchUpdateFormData(
 
 export function parsePublicRegistrationFormData(
   formData: FormData,
+  gameName?: string | null,
+  gameMode?: string | null,
 ): ParseResult<PublicRegistrationInput> {
   const registrationResult = parseFormData(publicRegistrationSchema, formData, {
     tournament_id: "invalid-tournament-id",
@@ -381,20 +345,47 @@ export function parsePublicRegistrationFormData(
     return { ok: true, data: { ...registrationResult.data, roster: null } }
   }
 
-  const rosterResult = teamRosterSchema.safeParse({
-    captain_nickname: formData.get("captain_nickname"),
-    main_players: [1, 2, 3, 4, 5].map((index) =>
-      formData.get(`roster_main_${index}`),
-    ),
-    substitutes: [1, 2].map((index) => formData.get(`roster_sub_${index}`)),
-  })
+  const gameConfig = getGameConfig(gameName, gameMode)
+  const teamSize = gameConfig.teamSize
+  const substitutesMax = gameConfig.substitutes
 
-  if (!rosterResult.success) {
-    const issue = rosterResult.error.issues[0]
-    return {
-      ok: false,
-      error: issue?.message || "invalid-roster",
-    }
+  const mainPlayers: (string | null)[] = []
+  for (let i = 1; i <= teamSize; i++) {
+    const val = formData.get(`roster_main_${i}`)
+    mainPlayers.push(typeof val === "string" ? val : null)
+  }
+
+  const substitutes: (string | null)[] = []
+  for (let i = 1; i <= substitutesMax; i++) {
+    const val = formData.get(`roster_sub_${i}`)
+    substitutes.push(typeof val === "string" ? val : null)
+  }
+
+  const captainNickname = formData.get("captain_nickname") as string | null
+
+  if (!captainNickname || captainNickname.trim().length === 0) {
+    return { ok: false, error: "invalid-roster-captain" }
+  }
+
+  const validMainPlayers = mainPlayers.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+  if (validMainPlayers.length < teamSize) {
+    return { ok: false, error: "invalid-roster-minimum" }
+  }
+
+  const validSubstitutes = substitutes.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+  if (validSubstitutes.length > substitutesMax) {
+    return { ok: false, error: "invalid-roster-maximum" }
+  }
+
+  const roster = [...validMainPlayers, ...validSubstitutes]
+  const normalizedRoster = roster.map(normalizeRosterNickname)
+
+  if (new Set(normalizedRoster).size !== normalizedRoster.length) {
+    return { ok: false, error: "duplicate-roster-player" }
+  }
+
+  if (!normalizedRoster.includes(normalizeRosterNickname(captainNickname))) {
+    return { ok: false, error: "invalid-roster-captain" }
   }
 
   return {
@@ -402,11 +393,9 @@ export function parsePublicRegistrationFormData(
     data: {
       ...registrationResult.data,
       roster: {
-        captain_nickname: rosterResult.data.captain_nickname,
-        main_players: rosterResult.data.main_players,
-        substitutes: rosterResult.data.substitutes.filter(
-          (nickname): nickname is string => Boolean(nickname),
-        ),
+        captain_nickname: captainNickname.trim(),
+        main_players: validMainPlayers.map((p) => p.trim()),
+        substitutes: validSubstitutes.map((p) => p.trim()),
       },
     },
   }

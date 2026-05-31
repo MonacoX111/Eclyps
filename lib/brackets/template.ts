@@ -16,7 +16,7 @@ export type BracketTemplateMatch = {
   score1: null
   score2: null
   status: "upcoming"
-  participant_type: "team"
+  participant_type: "team" | "player"
   participant_1_id: null
   participant_2_id: null
   winner_participant_id: null
@@ -38,10 +38,12 @@ export function createBracketTemplateMatches({
   tournamentId,
   bracketSize,
   startingMatchOrder,
+  participantType = "team",
 }: {
   tournamentId: string
   bracketSize: BracketSize
   startingMatchOrder: number
+  participantType?: "team" | "player"
 }) {
   const bracketId = randomUUID()
   const roundLabels = getRoundLabels(bracketSize)
@@ -70,7 +72,7 @@ export function createBracketTemplateMatches({
         score1: null,
         score2: null,
         status: "upcoming",
-        participant_type: "team",
+        participant_type: participantType,
         participant_1_id: null,
         participant_2_id: null,
         winner_participant_id: null,

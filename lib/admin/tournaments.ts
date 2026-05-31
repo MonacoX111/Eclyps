@@ -16,6 +16,7 @@ export type AdminTournament = {
   id: string
   name: string | null
   game: string | null
+  game_mode: string | null
   participant_type: "team" | "player"
   event_date: string | null
   format: string | null
@@ -55,7 +56,7 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
   const { rows, error } = await runAdminRowsQuery("tournaments", async () => {
     const result = await supabase
       .from("tournaments")
-      .select("id, name, game, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
+      .select("id, name, game, game_mode, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
       .order("created_at", { ascending: false })
 
     if (result.error && isMissingColumnError(result.error)) {
@@ -81,6 +82,7 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     id,
     name: readNullableString(row.name),
     game: readNullableString(row.game),
+    game_mode: readNullableString(row.game_mode),
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),

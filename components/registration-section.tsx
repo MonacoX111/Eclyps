@@ -356,7 +356,11 @@ export function RegistrationSection({
                   />
                 </RegistrationField>
                 {summary.participantType === "team" ? (
-                  <TeamRosterFields disabled={!canSubmit} />
+                  <TeamRosterFields
+                    disabled={!canSubmit}
+                    teamSize={summary.teamSize}
+                    substitutes={summary.substitutes}
+                  />
                 ) : null}
               </div>
               <div className="sm:col-span-2">
@@ -664,7 +668,15 @@ function RegistrationField({
   )
 }
 
-function TeamRosterFields({ disabled }: { disabled: boolean }) {
+function TeamRosterFields({
+  disabled,
+  teamSize,
+  substitutes,
+}: {
+  disabled: boolean
+  teamSize: number
+  substitutes: number
+}) {
   const { t } = useLanguage()
 
   return (
@@ -678,8 +690,8 @@ function TeamRosterFields({ disabled }: { disabled: boolean }) {
         </p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {[1, 2, 3, 4, 5].map((index) => (
-          <RegistrationField key={index} label={`${t.registration.fields.mainPlayer} ${index}`}>
+        {Array.from({ length: teamSize }, (_, i) => i + 1).map((index) => (
+          <RegistrationField key={`main-${index}`} label={`${t.registration.fields.mainPlayer} ${index}`}>
             <input
               name={`roster_main_${index}`}
               required
@@ -689,8 +701,8 @@ function TeamRosterFields({ disabled }: { disabled: boolean }) {
             />
           </RegistrationField>
         ))}
-        {[1, 2].map((index) => (
-          <RegistrationField key={index} label={`${t.registration.fields.substitute} ${index}`}>
+        {Array.from({ length: substitutes }, (_, i) => i + 1).map((index) => (
+          <RegistrationField key={`sub-${index}`} label={`${t.registration.fields.substitute} ${index}`}>
             <input
               name={`roster_sub_${index}`}
               disabled={disabled}
