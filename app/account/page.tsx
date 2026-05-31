@@ -427,7 +427,7 @@ async function AccountDashboard({
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">{t.account.quickActions.title}</p>
             <h2 className="mt-2 text-xl font-bold text-white">{t.account.quickActions.subtitle}</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap sm:items-center sm:justify-start lg:justify-end lg:w-auto">
             <ActionLink href="/tournament" icon={Calendar} label={t.account.quickActions.browseTournaments} primary />
             <ActionLink href={`/players/${player.id}`} icon={ExternalLink} label={t.account.viewPublicProfile} />
             {manageableTeams.length === 1 ? (
@@ -700,13 +700,13 @@ function ActionLink({
   primary?: boolean
 }) {
   const className = primary
-    ? "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-300"
-    : "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
+    ? "inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-300"
+    : "inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
 
   return (
     <Link href={href} className={className}>
-      <Icon className="h-4 w-4" />
-      <span className="truncate">{label}</span>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span>{label}</span>
     </Link>
   )
 }

@@ -65,7 +65,7 @@ export function CreateTeamModal({
   }, [initialError, initialSuccess, lang, t])
 
   return (
-    <div className={`relative flex flex-col items-center ${isOpen ? "z-[100]" : "z-20"}`}>
+    <div className={`relative flex flex-col items-stretch sm:items-center w-full sm:w-auto ${isOpen ? "z-[100]" : "z-20"}`}>
       {/* Toast Alert Feedback */}
       {successMessage && (
         <div className="fixed top-24 right-4 z-50 rounded-xl border border-emerald-500/25 bg-emerald-950/80 px-4 py-3 text-sm text-emerald-200 shadow-xl backdrop-blur-md">
@@ -84,21 +84,21 @@ export function CreateTeamModal({
         alreadyManagesTeam ? (
           <button
             disabled
-            className="rounded-xl border border-emerald-400/15 bg-emerald-400/[0.03] px-6 py-3 text-sm font-semibold text-emerald-200/60 cursor-not-allowed"
+            className="w-full rounded-xl border border-emerald-400/15 bg-emerald-400/[0.03] px-6 py-3 text-sm font-semibold text-emerald-200/60 cursor-not-allowed sm:w-auto"
           >
             {t.account.createTeam.buttonManagedLabel}
           </button>
         ) : hasApprovedPlayer ? (
           <button
             onClick={() => setIsOpen(true)}
-            className="rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-emerald-300 cursor-pointer shadow-lg shadow-emerald-950/40"
+            className="w-full rounded-xl bg-emerald-400 px-6 py-3 text-sm font-semibold text-black transition hover:bg-emerald-300 cursor-pointer shadow-lg shadow-emerald-950/40 sm:w-auto"
           >
             {t.account.createTeam.buttonLabel}
           </button>
         ) : (
           <button
             disabled
-            className="rounded-xl border border-white/5 bg-white/[0.02] px-6 py-3 text-sm font-semibold text-white/40 cursor-not-allowed"
+            className="w-full rounded-xl border border-white/5 bg-white/[0.02] px-6 py-3 text-sm font-semibold text-white/40 cursor-not-allowed sm:w-auto"
             title={t.account.createTeam.errors.waitApproved}
           >
             {t.account.createTeam.buttonDisabledLabel}
@@ -107,7 +107,7 @@ export function CreateTeamModal({
       ) : (
         <a
           href="/#registration"
-          className="rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:text-white"
+          className="w-full text-center rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:text-white sm:w-auto"
         >
           {t.account.createTeam.buttonLoginLabel}
         </a>
