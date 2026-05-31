@@ -482,9 +482,6 @@ async function AccountDashboard({
                         {team.roster_count} {t.account.rosterCountLabel}
                       </span>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/teams/${team.id}`} className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:border-white/20 hover:text-white">
-                          {t.account.viewTeamFull}
-                        </Link>
                         {(team.role === "Owner" || team.role === "Captain") && (
                           <Link href={`/teams/${team.id}`} className="inline-flex items-center gap-1 rounded-full bg-emerald-400 px-3 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-300">
                             <Settings className="h-3 w-3" />
