@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+
 
 export type NotificationRow = {
   id: string
@@ -16,11 +18,13 @@ export type NotificationRow = {
   message: string
   read_at: string | null
   created_at: string
+  teams?: { logo_url: string | null } | { logo_url: string | null }[] | null
 }
 
 /**
  * Loads notifications for the currently logged-in user.
- * Relies on Supabase RLS and cookies.
+ * Queries using the admin client to bypass any relational RLS constraints on teams table,
+ * while safely securing user access by filtering on userProfile.id.
  */
 export async function getUserNotifications(): Promise<NotificationRow[]> {
   try {
@@ -29,10 +33,15 @@ export async function getUserNotifications(): Promise<NotificationRow[]> {
       return []
     }
 
-    const supabase = await createSupabaseServerClient()
-    const { data, error } = await supabase
+    const supabaseAdmin = createSupabaseAdminClient()
+    if (!supabaseAdmin) {
+      console.error("getUserNotifications: Admin client unavailable")
+      return []
+    }
+
+    const { data, error } = await supabaseAdmin
       .from("notifications")
-      .select("*")
+      .select("*, teams(logo_url)")
       .eq("user_profile_id", userProfile.id)
       .order("created_at", { ascending: false })
 

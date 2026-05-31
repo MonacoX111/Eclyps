@@ -23,6 +23,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
   const fetchNotifications = async () => {
     try {
       const data = await getUserNotifications()
+      console.log("NotificationsBell notifications fetched:", data)
       setNotifications(data)
     } catch (err) {
       console.error("Failed to load user notifications:", err)
@@ -190,9 +191,20 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                 </div>
               ) : (
                 <div className="divide-y divide-white/5">
-                  {notifications.map((notification) => {
+                   {notifications.map((notification) => {
                     const isUnread = !notification.read_at
                     const { title, message } = getLocalizedNotification(notification, lang)
+
+                    // Resolve logo URL from joined teams (supporting both object and array formats)
+                    let logoUrl: string | null = null
+                    if (notification.teams) {
+                      if (Array.isArray(notification.teams)) {
+                        logoUrl = notification.teams[0]?.logo_url || null
+                      } else {
+                        logoUrl = notification.teams.logo_url || null
+                      }
+                    }
+
                     return (
                       <div
                         key={notification.id}
@@ -200,9 +212,17 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                           isUnread ? "bg-white/[0.01] hover:bg-white/[0.03]" : "hover:bg-white/2"
                         }`}
                       >
-                        {/* Type Icon */}
-                        <div className="mt-0.5 shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/5 border border-white/5">
-                          {getNotificationIcon(notification.type)}
+                        {/* Type Icon or Team Logo */}
+                        <div className="mt-0.5 shrink-0 flex items-center justify-center h-8 w-8 rounded-full overflow-hidden bg-white/5 border border-white/5">
+                          {logoUrl ? (
+                            <img
+                              src={logoUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            getNotificationIcon(notification.type)
+                          )}
                         </div>
 
                         {/* Title & Message */}

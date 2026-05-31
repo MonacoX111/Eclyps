@@ -11,6 +11,7 @@ type AccountNotificationsListProps = {
 }
 
 export function AccountNotificationsList({ initialNotifications }: AccountNotificationsListProps) {
+  console.log("AccountNotificationsList initialNotifications:", initialNotifications)
   const { t, lang } = useLanguage()
   const [notifications, setNotifications] = useState<NotificationRow[]>(initialNotifications)
   const [showAll, setShowAll] = useState(false)
@@ -117,6 +118,17 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
           {visibleNotifications.map((notification) => {
             const isUnread = !notification.read_at
             const { title, message } = getLocalizedNotification(notification, lang)
+
+            // Resolve logo URL from joined teams (supporting both object and array formats)
+            let logoUrl: string | null = null
+            if (notification.teams) {
+              if (Array.isArray(notification.teams)) {
+                logoUrl = notification.teams[0]?.logo_url || null
+              } else {
+                logoUrl = notification.teams.logo_url || null
+              }
+            }
+
             return (
               <div
                 key={notification.id}
@@ -124,9 +136,17 @@ export function AccountNotificationsList({ initialNotifications }: AccountNotifi
                   isUnread ? "bg-white/[0.01]" : ""
                 }`}
               >
-                {/* Type Icon */}
-                <div className="mt-0.5 shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-white/5 border border-white/5">
-                  {getNotificationIcon(notification.type)}
+                {/* Type Icon or Team Logo */}
+                <div className="mt-0.5 shrink-0 flex items-center justify-center h-8 w-8 rounded-full overflow-hidden bg-white/5 border border-white/5">
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    getNotificationIcon(notification.type)
+                  )}
                 </div>
 
                 {/* Title & Message */}

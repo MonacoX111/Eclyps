@@ -7,6 +7,7 @@ import {
   Trophy,
   ShieldCheck,
   UserCheck,
+  ShieldAlert,
   Calendar,
   Crosshair,
   Gamepad2,
@@ -26,6 +27,7 @@ import { CreateTeamModal } from "@/components/create-team-modal"
 import { AccountNotificationsList } from "@/components/account-notifications-list"
 import { AccountAvatar } from "@/components/account-avatar"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { getLocalizedNotification } from "@/lib/notifications/localize"
 
 export type TeamInfo = {
   id: string
@@ -130,6 +132,7 @@ export function AccountDashboardClient({
       title: t.account.activity.teamCreated,
       body: team.name,
       icon: Users,
+      logoUrl: null as string | null,
     })),
     ...(registrations ?? []).map((registration: any) => ({
       id: `registration-${registration.id}`,
@@ -137,14 +140,42 @@ export function AccountDashboardClient({
       title: t.account.activity.registrationSubmitted,
       body: registration.tournaments?.name || t.profile.meta.tournament,
       icon: Calendar,
+      logoUrl: null as string | null,
     })),
-    ...notifications.map((notification) => ({
-      id: `notification-${notification.id}`,
-      date: notification.created_at,
-      title: notification.title,
-      body: notification.message,
-      icon: Bell,
-    })),
+    ...notifications.map((notification) => {
+      const { title, message } = getLocalizedNotification(notification, lang)
+      
+      // Resolve logo URL from joined teams (supporting both object and array formats)
+      let logoUrl: string | null = null
+      if (notification.teams) {
+        if (Array.isArray(notification.teams)) {
+          logoUrl = notification.teams[0]?.logo_url || null
+        } else {
+          logoUrl = notification.teams.logo_url || null
+        }
+      }
+
+      // Choose notification icon
+      let itemIcon = Bell
+      if (notification.type === "player_approved" || notification.type === "registration_approved") {
+        itemIcon = UserCheck
+      } else if (notification.type === "player_rejected" || notification.type === "registration_rejected") {
+        itemIcon = ShieldAlert
+      } else if (notification.type === "team_approved" || notification.type === "team_rejected") {
+        itemIcon = Users
+      } else if (notification.type === "match_scheduled") {
+        itemIcon = Calendar
+      }
+
+      return {
+        id: `notification-${notification.id}`,
+        date: notification.created_at,
+        title,
+        body: message,
+        icon: itemIcon,
+        logoUrl,
+      }
+    }),
   ]
     .filter((item) => item.date)
     .sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime())
@@ -391,8 +422,16 @@ export function AccountDashboardClient({
               <div className="space-y-4">
                 {activityItems.map((item) => (
                   <div key={item.id} className="relative flex gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
-                      <item.icon className="h-4 w-4" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
+                      {item.logoUrl ? (
+                        <img
+                          src={item.logoUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <item.icon className="h-4 w-4" />
+                      )}
                     </div>
                     <div className="min-w-0 border-b border-white/5 pb-4 last:border-b-0 last:pb-0">
                       <p className="truncate text-sm font-bold text-white">{item.title}</p>
