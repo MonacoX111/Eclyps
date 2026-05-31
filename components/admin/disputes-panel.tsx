@@ -82,30 +82,24 @@ function DisputeRecord({
   const { t, lang } = useLanguage()
 
   const getDisplayStatus = (status: string) => {
-    if (lang === "uk") {
-      switch (status) {
-        case "open": return "Відкритий"
-        case "under_review": return "На розгляді"
-        case "resolved": return "Вирішено"
-        case "rejected": return "Відхилено"
-        default: return status
-      }
+    switch (status) {
+      case "open": return t.admin.extra.disputeStatus.open
+      case "under_review": return t.admin.extra.disputeStatus.underReview
+      case "resolved": return t.admin.extra.disputeStatus.resolved
+      case "rejected": return t.admin.extra.disputeStatus.rejected
+      default: return status
     }
-    return status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
   }
 
   const getDisplayType = (type: string) => {
-    if (lang === "uk") {
-      switch (type) {
-        case "score_conflict": return "Конфлікт рахунку"
-        case "cheating": return "Читерство"
-        case "toxic_behavior": return "Токсична поведінка"
-        case "no_show": return "Неявка"
-        case "connection_issue": return "Проблеми із підключенням"
-        default: return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
-      }
+    switch (type) {
+      case "score_conflict": return t.admin.extra.disputeTypes.scoreConflict
+      case "cheating": return t.admin.extra.disputeTypes.cheating
+      case "toxic_behavior": return t.admin.extra.disputeTypes.toxicBehavior
+      case "no_show": return t.admin.extra.disputeTypes.noShow
+      case "connection_issue": return t.admin.extra.disputeTypes.connectionIssue
+      default: return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
     }
-    return type.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())
   }
 
   return (
@@ -177,10 +171,10 @@ function DisputeReviewForm({ dispute }: { dispute: AdminDispute }) {
       <label className="grid gap-2 text-sm text-white/70">
         <span>{t.admin.disputes.statusField}</span>
         <select name="status" defaultValue={dispute.status} className={inputClassName}>
-          <option value="open">{lang === "uk" ? "Відкритий" : "Open"}</option>
-          <option value="under_review">{lang === "uk" ? "На розгляді" : "Under review"}</option>
-          <option value="resolved">{lang === "uk" ? "Вирішено" : "Resolved"}</option>
-          <option value="rejected">{lang === "uk" ? "Відхилено" : "Rejected"}</option>
+          <option value="open">{t.admin.extra.disputeStatus.open}</option>
+          <option value="under_review">{t.admin.extra.disputeStatus.underReview}</option>
+          <option value="resolved">{t.admin.extra.disputeStatus.resolved}</option>
+          <option value="rejected">{t.admin.extra.disputeStatus.rejected}</option>
         </select>
       </label>
       <label className="grid gap-2 text-sm text-white/70">

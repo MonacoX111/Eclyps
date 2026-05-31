@@ -58,10 +58,7 @@ export function CreateTeamModal({
       setIsOpen(false)
       setName("")
       setLogoUrl("")
-      const msg = lang === "uk"
-        ? "Команду створено. Очікує підтвердження адміністратора."
-        : "Team created. Waiting for admin approval."
-      setSuccessMessage(msg)
+      setSuccessMessage(t.account.createTeam.errors.created)
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
@@ -102,7 +99,7 @@ export function CreateTeamModal({
           <button
             disabled
             className="rounded-xl border border-white/5 bg-white/[0.02] px-6 py-3 text-sm font-semibold text-white/40 cursor-not-allowed"
-            title={lang === "uk" ? "Зачекайте на схвалення профілю гравця" : "Wait for player profile approval"}
+            title={t.account.createTeam.errors.waitApproved}
           >
             {t.account.createTeam.buttonDisabledLabel}
           </button>
@@ -149,7 +146,7 @@ export function CreateTeamModal({
 
               <div className="relative">
                 <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">
-                  {lang === "uk" ? "Глобальні Команди" : "Global Teams"}
+                  {t.account.createTeam.errors.modalEyebrow}
                 </p>
                 <h2 className="mt-3 text-2xl font-bold text-white">
                   {t.account.createTeam.modalTitle}

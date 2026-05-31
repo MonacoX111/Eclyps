@@ -52,14 +52,14 @@ export function RegistrationsPanel({
         {registrationFilters.map((item) => {
           const label =
             item.value === "all"
-              ? (lang === "uk" ? "Всі" : "All")
+              ? t.admin.extra.all
               : item.value === "pending"
-              ? (lang === "uk" ? "На розгляді" : "Pending")
+              ? t.admin.extra.pending
               : item.value === "approved"
-              ? (lang === "uk" ? "Схвалено" : "Approved")
+              ? t.admin.extra.approved
               : item.value === "checked-in"
-              ? (lang === "uk" ? "Пройшли чек-ін" : "Checked in")
-              : (lang === "uk" ? "Не пройшли чек-ін" : "Not checked in")
+              ? t.admin.extra.checkedIn
+              : t.admin.extra.notCheckedIn
           return (
             <a
               key={item.value}
@@ -139,10 +139,10 @@ function RegistrationRecord({
   const status = registration.status
   const displayStatus =
     status === "approved"
-      ? (lang === "uk" ? "Схвалено" : "Approved")
+      ? t.admin.extra.approved
       : status === "rejected"
-      ? (lang === "uk" ? "Відхилено" : "Rejected")
-      : (lang === "uk" ? "На розгляді" : "Pending")
+      ? t.admin.extra.rejected
+      : t.admin.extra.pending
 
   const displayCheckInStatus =
     registration.check_in_status === "checked_in"

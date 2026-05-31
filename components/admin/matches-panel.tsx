@@ -118,10 +118,10 @@ function BracketTemplateForm({
       <TournamentSelect tournaments={tournaments} />
       <AdminField label={t.admin.matches.bracketSizeField}>
         <select name="bracket_size" defaultValue="8" className={inputClassName}>
-          <option value="2">{lang === "uk" ? "2 учасники" : "2 participants"}</option>
-          <option value="4">{lang === "uk" ? "4 учасники" : "4 participants"}</option>
-          <option value="8">{lang === "uk" ? "8 учасників" : "8 participants"}</option>
-          <option value="16">{lang === "uk" ? "16 учасників" : "16 participants"}</option>
+          <option value="2">{t.admin.extra.participantsSelect.participants2}</option>
+          <option value="4">{t.admin.extra.participantsSelect.participants4}</option>
+          <option value="8">{t.admin.extra.participantsSelect.participants8}</option>
+          <option value="16">{t.admin.extra.participantsSelect.participants16}</option>
         </select>
       </AdminField>
       <label className="flex gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/65 sm:col-span-2">
@@ -156,16 +156,13 @@ function BracketEditor({
   }
 
   const getDisplayBracketStatus = (statusStr: BracketLifecycleStatus) => {
-    if (lang === "uk") {
-      return statusStr === "template"
-        ? "Шаблон"
-        : statusStr === "locked"
-        ? "Заблоковано"
-        : statusStr === "active"
-        ? "Активна"
-        : "Завершена"
-    }
-    return formatBracketStatus(statusStr)
+    return statusStr === "template"
+      ? t.admin.extra.bracketLabels.template
+      : statusStr === "locked"
+      ? t.admin.extra.bracketLabels.locked
+      : statusStr === "active"
+      ? t.admin.extra.bracketLabels.active
+      : t.admin.extra.bracketLabels.finished
   }
 
   return (
@@ -184,7 +181,7 @@ function BracketEditor({
                   {tournamentNames.get(bracket.tournamentId) ?? t.admin.matches.unknownTournament}
                 </h4>
                 <p className="mt-1 text-sm text-white/50">
-                  {getDisplayBracketStatus(bracket.status)} {lang === "uk" ? "сітка" : "bracket"}
+                  {getDisplayBracketStatus(bracket.status)} {t.admin.extra.bracketLabels.bracket}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

@@ -3,7 +3,7 @@ import {
   PublicProfilePage,
 } from "@/components/public-profile-page"
 import { getPublicPlayerProfile } from "@/lib/data/profiles"
-import { getLanguage } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { PlayerDashboard, type TeamItem, type RegistrationItem } from "@/components/player-dashboard"
@@ -18,15 +18,14 @@ export default async function PlayerProfilePage({
   params,
 }: PlayerProfilePageProps) {
   const { id } = await params
-  const [data, userProfile] = await Promise.all([
+  const [data, userProfile, t] = await Promise.all([
     getPublicPlayerProfile(id),
     getCurrentUserProfile(),
+    getTranslations(),
   ])
 
   if (!data) {
-    const lang = await getLanguage()
-    const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} kind="player" userProfile={userProfile} />
+    return <PublicProfileError message={t.profile.playerUnavailable} kind="player" userProfile={userProfile} />
   }
 
   const isOwner = userProfile && userProfile.auth_user_id === data.profile.user_id
@@ -35,9 +34,7 @@ export default async function PlayerProfilePage({
   // Enforce Visibility Rules:
   // Pending/rejected player profiles are only visible to the player themselves (isOwner)
   if (playerStatus !== "approved" && !isOwner) {
-    const lang = await getLanguage()
-    const message = lang === "uk" ? "Цей профіль гравця недоступний." : "This player profile is not available."
-    return <PublicProfileError message={message} kind="player" userProfile={userProfile} />
+    return <PublicProfileError message={t.profile.playerUnavailable} kind="player" userProfile={userProfile} />
   }
 
   let teams: TeamItem[] = []

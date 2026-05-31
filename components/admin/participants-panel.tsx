@@ -174,7 +174,7 @@ export function ParticipantsPanel({
                     onChange={(e) => setSelectedTournamentId(e.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none transition focus:border-primary/60 cursor-pointer"
                   >
-                    <option value="all">{lang === "uk" ? "Всі" : "All"}</option>
+                    <option value="all">{t.admin.extra.all}</option>
                     {tournaments.map((tournament) => (
                       <option key={tournament.id} value={tournament.id}>
                         {tournament.name ?? t.admin.participants.untitledTournament}
@@ -186,14 +186,14 @@ export function ParticipantsPanel({
 
               {/* Participant Type Filters */}
               <div className="flex items-center gap-1 text-[10px]">
-                <span className="text-white/45 mr-1">{lang === "uk" ? "Тип:" : "Type:"}</span>
+                <span className="text-white/45 mr-1">{t.admin.extra.typeLabel}</span>
                 {(["all", "team", "player"] as const).map((filter) => {
                   const label =
                     filter === "all"
-                      ? (lang === "uk" ? "Всі" : "All")
+                      ? t.admin.extra.all
                       : filter === "team"
-                      ? (lang === "uk" ? "Команди" : "Teams")
-                      : (lang === "uk" ? "Гравці" : "Players")
+                      ? t.admin.extra.teamsOption
+                      : t.admin.extra.playersOption
                   return (
                     <button
                       key={filter}

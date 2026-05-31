@@ -8,7 +8,7 @@ import { ParticleField } from "@/components/particle-field"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getPublishedNewsPosts, type PublicNewsSummary } from "@/lib/data/news"
-import { getLanguage } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -46,34 +46,38 @@ async function ActiveNavbar() {
 }
 
 async function NewsIndex() {
-  const [posts, lang] = await Promise.all([getPublishedNewsPosts(), getLanguage()])
+  const [posts, lang, t] = await Promise.all([
+    getPublishedNewsPosts(),
+    getLanguage(),
+    getTranslations(),
+  ])
 
   return (
     <section className="relative z-10 px-4 py-20">
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">
-            Eclyps Wire
+            {t.news.wire}
           </p>
           <h1 className="glow-text text-4xl font-bold text-foreground md:text-6xl">
-            News
+            {t.news.title}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-white/58">
-            Announcements, tournament updates, patch notes, and official Eclyps posts.
+            {t.news.subtitle}
           </p>
         </div>
 
         {posts.length === 0 ? (
           <div className="glass-card rounded-2xl p-10 text-center">
-            <p className="text-lg font-semibold text-white">No published posts yet.</p>
+            <p className="text-lg font-semibold text-white">{t.news.noPosts}</p>
             <p className="mt-2 text-sm text-white/55">
-              Official Eclyps news will appear here after admins publish it.
+              {t.news.noPostsDesc}
             </p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {posts.map((post) => (
-              <NewsCard key={post.slug} post={post} lang={lang} />
+              <NewsCard key={post.slug} post={post} lang={lang} t={t} />
             ))}
           </div>
         )}
@@ -82,7 +86,17 @@ async function NewsIndex() {
   )
 }
 
-function NewsCard({ post, lang }: { post: PublicNewsSummary; lang: "uk" | "en" }) {
+function NewsCard({
+  post,
+  lang,
+  t,
+}: {
+  post: PublicNewsSummary
+  lang: "uk" | "en"
+  t: any
+}) {
+  const categoryLabel = getCategoryLabel(post.category, t)
+
   return (
     <Link
       href={`/news/${post.slug}`}
@@ -91,12 +105,12 @@ function NewsCard({ post, lang }: { post: PublicNewsSummary; lang: "uk" | "en" }
       <CoverImage url={post.cover_image_url} title={post.title} />
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {post.category && (
+          {categoryLabel && (
             <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 font-mono uppercase tracking-wider text-primary">
-              {post.category}
+              {categoryLabel}
             </span>
           )}
-          <span className="text-white/45">{formatNewsDate(post.published_at, lang)}</span>
+          <span className="text-white/45">{formatNewsDate(post.published_at, lang, t)}</span>
         </div>
         <h2 className="mt-4 text-xl font-bold leading-tight text-white transition group-hover:text-primary">
           {post.title}
@@ -110,6 +124,22 @@ function NewsCard({ post, lang }: { post: PublicNewsSummary; lang: "uk" | "en" }
       </div>
     </Link>
   )
+}
+
+function getCategoryLabel(category: string | null, t: any) {
+  if (!category) return ""
+  switch (category) {
+    case "announcement":
+      return t.news.categoryAnnouncement
+    case "tournament":
+      return t.news.categoryTournament
+    case "update":
+      return t.news.categoryUpdate
+    case "patch_notes":
+      return t.news.categoryPatchNotes
+    default:
+      return category
+  }
 }
 
 function CoverImage({ url, title }: { url: string | null; title: string }) {
@@ -134,8 +164,8 @@ function CoverImage({ url, title }: { url: string | null; title: string }) {
   )
 }
 
-function formatNewsDate(value: string | null, lang: "uk" | "en") {
-  if (!value) return "Date TBA"
+function formatNewsDate(value: string | null, lang: "uk" | "en", t: any) {
+  if (!value) return t.news.dateTba
 
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value

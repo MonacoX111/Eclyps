@@ -88,10 +88,10 @@ function ApplicationRecord({
   const status = application.status
   const displayStatus =
     status === "approved"
-      ? (lang === "uk" ? "Схвалено" : "Approved")
+      ? t.admin.extra.approved
       : status === "rejected"
-      ? (lang === "uk" ? "Відхилено" : "Rejected")
-      : (lang === "uk" ? "На розгляді" : "Pending")
+      ? t.admin.extra.rejected
+      : t.admin.extra.pending
 
   return (
     <div className={recordClassName}>

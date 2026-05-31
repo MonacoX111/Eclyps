@@ -53,11 +53,7 @@ export function TeamsPanel({
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.teams.createTeam}</h3>
           <p className="mt-2 text-sm leading-6 text-white/55">
-            {lang === "uk" ? (
-              <>Додає глобальний рядок команди в <code>public.teams</code>.</>
-            ) : (
-              <>Adds a legacy or global team row to <code>public.teams</code>.</>
-            )}
+            {t.admin.teams.createTeamDesc}
           </p>
 
           <TeamForm action={createTeam} submitLabel={t.admin.teams.createTeam} tournaments={tournaments} />
@@ -80,12 +76,12 @@ export function TeamsPanel({
               {(["all", "pending", "approved", "rejected"] as const).map((filter) => {
                 const label =
                   filter === "all"
-                    ? (lang === "uk" ? "Всі" : "All")
+                    ? t.admin.extra.all
                     : filter === "pending"
-                    ? (lang === "uk" ? "На розгляді" : "Pending")
+                    ? t.admin.extra.pending
                     : filter === "approved"
-                    ? (lang === "uk" ? "Схвалено" : "Approved")
-                    : (lang === "uk" ? "Відхилено" : "Rejected")
+                    ? t.admin.extra.approved
+                    : t.admin.extra.rejected
                 return (
                   <button
                     key={filter}
@@ -141,10 +137,10 @@ function TeamRecord({
   const status = team.status ?? "approved"
   const displayStatus =
     status === "approved"
-      ? (lang === "uk" ? "Схвалено" : "Approved")
+      ? t.admin.extra.approved
       : status === "rejected"
-      ? (lang === "uk" ? "Відхилено" : "Rejected")
-      : (lang === "uk" ? "На розгляді" : "Pending")
+      ? t.admin.extra.rejected
+      : t.admin.extra.pending
 
   return (
     <details className={recordClassName}>

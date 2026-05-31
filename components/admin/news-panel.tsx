@@ -69,28 +69,22 @@ function NewsRecord({ post }: { post: AdminNewsPost }) {
 
   const getDisplayCategory = (cat: string | null) => {
     if (!cat) return ""
-    if (lang === "uk") {
-      switch (cat) {
-        case "announcement": return "Оголошення"
-        case "tournament": return "Турнір"
-        case "update": return "Оновлення"
-        case "patch_notes": return "Патч-нотатки"
-        default: return cat
-      }
+    switch (cat) {
+      case "announcement": return t.admin.extra.newsCategories.announcement
+      case "tournament": return t.admin.extra.newsCategories.tournament
+      case "update": return t.admin.extra.newsCategories.update
+      case "patch_notes": return t.admin.extra.newsCategories.patchNotes
+      default: return cat
     }
-    return cat
   }
 
   const getDisplayStatus = (status: string) => {
-    if (lang === "uk") {
-      switch (status) {
-        case "draft": return "Чернетка"
-        case "published": return "Опубліковано"
-        case "archived": return "Архівовано"
-        default: return status
-      }
+    switch (status) {
+      case "draft": return t.admin.extra.newsStatus.draft
+      case "published": return t.admin.extra.newsStatus.published
+      case "archived": return t.admin.extra.newsStatus.archived
+      default: return status
     }
-    return status
   }
 
   return (
@@ -197,12 +191,12 @@ function NewsForm({
 }
 
 function NewsStatusSelect({ value = "draft" }: { value?: NewsStatus }) {
-  const { lang } = useLanguage()
+  const { t } = useLanguage()
   return (
     <select name="status" defaultValue={value} className={inputClassName}>
-      <option value="draft">{lang === "uk" ? "Чернетка" : "Draft"}</option>
-      <option value="published">{lang === "uk" ? "Опубліковано" : "Published"}</option>
-      <option value="archived">{lang === "uk" ? "Архівовано" : "Archived"}</option>
+      <option value="draft">{t.admin.extra.newsStatus.draft}</option>
+      <option value="published">{t.admin.extra.newsStatus.published}</option>
+      <option value="archived">{t.admin.extra.newsStatus.archived}</option>
     </select>
   )
 }

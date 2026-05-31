@@ -69,12 +69,12 @@ export function PlayersPanel({
               {(["all", "pending", "approved", "rejected"] as const).map((filter) => {
                 const label =
                   filter === "all"
-                    ? (lang === "uk" ? "Всі" : "All")
+                    ? t.admin.extra.all
                     : filter === "pending"
-                    ? (lang === "uk" ? "На розгляді" : "Pending")
+                    ? t.admin.extra.pending
                     : filter === "approved"
-                    ? (lang === "uk" ? "Схвалено" : "Approved")
-                    : (lang === "uk" ? "Відхилено" : "Rejected")
+                    ? t.admin.extra.approved
+                    : t.admin.extra.rejected
                 return (
                   <button
                     key={filter}
@@ -124,10 +124,10 @@ function PlayerRecord({
   const status = player.status ?? "approved"
   const displayStatus =
     status === "approved"
-      ? (lang === "uk" ? "Схвалено" : "Approved")
+      ? t.admin.extra.approved
       : status === "rejected"
-      ? (lang === "uk" ? "Відхилено" : "Rejected")
-      : (lang === "uk" ? "На розгляді" : "Pending")
+      ? t.admin.extra.rejected
+      : t.admin.extra.pending
 
   return (
     <details className={recordClassName}>

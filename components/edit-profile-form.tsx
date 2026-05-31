@@ -47,10 +47,10 @@ export function EditProfileForm({
         // Clear success message after 5 seconds
         setTimeout(() => setSuccess(false), 5000)
       } else {
-        setError(res.error || (lang === "uk" ? "Не вдалося оновити профіль." : "Failed to update profile."))
+        setError(res.error || t.account.editForm.errors.failedUpdate)
       }
     } catch (err) {
-      setError(lang === "uk" ? "Сталася неочікувана помилка." : "An unexpected error occurred.")
+      setError(t.account.editForm.errors.unexpected)
     } finally {
       setLoading(false)
     }

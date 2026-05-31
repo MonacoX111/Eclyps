@@ -10,7 +10,7 @@ import { getApprovedTeams } from "@/lib/data/teams"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { CreateTeamModal } from "@/components/create-team-modal"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
-import { getLanguage } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -108,19 +108,20 @@ async function ActiveNavbar() {
 }
 
 async function ActiveTeamsGrid() {
-  const approvedTeams = await getApprovedTeams()
-  const lang = await getLanguage()
+  const [approvedTeams, lang, t] = await Promise.all([
+    getApprovedTeams(),
+    getLanguage(),
+    getTranslations(),
+  ])
 
   const teamCards = approvedTeams.map((team, index) => {
     const displayName = team.name
     const seed = team.seed
 
     const capPart = team.captain_name 
-      ? (lang === "uk" ? `Капітан: ${team.captain_name}` : `Captain: ${team.captain_name}`)
+      ? `${t.admin.extra.teamCaptain}: ${team.captain_name}`
       : ""
-    const memberLabel = lang === "uk" 
-      ? `${team.member_count} учасн.` 
-      : `${team.member_count} members`
+    const memberLabel = `${team.member_count} ${t.admin.extra.teamMembersCount}`
     
     const subtitle = capPart ? `${capPart} • ${memberLabel}` : memberLabel
 
@@ -138,7 +139,7 @@ async function ActiveTeamsGrid() {
     }
   })
 
-  const title = lang === "uk" ? "Команди" : "Teams"
+  const title = t.navbar.teams
 
   return (
     <TeamsGrid

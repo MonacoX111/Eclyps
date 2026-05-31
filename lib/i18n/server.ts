@@ -6,7 +6,18 @@ export async function getLanguage(): Promise<Language> {
     const cookieStore = await cookies()
     const lang = cookieStore.get("lang")?.value
     return (lang === "en" ? "en" : "uk") as Language
-  } catch (error) {
+  } catch (error: any) {
+    // Rethrow Next.js dynamic routing/rendering control errors so that Next.js
+    // knows the component/layout is dynamic and shouldn't be statically pre-rendered.
+    if (
+      error &&
+      (error.name === "DynamicServerError" ||
+        error.message?.includes("DynamicServerError") ||
+        error.digest === "DYNAMIC_SERVER_USAGE" ||
+        error.digest?.startsWith("NEXT_"))
+    ) {
+      throw error
+    }
     // Fallback if accessed outside request context (e.g. static builds)
     return "uk"
   }

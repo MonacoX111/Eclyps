@@ -8,6 +8,7 @@ import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getApprovedPlayers } from "@/lib/data/players"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -45,7 +46,10 @@ async function ActiveNavbar() {
 }
 
 async function ActivePlayersGrid() {
-  const approvedPlayers = await getApprovedPlayers()
+  const [approvedPlayers, t] = await Promise.all([
+    getApprovedPlayers(),
+    getTranslations(),
+  ])
 
   const playerCards = approvedPlayers.map((player, index) => {
     const displayName = player.display_name || player.nickname || player.name
@@ -57,6 +61,7 @@ async function ActivePlayersGrid() {
       subtitle: getPlayerCardSubtitle({
         realName: player.real_name,
         nickname: player.nickname,
+        fallback: t.teamsGrid.playerSubtitleDefault,
       }),
       tag: createTeamTag(displayName),
       wins: player.wins,
@@ -92,9 +97,11 @@ function createTeamTag(name: string) {
 function getPlayerCardSubtitle({
   realName,
   nickname,
+  fallback,
 }: {
   realName: string | null
   nickname: string | null
+  fallback: string
 }) {
   const hasNickname = typeof nickname === "string" && nickname.trim().length > 0
   const hasRealName = typeof realName === "string" && realName.trim().length > 0
@@ -102,7 +109,7 @@ function getPlayerCardSubtitle({
   if (hasNickname && hasRealName) {
     return realName
   }
-  return "Player"
+  return fallback
 }
 
 

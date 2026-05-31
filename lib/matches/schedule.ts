@@ -11,21 +11,26 @@ export function formatMatchScheduleTime({
   scheduledAt,
   timezone,
   scheduleNote,
+  lang = "uk",
 }: {
   scheduledAt: string | null
   timezone: string | null
   scheduleNote: string | null
+  lang?: string
 }) {
+  const tbaLabel = lang === "en" ? "Time TBA" : "Час не оголошено"
+
   if (!scheduledAt) {
-    return scheduleNote || MATCH_TIME_TBA_LABEL
+    return scheduleNote || tbaLabel
   }
 
   const date = new Date(scheduledAt)
   if (Number.isNaN(date.getTime())) {
-    return scheduleNote || MATCH_TIME_TBA_LABEL
+    return scheduleNote || tbaLabel
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  const locale = lang === "en" ? "en-US" : "uk-UA"
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",

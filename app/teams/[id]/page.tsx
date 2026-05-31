@@ -22,15 +22,14 @@ type TeamProfilePageProps = {
 export default async function TeamProfilePage({ params, searchParams }: TeamProfilePageProps) {
   const { id } = await params
   const resolvedParams = await searchParams
-  const [data, userProfile] = await Promise.all([
+  const [data, userProfile, t] = await Promise.all([
     getPublicTeamProfile(id),
     getCurrentUserProfile(),
+    getTranslations(),
   ])
 
   if (!data) {
-    const lang = await getLanguage()
-    const message = lang === "uk" ? "Цей профіль команди недоступний." : "This team profile is not available."
-    return <PublicProfileError message={message} userProfile={userProfile} />
+    return <PublicProfileError message={t.profile.teamUnavailable} userProfile={userProfile} />
   }
 
   let isManager = false
@@ -57,12 +56,8 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   // Enforce Visibility Rules:
   // Pending/rejected teams are only visible to the owner/captains (isManager)
   if (teamStatus !== "approved" && !isManager) {
-    const lang = await getLanguage()
-    const message = lang === "uk" ? "Цей профіль команди недоступний." : "This team profile is not available."
-    return <PublicProfileError message={message} userProfile={userProfile} />
+    return <PublicProfileError message={t.profile.teamUnavailable} userProfile={userProfile} />
   }
-
-  const t = await getTranslations()
   const rosterManagement = isManager ? (
     <div className="mt-6">
       <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">

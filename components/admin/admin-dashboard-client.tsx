@@ -229,7 +229,7 @@ export function AdminDashboardClient({
               <h1 className="font-extrabold text-xs tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70 truncate">
                 {t.admin.subtitle}
               </h1>
-              <p className="text-[9px] font-bold text-emerald-400 tracking-[0.2em] uppercase">Control Panel</p>
+              <p className="text-[9px] font-bold text-emerald-400 tracking-[0.2em] uppercase">{t.admin.extra.controlPanel}</p>
             </div>
           </div>
           {/* Language Switcher */}
@@ -322,7 +322,7 @@ export function AdminDashboardClient({
                   </div>
                   <div className="min-w-0">
                     <h1 className="font-extrabold text-xs tracking-wider uppercase text-white truncate">{t.admin.subtitle}</h1>
-                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Mobile Panel</p>
+                    <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">{t.admin.extra.mobilePanel}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -419,9 +419,9 @@ export function AdminDashboardClient({
           </div>
 
           <div className="hidden sm:flex items-center gap-4 text-xs font-mono text-white/40">
-            <span>Session: <span className="text-emerald-400">active</span></span>
+            <span>{t.admin.extra.session}<span className="text-emerald-400">{t.admin.extra.active}</span></span>
             <span className="h-3 w-px bg-white/10" />
-            <span>Ver: <span className="text-emerald-400">2026.5</span></span>
+            <span>{t.admin.extra.version}<span className="text-emerald-400">2026.5</span></span>
           </div>
         </header>
 
@@ -443,9 +443,9 @@ export function AdminDashboardClient({
                   <div className="relative rounded-2xl border border-white/10 bg-gradient-to-r from-emerald-500/10 via-black/20 to-black/40 p-6 md:p-8 overflow-hidden shadow-2xl">
                     <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-emerald-500/10 to-transparent opacity-50" />
                     <div className="relative z-10 space-y-2">
-                      <span className="text-[10px] font-bold text-emerald-400 tracking-[0.25em] uppercase">Control Room</span>
+                      <span className="text-[10px] font-bold text-emerald-400 tracking-[0.25em] uppercase">{t.admin.extra.controlRoom}</span>
                       <h2 className="text-2xl md:text-3xl font-extrabold text-white">
-                        {lang === "uk" ? "Вітаємо у панелі керування!" : "Welcome to the Control Room"}
+                        {t.admin.extra.welcomeControlRoom}
                       </h2>
                       <p className="text-sm text-white/60 max-w-xl leading-relaxed">
                         {t.admin.description}
@@ -523,7 +523,7 @@ export function AdminDashboardClient({
                             onClick={() => handleTabChange("tournaments")}
                             className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition"
                           >
-                            {lang === "uk" ? "Змінити" : "Switch"}
+                            {t.admin.extra.switch}
                           </button>
                         </div>
 
@@ -534,33 +534,33 @@ export function AdminDashboardClient({
                                 {activeTournament.name || "Untitled Tournament"}
                               </h4>
                               <p className="text-xs text-white/40 mt-1">
-                                {activeTournament.game || "CS2"} {"\u2022"} {formatDisplayDate(activeTournament.event_date)}
+                                {activeTournament.game || "CS2"} {"\u2022"} {formatDisplayDate(activeTournament.event_date, lang)}
                               </p>
                             </div>
                             <div className="grid grid-cols-2 gap-4 rounded-xl bg-black/20 p-4 border border-white/5 text-xs text-white/70">
                               <div className="space-y-1">
-                                <span className="block text-[10px] text-white/40 uppercase">{lang === "uk" ? "Статус" : "Status"}</span>
+                                <span className="block text-[10px] text-white/40 uppercase">{t.admin.extra.statusLabel}</span>
                                 <span className={`inline-block rounded-full px-2 py-0.5 font-bold uppercase tracking-wider text-[9px] ${statusBadgeColor(activeTournament.status)}`}>
                                   {formatStatus(activeTournament.status)}
                                 </span>
                               </div>
                               <div className="space-y-1">
-                                <span className="block text-[10px] text-white/40 uppercase">{lang === "uk" ? "Макс. команд" : "Slots"}</span>
+                                <span className="block text-[10px] text-white/40 uppercase">{t.admin.extra.slotsLabel}</span>
                                 <span className="block font-bold text-white font-mono">{activeTournament.team_count ?? 16}</span>
                               </div>
                               <div className="space-y-1">
-                                <span className="block text-[10px] text-white/40 uppercase">{lang === "uk" ? "Призовий фонд" : "Prize Pool"}</span>
+                                <span className="block text-[10px] text-white/40 uppercase">{t.admin.extra.prizePoolLabel}</span>
                                 <span className="block font-bold text-emerald-400">{activeTournament.prize_pool || "TBA"}</span>
                               </div>
                               <div className="space-y-1">
-                                <span className="block text-[10px] text-white/40 uppercase">{lang === "uk" ? "Формат" : "Format"}</span>
+                                <span className="block text-[10px] text-white/40 uppercase">{t.admin.extra.formatLabel}</span>
                                 <span className="block font-bold text-white">{activeTournament.format || "BO3"}</span>
                               </div>
                             </div>
                           </div>
                         ) : (
                           <AdminEmptyState>
-                            {lang === "uk" ? "Активного турніру не обрано. Створіть та призначте турнір." : "No active tournament selected."}
+                            {t.admin.extra.noActiveTournament}
                           </AdminEmptyState>
                         )}
                       </div>
@@ -784,7 +784,7 @@ export function AdminDashboardClient({
                           {t.admin.settings.apiLatency}
                         </span>
                         <div className="flex items-center justify-between font-semibold px-1">
-                          <span className="text-white/60">Internal API Gateway</span>
+                          <span className="text-white/60">{t.admin.extra.internalApiGateway}</span>
                           <span className="text-emerald-400 flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-emerald-400" />
                             {t.admin.settings.healthy} (8ms)

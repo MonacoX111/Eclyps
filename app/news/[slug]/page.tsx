@@ -9,7 +9,7 @@ import { ParticleField } from "@/components/particle-field"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getPublishedNewsPostBySlug } from "@/lib/data/news"
-import { getLanguage } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
 
@@ -53,12 +53,15 @@ async function ActiveNavbar() {
 }
 
 async function Article({ slug }: { slug: string }) {
-  const [post, lang] = await Promise.all([
+  const [post, lang, t] = await Promise.all([
     getPublishedNewsPostBySlug(slug),
     getLanguage(),
+    getTranslations(),
   ])
 
   if (!post) notFound()
+
+  const categoryLabel = getCategoryLabel(post.category, t)
 
   return (
     <article className="relative z-10 px-4 py-16">
@@ -67,18 +70,18 @@ async function Article({ slug }: { slug: string }) {
           href="/news"
           className="text-sm font-medium text-primary transition hover:text-emerald-200"
         >
-          {"<-"} Back to news
+          {t.news.backToNews}
         </Link>
 
         <header className="mt-8">
           <div className="flex flex-wrap items-center gap-3 text-xs">
-            {post.category && (
+            {categoryLabel && (
               <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 font-mono uppercase tracking-wider text-primary">
-                {post.category}
+                {categoryLabel}
               </span>
             )}
-            <span className="text-white/45">{formatNewsDate(post.published_at, lang)}</span>
-            <span className="text-white/35">by {post.author_name ?? "Eclyps"}</span>
+            <span className="text-white/45">{formatNewsDate(post.published_at, lang, t)}</span>
+            <span className="text-white/35">{t.news.by} {post.author_name ?? "Eclyps"}</span>
           </div>
           <h1 className="glow-text mt-5 text-4xl font-bold leading-tight text-white md:text-6xl">
             {post.title}
@@ -98,6 +101,22 @@ async function Article({ slug }: { slug: string }) {
       </div>
     </article>
   )
+}
+
+function getCategoryLabel(category: string | null, t: any) {
+  if (!category) return ""
+  switch (category) {
+    case "announcement":
+      return t.news.categoryAnnouncement
+    case "tournament":
+      return t.news.categoryTournament
+    case "update":
+      return t.news.categoryUpdate
+    case "patch_notes":
+      return t.news.categoryPatchNotes
+    default:
+      return category
+  }
 }
 
 function CoverImage({ url, title }: { url: string | null; title: string }) {
@@ -122,8 +141,8 @@ function CoverImage({ url, title }: { url: string | null; title: string }) {
   )
 }
 
-function formatNewsDate(value: string | null, lang: "uk" | "en") {
-  if (!value) return "Date TBA"
+function formatNewsDate(value: string | null, lang: "uk" | "en", t: any) {
+  if (!value) return t.news.dateTba
 
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value

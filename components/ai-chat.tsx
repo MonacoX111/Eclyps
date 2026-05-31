@@ -13,23 +13,10 @@ type Message = {
 }
 
 export function AiChat() {
-  const { lang } = useLanguage()
+  const { t, lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [isThinking, setIsThinking] = useState(false)
-  
-  // Dynamic bilingual text
-  const t = {
-    title: lang === "uk" ? "ШІ Асистент Eclyps" : "Eclyps AI Assistant",
-    placeholder: lang === "uk" ? "Запитайте про що завгодно..." : "Ask anything...",
-    thinking: lang === "uk" ? "Аналізую..." : "Thinking...",
-    welcome: lang === "uk"
-      ? "Привіт! Я ваш асистент Eclyps. Запитайте мене про турніри, команди, правила реєстрації або сітку матчів!"
-      : "Hi! I am your Eclyps AI assistant. Ask me anything about tournaments, teams, registration rules, or match brackets!",
-    error: lang === "uk"
-      ? "Не вдалося отримати відповідь від ШІ. Будь ласка, спробуйте ще раз."
-      : "Failed to receive a response from the AI. Please try again."
-  }
 
   const [messages, setMessages] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -40,7 +27,7 @@ export function AiChat() {
       {
         id: "welcome",
         sender: "ai",
-        text: t.welcome,
+        text: t.aiChat.welcome,
       },
     ])
   }, [lang])
@@ -83,7 +70,7 @@ export function AiChat() {
         {
           id: Math.random().toString(),
           sender: data.error ? "system" : "ai",
-          text: data.answer || data.error || t.error,
+          text: data.answer || data.error || t.aiChat.error,
         },
       ])
     } catch (err) {
@@ -93,7 +80,7 @@ export function AiChat() {
         {
           id: Math.random().toString(),
           sender: "system",
-          text: t.error,
+          text: t.aiChat.error,
         },
       ])
     } finally {
@@ -138,11 +125,11 @@ export function AiChat() {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    {t.title}
+                    {t.aiChat.title}
                   </h4>
                   <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                    <span className="text-[10px] text-muted-foreground uppercase">Online</span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{t.aiChat.online}</span>
                   </div>
                 </div>
               </div>
@@ -201,7 +188,7 @@ export function AiChat() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                     </span>
-                    <span>{t.thinking}</span>
+                    <span>{t.aiChat.thinking}</span>
                   </div>
                 </div>
               )}
@@ -217,7 +204,7 @@ export function AiChat() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={t.placeholder}
+                placeholder={t.aiChat.placeholder}
                 disabled={isThinking}
                 className="flex-1 rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-xs text-white placeholder-white/30 outline-none transition focus:border-primary/50 disabled:opacity-50"
               />

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useLanguage } from "@/components/language-provider"
 
 type ParticipantType = "team" | "player"
 
@@ -24,6 +25,7 @@ export function MatchParticipantFields({
   team1?: string | null
   team2?: string | null
 }) {
+  const { t } = useLanguage()
   const [participantType, setParticipantType] = useState<ParticipantType>(
     getInitialType(initialType),
   )
@@ -33,8 +35,8 @@ export function MatchParticipantFields({
   return (
     <>
       <ParticipantTypeField value={participantType} onChange={setParticipantType} />
-      <NameField label={participantType === "player" ? "Player 1" : "Team 1"} name="team1" listId={listId} value={team1} />
-      <NameField label={participantType === "player" ? "Player 2" : "Team 2"} name="team2" listId={listId} value={team2} />
+      <NameField label={participantType === "player" ? t.admin.extra.player1Label : t.admin.extra.team1Label} name="team1" listId={listId} value={team1} />
+      <NameField label={participantType === "player" ? t.admin.extra.player2Label : t.admin.extra.team2Label} name="team2" listId={listId} value={team2} />
       <NameList id={listId} names={names} />
     </>
   )
@@ -51,6 +53,7 @@ export function ResultParticipantFields({
   playerNames: string[]
   team?: string | null
 }) {
+  const { t } = useLanguage()
   const [participantType, setParticipantType] = useState<ParticipantType>(
     getInitialType(initialType),
   )
@@ -60,7 +63,7 @@ export function ResultParticipantFields({
   return (
     <>
       <ParticipantTypeField value={participantType} onChange={setParticipantType} />
-      <NameField label={participantType === "player" ? "Player" : "Team"} name="team" listId={listId} value={team} />
+      <NameField label={participantType === "player" ? t.admin.extra.playerLabel : t.admin.extra.teamLabel} name="team" listId={listId} value={team} />
       <NameList id={listId} names={names} />
     </>
   )
@@ -73,17 +76,18 @@ function ParticipantTypeField({
   value: ParticipantType
   onChange: (value: ParticipantType) => void
 }) {
+  const { t } = useLanguage()
   return (
     <label className="space-y-2 text-sm text-white/75">
-      <span className="block">Participant type</span>
+      <span className="block">{t.admin.extra.participantType}</span>
       <select
         name="participant_type"
         value={value}
         onChange={(event) => onChange(event.target.value as ParticipantType)}
         className={inputClassName}
       >
-        <option value="team">Team</option>
-        <option value="player">Player</option>
+        <option value="team">{t.admin.extra.teamLabel}</option>
+        <option value="player">{t.admin.extra.playerLabel}</option>
       </select>
     </label>
   )

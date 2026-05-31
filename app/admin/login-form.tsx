@@ -22,13 +22,13 @@ export function AdminLoginForm({
   const { t, lang } = useLanguage()
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const retryAfterLabel = formatRetryAfter(retryAfter, lang)
+  const retryAfterLabel = formatRetryAfter(retryAfter, t, lang)
 
   return (
     <form action={action} className="mt-6 space-y-4">
       <div className="space-y-2">
         <label htmlFor="password" className="text-sm text-white/80">
-          {lang === "uk" ? "Пароль" : "Password"}
+          {t.admin.login.passwordLabel}
         </label>
         <div className="relative">
           <input
@@ -39,7 +39,7 @@ export function AdminLoginForm({
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder={lang === "uk" ? "Введіть пароль..." : "Enter password..."}
+            placeholder={t.admin.login.placeholder}
             className="w-full rounded-xl border border-white/10 bg-black/30 pl-4 pr-12 py-3 text-white outline-none transition focus:border-emerald-300/60"
           />
           <button
@@ -59,97 +59,99 @@ export function AdminLoginForm({
 
       {error === "invalid" && (
         <p className="text-sm text-red-300">
-          {lang === "uk" ? "Неправильний пароль." : "Incorrect password."}
+          {t.admin.login.incorrectPassword}
         </p>
       )}
 
       {error === "unavailable" && (
         <p className="text-sm text-amber-200">
-          {lang === "uk" ? "Доступ адміністратора ще не налаштовано." : "Admin access is not configured yet."}
+          {t.admin.login.notConfigured}
         </p>
       )}
 
       {error === "storage" && (
         <p className="text-sm text-amber-200">
-          {lang === "uk"
-            ? "Сховище авторизації адміністратора не готове. Застосуйте міграцію Supabase."
-            : "Admin auth storage is not ready. Apply the Supabase admin auth migration."}
+          {t.admin.login.errorStorage}
         </p>
       )}
 
       {error === "rate-limited" && (
         <p className="text-sm text-red-300">
-          {lang === "uk"
-            ? `Забагато спроб. Спробуйте знову ${retryAfterLabel ? ` через ${retryAfterLabel}` : " пізніше"}.`
-            : `Too many attempts. Try again ${retryAfterLabel ? ` in ${retryAfterLabel}` : " later"}.`}
+          {t.admin.login.errorRateLimited}
+          {retryAfterLabel 
+            ? ` ${lang === "uk" ? "через" : "in"} ${retryAfterLabel}` 
+            : ` ${lang === "uk" ? "пізніше" : "later"}`}
+          .
         </p>
       )}
 
-      {health && <AdminAuthHealthPanel health={health} lang={lang} />}
+      {health && <AdminAuthHealthPanel health={health} t={t} />}
 
-      <AdminLoginButton lang={lang} />
+      <AdminLoginButton t={t} />
     </form>
   )
 }
 
-function AdminAuthHealthPanel({ health, lang }: { health: AdminAuthHealth; lang: string }) {
+function AdminAuthHealthPanel({ health, t }: { health: AdminAuthHealth; t: any }) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-xs leading-5 text-white/55">
       <p className="font-medium uppercase tracking-[0.2em] text-white/45">
-        {lang === "uk" ? "Стан авторизації" : "Auth health"}
+        {t.admin.login.statusTitle}
       </p>
       <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-        <dt>{lang === "uk" ? "Конфігурація присутня" : "Env present"}</dt>
+        <dt>{t.admin.login.statusEnv}</dt>
         <dd className="text-white/70">
-          {yesNo(health.passwordHashPresent && health.sessionSecretPresent, lang)}
+          {yesNo(health.passwordHashPresent && health.sessionSecretPresent, t)}
         </dd>
-        <dt>{lang === "uk" ? "Формат хешу валідний" : "Hash format valid"}</dt>
-        <dd className="text-white/70">{yesNo(health.passwordHashFormatValid, lang)}</dd>
-        <dt>{lang === "uk" ? "Секрет сесії валідний" : "Session secret valid"}</dt>
+        <dt>{t.admin.login.statusHash}</dt>
+        <dd className="text-white/70">{yesNo(health.passwordHashFormatValid, t)}</dd>
+        <dt>{t.admin.login.statusSecret}</dt>
         <dd className="text-white/70">
-          {yesNo(health.sessionSecretFormatValid, lang)}
+          {yesNo(health.sessionSecretFormatValid, t)}
         </dd>
-        <dt>{lang === "uk" ? "Кукі сесії зчитується" : "Session cookie readable"}</dt>
-        <dd className="text-white/70">{yesNo(health.sessionCookieReadable, lang)}</dd>
-        <dt>{lang === "uk" ? "Екрановані роздільники хешу" : "Escaped hash separators"}</dt>
+        <dt>{t.admin.login.statusCookie}</dt>
+        <dd className="text-white/70">{yesNo(health.sessionCookieReadable, t)}</dd>
+        <dt>{t.admin.login.statusEscaped}</dt>
         <dd className="text-white/70">
-          {yesNo(health.passwordHashEscapedDollarSigns, lang)}
+          {yesNo(health.passwordHashEscapedDollarSigns, t)}
         </dd>
       </dl>
     </div>
   )
 }
 
-function yesNo(value: boolean, lang: string) {
+function yesNo(value: boolean, t: any) {
   return value
-    ? (lang === "uk" ? "так" : "yes")
-    : (lang === "uk" ? "ні" : "no")
+    ? t.admin.login.yes
+    : t.admin.login.no
 }
 
-function formatRetryAfter(value: string | undefined, lang: string) {
+function formatRetryAfter(value: string | undefined, t: any, lang: string) {
   const seconds = Number(value)
   if (!Number.isFinite(seconds) || seconds <= 0) return null
 
   const roundedSeconds = Math.ceil(seconds)
   if (roundedSeconds < 60) {
     if (lang === "uk") {
-      return `${roundedSeconds} сек.`
+      return `${roundedSeconds}${t.admin.login.secLabel}`
     }
-    return `${roundedSeconds} second${roundedSeconds === 1 ? "" : "s"}`
+    const unit = roundedSeconds === 1 ? t.admin.login.secLabel : t.admin.login.secPluralLabel
+    return `${roundedSeconds}${unit}`
   }
 
   const minutes = Math.ceil(roundedSeconds / 60)
   if (lang === "uk") {
-    return `${minutes} хв.`
+    return `${minutes}${t.admin.login.minLabel}`
   }
-  return `${minutes} minute${minutes === 1 ? "" : "s"}`
+  const unit = minutes === 1 ? t.admin.login.minLabel : t.admin.login.minPluralLabel
+  return `${minutes}${unit}`
 }
 
 type ButtonProps = {
-  lang: string
+  t: any
 }
 
-function AdminLoginButton({ lang }: ButtonProps) {
+function AdminLoginButton({ t }: ButtonProps) {
   const { pending } = useFormStatus()
 
   return (
@@ -159,8 +161,8 @@ function AdminLoginButton({ lang }: ButtonProps) {
       className="w-full rounded-xl bg-emerald-300 px-4 py-3 font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
     >
       {pending
-        ? (lang === "uk" ? "Вхід..." : "Continuing...")
-        : (lang === "uk" ? "Увійти" : "Continue")}
+        ? t.admin.login.buttonLoading
+        : t.admin.login.button}
     </button>
   )
 }

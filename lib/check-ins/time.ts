@@ -79,11 +79,12 @@ export function formatKyivDateTimeInput(value: string | null | undefined) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
 }
 
-export function formatKyivCheckInDate(value: string | null | undefined) {
+export function formatKyivCheckInDate(value: string | null | undefined, lang: string = "uk") {
   const timestamp = readUtcTimestamp(value)
-  if (!timestamp) return value ?? "soon"
+  if (!timestamp) return value ?? (lang === "en" ? "soon" : "незабаром")
 
-  return new Intl.DateTimeFormat("en-US", {
+  const locale = lang === "en" ? "en-US" : "uk-UA"
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -92,8 +93,9 @@ export function formatKyivCheckInDate(value: string | null | undefined) {
   }).format(new Date(timestamp))
 }
 
-export function formatKyivCheckInDateWithLabel(value: string | null | undefined) {
-  return `${formatKyivCheckInDate(value)} ${CHECK_IN_DISPLAY_TIME_ZONE_LABEL}`
+export function formatKyivCheckInDateWithLabel(value: string | null | undefined, lang: string = "uk") {
+  const label = lang === "en" ? "Kyiv Time" : "за київським часом"
+  return `${formatKyivCheckInDate(value, lang)} ${label}`
 }
 
 export function readUtcTimestamp(value: unknown) {

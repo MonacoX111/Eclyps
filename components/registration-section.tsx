@@ -373,8 +373,8 @@ export function RegistrationSection({
                             ? t.registration.alerts.submitButtonTeamRegistered
                             : approvedPlayer
                               ? (summary.participantType === "player" 
-                                  ? (lang === "uk" ? "Зареєструвати гравця" : "Register Player")
-                                  : (lang === "uk" ? "Зареєструвати команду" : "Register Team"))
+                                  ? t.registration.alertsExtra.registerPlayer
+                                  : t.registration.alertsExtra.registerTeam)
                               : userProfile
                                 ? applicationStatus === "pending"
                                   ? t.registration.buttons.playerPending
@@ -585,12 +585,10 @@ function PlayerApplicationState({
     return (
       <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4">
         <p className="text-sm font-semibold text-amber-100">
-          {lang === "uk" ? "Профіль на розгляді" : "Profile Pending Approval"}
+          {t.registration.alertsExtra.profilePendingTitle}
         </p>
         <p className="mt-2 text-sm leading-6 text-white/70">
-          {lang === "uk"
-            ? "Ваша заявка гравця очікує на перевірку адміністратором."
-            : "Your player profile is waiting for admin approval."}
+          {t.registration.alertsExtra.profilePendingMessage}
         </p>
       </div>
     )
@@ -601,12 +599,10 @@ function PlayerApplicationState({
       <div className="sm:col-span-2 rounded-xl border border-red-300/25 bg-red-300/10 px-4 py-4 flex flex-col gap-4">
         <div>
           <p className="text-sm font-semibold text-red-100">
-            {lang === "uk" ? "Профіль відхилено" : "Profile Application Rejected"}
+            {t.registration.alertsExtra.profileRejectedTitle}
           </p>
           <p className="mt-2 text-sm leading-6 text-white/70">
-            {lang === "uk"
-              ? "Ваша попередня заявка була відхилена адміністратором. Ви можете подати нову заявку."
-              : "Your previous player profile application has been rejected by an admin. You can submit a new application."}
+            {t.registration.alertsExtra.profileRejectedMessage}
           </p>
         </div>
         <div>
@@ -626,12 +622,10 @@ function PlayerApplicationState({
     <div className="sm:col-span-2 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-4 flex flex-col gap-4">
       <div>
         <p className="text-sm font-semibold text-amber-100">
-          {lang === "uk" ? "Необхідно створити профіль гравця" : "Player Profile Required"}
+          {t.registration.alertsExtra.profileRequiredTitle}
         </p>
         <p className="mt-2 text-sm leading-6 text-white/70">
-          {lang === "uk"
-            ? "Ваш акаунт Discord підключено, але у вас ще немає схваленого профілю гравця або активної заявки. Подайте заявку зараз, щоб мати можливість реєструватися на турніри."
-            : "Your Discord account is connected, but you do not have an approved player profile or a pending application yet. Apply now to register for tournaments."}
+          {t.registration.alertsExtra.profileRequiredMessage}
         </p>
       </div>
       <div>
