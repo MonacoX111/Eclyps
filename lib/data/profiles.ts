@@ -209,6 +209,7 @@ async function getPublicProfile(
   let memberCount: number | null = null
   let status: string | null = null
   let teamMembers: any[] = []
+  let connections: PublicProfileConnection[] = []
 
   if (kind === "team") {
     const teamId = source?.id ?? id
@@ -240,6 +241,69 @@ async function getPublicProfile(
     if (source && "status" in source) {
       status = source.status
     }
+  } else if (kind === "player") {
+    const playerId = source?.id ?? id
+
+    // Fetch team memberships
+    const membershipsRes = await supabase
+      .from("team_members")
+      .select(`
+        role,
+        team:teams(id, name, status, logo_url)
+      `)
+      .eq("player_id", playerId)
+
+    // Fetch owned teams
+    const ownedTeamsRes = await supabase
+      .from("teams")
+      .select("id, name, status, logo_url")
+      .eq("owner_player_id", playerId)
+
+    const teamMap = new Map<string, any>()
+
+    if (membershipsRes.data) {
+      for (const m of membershipsRes.data) {
+        const t = m.team as any
+        if (t && t.id && t.status === "approved") {
+          teamMap.set(t.id, {
+            id: t.id,
+            name: t.name,
+            logo_url: t.logo_url,
+            role: m.role,
+          })
+        }
+      }
+    }
+
+    if (ownedTeamsRes.data) {
+      for (const t of ownedTeamsRes.data) {
+        if (t.status === "approved") {
+          if (!teamMap.has(t.id)) {
+            teamMap.set(t.id, {
+              id: t.id,
+              name: t.name,
+              logo_url: t.logo_url,
+              role: "owner",
+            })
+          } else {
+            const existing = teamMap.get(t.id)
+            teamMap.set(t.id, {
+              ...existing,
+              role: "owner",
+            })
+          }
+        }
+      }
+    }
+
+    connections = Array.from(teamMap.values()).map((t) => ({
+      id: t.id,
+      label: t.name,
+      href: `/teams/${t.id}`,
+      meta: t.role === "owner" ? "Власник" : t.role === "captain" ? "Капітан" : t.role === "substitute" ? "Запасний" : "Учасник",
+      logoUrl: t.logo_url ?? null,
+      role: t.role,
+    }))
   }
 
   const profile = toPublicProfileRecord({
@@ -254,7 +318,7 @@ async function getPublicProfile(
   return {
     profile,
     tournamentName: tournament?.name ?? null,
-    connections: [],
+    connections,
     stats: calculateParticipantStats({
       matches,
       identity: {

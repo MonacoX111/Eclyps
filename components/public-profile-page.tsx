@@ -144,21 +144,64 @@ export function PublicProfilePage({ data, userProfile = null, children }: Public
                   <EmptyState>{emptyConnections}</EmptyState>
                 ) : (
                   <div className="flex flex-wrap justify-center gap-4">
-                    {data.connections.map((connection) => (
-                      <div
-                        key={connection.id}
-                        className="glass-card w-full rounded-xl p-5 sm:w-[calc((100%-1rem)/2)]"
-                      >
-                        <p className="break-words font-semibold text-foreground">
-                          {connection.label}
-                        </p>
-                        {connection.meta ? (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {connection.meta}
-                          </p>
-                        ) : null}
-                      </div>
-                    ))}
+                    {data.connections.map((connection) => {
+                      const logoUrl = (connection as any).logoUrl
+                      const role = (connection as any).role
+
+                      return (
+                        <Link
+                          key={connection.id}
+                          href={connection.href || "#"}
+                          className="glass-card w-full rounded-xl p-5 sm:w-[calc((100%-1rem)/2)] flex items-center justify-between gap-4 hover:border-emerald-500/20 transition group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Team Logo or Fallback */}
+                            {logoUrl ? (
+                              <img
+                                src={logoUrl}
+                                alt=""
+                                className="h-10 w-10 rounded-lg object-cover border border-white/10 shrink-0"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-bold text-white/45 shrink-0">
+                                <Shield className="h-5 w-5 text-emerald-400/60" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="break-words font-semibold text-foreground group-hover:text-emerald-400 transition">
+                                {connection.label}
+                              </p>
+                              {connection.meta ? (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {connection.meta}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {/* Role Badge */}
+                          {role && (
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                              role === "owner"
+                                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+                                : role === "captain"
+                                  ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
+                                  : role === "substitute"
+                                    ? "bg-blue-500/10 border border-blue-500/20 text-blue-300"
+                                    : "bg-white/5 border border-white/10 text-white/60"
+                            }`}>
+                              {role === "owner"
+                                ? t.profile.meta.owner
+                                : role === "captain"
+                                  ? t.profile.meta.captain
+                                  : role === "substitute"
+                                    ? t.profile.meta.substitute
+                                    : t.profile.meta.member}
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })}
                   </div>
                 )}
               </div>
