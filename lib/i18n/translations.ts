@@ -16,7 +16,7 @@ const rawTranslations = {
       schedule: "Розклад",
       results: "Результати",
       news: "Новини",
-      loginDiscord: "Увійти через Discord",
+      loginDiscord: "Зареєструватися / Увійти",
       logout: "Вийти",
     },
     footer: {
@@ -1215,7 +1215,7 @@ const rawTranslations = {
       schedule: "Schedule",
       results: "Results",
       news: "News",
-      loginDiscord: "Login with Discord",
+      loginDiscord: "Sign up / Log in",
       logout: "Logout",
     },
     footer: {
