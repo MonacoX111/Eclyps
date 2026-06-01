@@ -57,11 +57,20 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       images: [ogImage],
     },
+    appleWebApp: {
+      capable: true,
+      title: 'Eclyps',
+      statusBarStyle: 'black-translucent',
+    },
   }
 }
 
 export const viewport = {
   themeColor: '#00c896',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 }
 
 export default async function RootLayout({

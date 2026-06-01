@@ -345,8 +345,8 @@ export function AccountDashboardClient({
           <DashboardPanel title={t.account.myRegistrations} description={t.account.registrationsDescription}>
 
             {registrations && registrations.length > 0 ? (
-              <div className="overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full text-left text-xs border-collapse min-w-[600px] sm:min-w-0">
                   <thead className="hidden sm:table-header-group">
                     <tr className="text-white/40 uppercase tracking-wider border-b border-white/5">
                       <th className="pb-3 font-semibold">{t.account.tableTournament}</th>

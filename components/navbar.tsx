@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
 import { logoutDiscord } from "@/app/auth/actions"
@@ -24,6 +24,17 @@ export function Navbar({
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const { t } = useLanguage()
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [open])
 
   const navLinks = [
     { href: "/tournament", label: t.navbar.tournament },
@@ -90,7 +101,7 @@ export function Navbar({
             {userProfile && <NotificationsBell userProfile={userProfile} />}
             <MobileAuthAvatar userProfile={userProfile} />
             <button
-              className="flex flex-col gap-1.5"
+              className="flex flex-col gap-1.5 p-2 -mr-2 cursor-pointer"
               onClick={() => setOpen(!open)}
               aria-label="Toggle menu"
             >

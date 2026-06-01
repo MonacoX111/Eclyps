@@ -152,7 +152,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute right-0 mt-2.5 w-80 max-h-[420px] rounded-2xl border flex flex-col overflow-hidden z-50 shadow-2xl"
+            className="absolute right-0 mt-2.5 w-72 sm:w-80 max-w-[calc(100vw-2rem)] max-h-[420px] rounded-2xl border flex flex-col overflow-hidden z-50 shadow-2xl"
             style={{
               background: "oklch(0.07 0.01 180 / 0.95)",
               backdropFilter: "blur(20px)",
@@ -229,7 +229,7 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
                         <div className="flex-1 min-w-0 pr-4">
                           <div className="flex items-baseline justify-between gap-1 mb-0.5">
                             <span
-                              className={`text-xs truncate ${
+                              className={`text-xs break-words whitespace-normal ${
                                 isUnread ? "font-bold text-white" : "font-medium text-white/70"
                               }`}
                             >
