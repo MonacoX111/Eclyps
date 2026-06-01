@@ -102,6 +102,38 @@ export function getLocalizedNotification(
         message: `Ваш матч${roundStr} турніру "${tName}" було заплановано/оновлено: ${localizedTime}.`,
       }
     }
+    case "team_invite_received": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const teamName = match ? match[1] : "команду"
+      return {
+        title: "Нове запрошення в команду",
+        message: `Вас запросили приєднатися до команди "${teamName}".`,
+      }
+    }
+    case "team_invite_accepted": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const playerName = match ? match[1] : "Гравець"
+      return {
+        title: "Запрошення прийнято",
+        message: `Гравець "${playerName}" прийняв ваше запрошення приєднатися до команди.`,
+      }
+    }
+    case "team_invite_declined": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const playerName = match ? match[1] : "Гравець"
+      return {
+        title: "Запрошення відхилено",
+        message: `Гравець "${playerName}" відхилив ваше запрошення приєднатися до команди.`,
+      }
+    }
+    case "team_invite_cancelled": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const teamName = match ? match[1] : "команди"
+      return {
+        title: "Запрошення скасовано",
+        message: `Ваше запрошення приєднатися до команди "${teamName}" було скасовано.`,
+      }
+    }
     default:
       return { title: notification.title, message: notification.message }
   }

@@ -37,6 +37,9 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   const teamStatus = data.profile.status ?? "approved"
   const members = data.teamMembers ?? []
 
+  let pendingInvites: any[] = []
+  let inviteCandidates: any[] = []
+
   if (userProfile) {
     const supabaseAdmin = createSupabaseAdminClient()
     if (supabaseAdmin) {
@@ -49,6 +52,83 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
 
       if (player) {
         isManager = await canManageTeam(id, player.id)
+      }
+
+      // Fetch pending invites and candidate players if user is manager
+      if (isManager && player) {
+        const [invitesRes, memberRowsRes, pendingInvitesRes, approvedPlayersRes] = await Promise.all([
+          supabaseAdmin
+            .from("team_invites")
+            .select(`
+              id,
+              status,
+              created_at,
+              invited_player_id,
+              players!team_invites_invited_player_id_fkey(display_name, nickname, name)
+            `)
+            .eq("team_id", id)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false }),
+          supabaseAdmin
+            .from("team_members")
+            .select("player_id")
+            .eq("team_id", id),
+          supabaseAdmin
+            .from("team_invites")
+            .select("invited_player_id")
+            .eq("team_id", id)
+            .eq("status", "pending"),
+          supabaseAdmin
+            .from("players")
+            .select(`
+              id,
+              display_name,
+              nickname,
+              real_name,
+              region,
+              avatar_url,
+              owner_user_id,
+              user_profiles!players_owner_user_id_fkey(discord_username)
+            `)
+            .eq("status", "approved")
+        ])
+
+        const invites = invitesRes.data
+        if (invites) {
+          pendingInvites = invites.map((inv: any) => {
+            const p = inv.players as any
+            return {
+              id: inv.id,
+              status: inv.status,
+              created_at: inv.created_at,
+              invited_player_id: inv.invited_player_id,
+              display_name: p?.display_name?.trim() || p?.nickname?.trim() || p?.name?.trim() || "Unknown player"
+            }
+          })
+        }
+
+        const memberPlayerIds = (memberRowsRes.data ?? []).map((m: any) => m.player_id)
+        const pendingInvitedPlayerIds = (pendingInvitesRes.data ?? []).map((i: any) => i.invited_player_id)
+
+        // Exclude: self (manager), team members, pending invitees
+        const excludedSet = new Set([player.id, ...memberPlayerIds, ...pendingInvitedPlayerIds])
+
+        if (approvedPlayersRes.data) {
+          inviteCandidates = approvedPlayersRes.data
+            .filter((p: any) => !excludedSet.has(p.id))
+            .map((p: any) => {
+              const profile = p.user_profiles as { discord_username?: string } | null
+              return {
+                id: p.id,
+                display_name: p.display_name?.trim() || p.nickname?.trim() || p.name?.trim() || "Unknown player",
+                nickname: p.nickname || null,
+                real_name: p.real_name || null,
+                region: p.region || null,
+                avatar_url: p.avatar_url || null,
+                discord_username: profile?.discord_username || null
+              }
+            })
+        }
       }
     }
   }
@@ -70,6 +150,8 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         ownerPlayerId={ownerPlayerId}
         initialError={resolvedParams?.rosterError}
         initialSuccess={resolvedParams?.rosterSuccess}
+        pendingInvites={pendingInvites}
+        inviteCandidates={inviteCandidates}
       />
     </div>
   ) : null

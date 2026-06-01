@@ -124,12 +124,13 @@ async function AccountDashboard({
     )
   }
 
-  // 2. Fetch User's Teams, registrations, and notifications concurrently.
+  // 2. Fetch User's Teams, registrations, notifications, and team invites concurrently.
   const [
     ownedTeamsRes,
     membershipsRes,
     registrationsRes,
     notificationsRes,
+    invitesRes,
   ] = await Promise.all([
     supabaseAdmin
       .from("teams")
@@ -154,6 +155,20 @@ async function AccountDashboard({
       .eq("user_profile_id", userProfileId)
       .order("created_at", { ascending: false }),
     getUserNotifications(),
+    supabaseAdmin
+      .from("team_invites")
+      .select(`
+        id,
+        team_id,
+        inviter_player_id,
+        status,
+        created_at,
+        teams:teams(name),
+        players!team_invites_inviter_player_id_fkey(display_name, nickname, name)
+      `)
+      .eq("invited_user_profile_id", userProfileId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
   ])
 
   const ownedTeams = ownedTeamsRes.data ?? []
@@ -172,6 +187,23 @@ async function AccountDashboard({
   }
 
   const notifications = notificationsRes ?? []
+
+  const rawInvites = invitesRes.data ?? []
+  if (invitesRes.error) {
+    console.error(`Error fetching team invites: [${invitesRes.error.code || "No code"}] ${invitesRes.error.message || "No message"}`)
+  }
+
+  const invitesList = rawInvites.map((inv: any) => {
+    const tObj = inv.teams as { name?: string } | null
+    const pObj = inv.players as { display_name?: string; nickname?: string; name?: string } | null
+    return {
+      id: inv.id,
+      team_id: inv.team_id,
+      team_name: tObj?.name || "Unknown Team",
+      inviter_name: pObj?.display_name?.trim() || pObj?.nickname?.trim() || pObj?.name?.trim() || "Captain",
+      created_at: inv.created_at,
+    }
+  })
 
   const membershipTeamIds = Array.from(new Set(memberships.map((m) => m.team_id).filter(Boolean)))
 
@@ -237,6 +269,7 @@ async function AccountDashboard({
       registrations={registrations}
       notifications={notifications}
       searchParams={searchParams}
+      invitesList={invitesList}
     />
   )
 }

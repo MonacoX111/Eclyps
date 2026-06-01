@@ -28,6 +28,7 @@ import { AccountNotificationsList } from "@/components/account-notifications-lis
 import { AccountAvatar } from "@/components/account-avatar"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
+import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
 
 export type TeamInfo = {
   id: string
@@ -57,7 +58,10 @@ export type AccountDashboardClientProps = {
   searchParams?: {
     teamError?: string
     teamSuccess?: string
+    inviteError?: string
+    inviteSuccess?: string
   }
+  invitesList?: any[]
 }
 
 export function AccountDashboardClient({
@@ -67,8 +71,35 @@ export function AccountDashboardClient({
   registrations,
   notifications,
   searchParams,
+  invitesList = [],
 }: AccountDashboardClientProps) {
   const { t, lang } = useLanguage()
+
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (searchParams?.inviteError) {
+      const messages: Record<string, string> = {
+        "unauthorized": t.account.invites.errors.unauthorized,
+        "invalid-invite": t.account.invites.errors.invalidInvite,
+        "mutation-failed": t.account.invites.errors.mutationFailed,
+        "admin-client-unavailable": t.account.invites.errors.mutationFailed,
+      }
+      setErrorMessage(messages[searchParams.inviteError] ?? t.account.invites.errors.mutationFailed)
+      const timer = setTimeout(() => setErrorMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+    if (searchParams?.inviteSuccess) {
+      const messages: Record<string, string> = {
+        "accepted": t.account.invites.success.accepted,
+        "declined": t.account.invites.success.declined,
+      }
+      setSuccessMessage(messages[searchParams.inviteSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
+      const timer = setTimeout(() => setSuccessMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams?.inviteError, searchParams?.inviteSuccess, lang, t])
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
@@ -294,6 +325,56 @@ export function AccountDashboardClient({
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.75fr)]">
         <div className="space-y-6">
+          {/* Invites Feedback Alerts */}
+          {successMessage && (
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/40 px-4 py-2.5 text-xs text-emerald-200 shadow-md">
+              ✓ {successMessage}
+            </div>
+          )}
+          {errorMessage && (
+            <div className="rounded-xl border border-red-500/25 bg-red-950/40 px-4 py-2.5 text-xs text-red-200 shadow-md">
+              ✗ {errorMessage}
+            </div>
+          )}
+
+          {/* Team Invites Panel */}
+          <DashboardPanel title={t.account.invites.title} description={t.account.invites.description}>
+            {invitesList.length === 0 ? (
+              <EmptyState icon={Inbox} title={t.account.invites.emptyStateTitle} body={t.account.invites.emptyStateBody} />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {invitesList.map((invite) => (
+                  <div key={invite.id} className="rounded-2xl border border-white/5 bg-white/[0.025] p-4 transition hover:border-emerald-400/30 hover:bg-white/[0.04] flex flex-col justify-between">
+                    <div>
+                      <h3 className="truncate text-base font-bold text-white">{invite.team_name}</h3>
+                      <p className="mt-1.5 text-xs text-white/55">
+                        {t.account.invites.invitedBy} <span className="font-semibold text-emerald-300">{invite.inviter_name}</span>
+                      </p>
+                    </div>
+                    <div className="mt-4 flex items-center justify-end gap-2 border-t border-white/5 pt-4">
+                      <button
+                        onClick={async () => {
+                          await acceptTeamInvite(invite.id)
+                        }}
+                        className="rounded-full bg-emerald-400 px-3.5 py-1.5 text-xs font-bold text-black transition hover:bg-emerald-300 cursor-pointer shadow-md shadow-emerald-950/20"
+                      >
+                        {t.account.invites.acceptButton}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await declineTeamInvite(invite.id)
+                        }}
+                        className="rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10 cursor-pointer transition"
+                      >
+                        {t.account.invites.declineButton}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+
           <DashboardPanel id="my-teams" title={t.account.myTeams} description={t.account.teamsDescription}>
             {teamsList.length === 0 ? (
               <EmptyState icon={Users} title={t.account.emptyStates.noTeamsTitle} body={t.account.noTeams}>
