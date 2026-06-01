@@ -39,6 +39,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
 
   let pendingInvites: any[] = []
   let inviteCandidates: any[] = []
+  let currentPlayerId: string | null = null
 
   if (userProfile) {
     const supabaseAdmin = createSupabaseAdminClient()
@@ -51,6 +52,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         .maybeSingle()
 
       if (player) {
+        currentPlayerId = player.id
         isManager = await canManageTeam(id, player.id)
       }
 
@@ -138,23 +140,26 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   if (teamStatus !== "approved" && !isManager) {
     return <PublicProfileError message={t.profile.teamUnavailable} userProfile={userProfile} />
   }
-  const rosterManagement = isManager ? (
+  const rosterManagement = (
     <div className="mt-6">
-      <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
-        {t.account.roster.managerBadge}
-      </div>
+      {isManager && (
+        <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
+          {t.account.roster.managerBadge}
+        </div>
+      )}
       <TeamRosterManager
         teamId={id}
         isManager={isManager}
         members={members}
         ownerPlayerId={ownerPlayerId}
+        currentPlayerId={currentPlayerId}
         initialError={resolvedParams?.rosterError}
         initialSuccess={resolvedParams?.rosterSuccess}
         pendingInvites={pendingInvites}
         inviteCandidates={inviteCandidates}
       />
     </div>
-  ) : null
+  )
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

@@ -119,7 +119,7 @@ export function AccountDashboardClient({
       case "Captain":
         return "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold"
       case "Sub":
-        return "bg-violet-500/10 text-violet-300 border border-violet-500/20"
+        return "bg-blue-500/10 text-blue-300 border border-blue-500/20"
       default:
         return "bg-white/5 text-white/50 border border-white/10"
     }
@@ -144,7 +144,7 @@ export function AccountDashboardClient({
       : role === "Captain"
         ? t.profile.meta.captain
         : role === "Sub"
-          ? t.account.subRole
+          ? t.profile.meta.substitute
           : t.profile.meta.member
 
   const statCards = [

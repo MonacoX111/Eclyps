@@ -5,7 +5,15 @@ import { redirect } from "next/navigation"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { generateTeamSlug } from "@/lib/teams/slug"
-import { canManageTeam } from "@/lib/auth/permissions"
+import {
+  canManageTeam,
+  isTeamOwner,
+  isTeamCaptain,
+  canRemoveMembers,
+  canChangeRoles,
+  getTeamRole
+} from "@/lib/auth/permissions"
+import { createNotification } from "@/lib/notifications/create-notification"
 
 /**
  * Server action to create a persistent global team.
@@ -269,8 +277,18 @@ export async function removeTeamMember(formData: FormData) {
   }
 
   // 2. Permission check
-  const isManager = await canManageTeam(teamId, managerPlayer.id)
-  if (!isManager) {
+  const isTargetOwner = await isTeamOwner(memberPlayerId, teamId)
+  if (isTargetOwner) {
+    return redirect(`/teams/${teamId}?rosterError=remove-owner-blocked`)
+  }
+
+  const allowed = await canRemoveMembers(managerPlayer.id, memberPlayerId, teamId)
+  if (!allowed) {
+    const isTargetCaptain = await isTeamCaptain(memberPlayerId, teamId)
+    const isManagerCaptain = await isTeamCaptain(managerPlayer.id, teamId)
+    if (isTargetCaptain && isManagerCaptain) {
+      return redirect(`/teams/${teamId}?rosterError=captain-cannot-modify-owner`)
+    }
     return redirect(`/teams/${teamId}?rosterError=permission-denied`)
   }
 
@@ -283,11 +301,6 @@ export async function removeTeamMember(formData: FormData) {
 
   if (!team) {
     return redirect(`/teams/${teamId}?rosterError=team-not-found`)
-  }
-
-  // Owner_player_id must remain protected
-  if (team.owner_player_id === memberPlayerId) {
-    return redirect(`/teams/${teamId}?rosterError=remove-owner-blocked`)
   }
 
   // Captain protection: cannot remove the last captain/owner
@@ -304,6 +317,13 @@ export async function removeTeamMember(formData: FormData) {
     }
   }
 
+  // Fetch target player user profile ID before deletion for notification
+  const { data: targetPlayer } = await supabaseAdmin
+    .from("players")
+    .select("owner_user_id")
+    .eq("id", memberPlayerId)
+    .maybeSingle()
+
   // 4. Remove player from team_members
   const { error: deleteError } = await supabaseAdmin
     .from("team_members")
@@ -314,6 +334,18 @@ export async function removeTeamMember(formData: FormData) {
   if (deleteError) {
     console.error("Failed to remove member:", deleteError)
     return redirect(`/teams/${teamId}?rosterError=mutation-failed`)
+  }
+
+  // Send notification to the removed member
+  if (targetPlayer?.owner_user_id) {
+    await createNotification({
+      userProfileId: targetPlayer.owner_user_id,
+      playerId: memberPlayerId,
+      teamId: teamId,
+      type: "team_member_removed",
+      title: "Removed from Team",
+      message: "You have been removed from the team roster.",
+    })
   }
 
   revalidatePath(`/teams/${teamId}`)
@@ -333,7 +365,7 @@ export async function updateTeamMemberRole(formData: FormData) {
   const memberPlayerId = formData.get("player_id") as string
   const role = formData.get("role") as string
 
-  if (!teamId || !memberPlayerId || (role !== "captain" && role !== "member")) {
+  if (!teamId || !memberPlayerId || (role !== "captain" && role !== "member" && role !== "substitute")) {
     return redirect(`/teams/${teamId}?rosterError=invalid-inputs`)
   }
 
@@ -355,8 +387,17 @@ export async function updateTeamMemberRole(formData: FormData) {
   }
 
   // 2. Permission check
-  const isManager = await canManageTeam(teamId, managerPlayer.id)
-  if (!isManager) {
+  const allowed = await canChangeRoles(managerPlayer.id, memberPlayerId, role, teamId)
+  if (!allowed) {
+    const isTargetOwner = await isTeamOwner(memberPlayerId, teamId)
+    if (isTargetOwner) {
+      return redirect(`/teams/${teamId}?rosterError=owner-downgrade-blocked`)
+    }
+    const isTargetCaptain = await isTeamCaptain(memberPlayerId, teamId)
+    const isManagerCaptain = await isTeamCaptain(managerPlayer.id, teamId)
+    if (isTargetCaptain && isManagerCaptain) {
+      return redirect(`/teams/${teamId}?rosterError=captain-cannot-modify-owner`)
+    }
     return redirect(`/teams/${teamId}?rosterError=permission-denied`)
   }
 
@@ -371,13 +412,8 @@ export async function updateTeamMemberRole(formData: FormData) {
     return redirect(`/teams/${teamId}?rosterError=team-not-found`)
   }
 
-  // Owner's role cannot be downgraded from captain
-  if (team.owner_player_id === memberPlayerId && role === "member") {
-    return redirect(`/teams/${teamId}?rosterError=owner-downgrade-blocked`)
-  }
-
   // Captain protection: cannot demote the last captain
-  if (role === "member") {
+  if (role !== "captain") {
     const { data: members } = await supabaseAdmin
       .from("team_members")
       .select("player_id, role")
@@ -392,6 +428,13 @@ export async function updateTeamMemberRole(formData: FormData) {
     }
   }
 
+  // Fetch target player user profile ID before update for notification
+  const { data: targetPlayer } = await supabaseAdmin
+    .from("players")
+    .select("owner_user_id")
+    .eq("id", memberPlayerId)
+    .maybeSingle()
+
   // 4. Update role
   const { error: updateError } = await supabaseAdmin
     .from("team_members")
@@ -402,6 +445,19 @@ export async function updateTeamMemberRole(formData: FormData) {
   if (updateError) {
     console.error("Failed to update role:", updateError)
     return redirect(`/teams/${teamId}?rosterError=mutation-failed`)
+  }
+
+  // Send notification to the member whose role changed
+  if (targetPlayer?.owner_user_id) {
+    const roleLabel = role === "captain" ? "Captain" : role === "substitute" ? "Substitute" : "Member"
+    await createNotification({
+      userProfileId: targetPlayer.owner_user_id,
+      playerId: memberPlayerId,
+      teamId: teamId,
+      type: "team_role_updated",
+      title: "Role Updated",
+      message: `Your role in the team roster has been updated to "${roleLabel}".`,
+    })
   }
 
   revalidatePath(`/teams/${teamId}`)

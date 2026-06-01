@@ -12,7 +12,7 @@ const inputClassName =
 
 type RosterMember = {
   player_id: string
-  role: "captain" | "member"
+  role: "captain" | "member" | "substitute"
   display_name: string
   avatar_url: string | null
 }
@@ -22,6 +22,7 @@ type TeamRosterManagerProps = {
   isManager: boolean
   members: RosterMember[]
   ownerPlayerId: string | null
+  currentPlayerId?: string | null
   initialError?: string | null
   initialSuccess?: string | null
   pendingInvites?: any[]
@@ -33,6 +34,7 @@ export function TeamRosterManager({
   isManager,
   members,
   ownerPlayerId,
+  currentPlayerId,
   initialError,
   initialSuccess,
   pendingInvites = [],
@@ -48,6 +50,9 @@ export function TeamRosterManager({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Roster Management Dropdown States
+  const [activeDropdownMemberId, setActiveDropdownMemberId] = useState<string | null>(null)
+
   useEffect(() => {
     if (initialError) {
       const messages: Record<string, string> = {
@@ -61,6 +66,7 @@ export function TeamRosterManager({
         "multiple-players-found": t.account.invites.errors.multiplePlayersFound,
         "mutation-failed": t.account.invites.errors.mutationFailed,
         "admin-client-unavailable": t.account.roster.errors.unavailable,
+        "captain-cannot-modify-owner": t.account.roster.errors.captainCannotModifyOwner || "Captain cannot modify owner.",
       }
       setErrorMessage(messages[initialError] ?? t.account.roster.errors.mutationFailed)
       const timer = setTimeout(() => setErrorMessage(null), 5000)
@@ -86,7 +92,7 @@ export function TeamRosterManager({
     }
   }, [initialError, initialSuccess, lang, t])
 
-  // Close dropdown on click outside
+  // Close autocomplete dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -96,6 +102,20 @@ export function TeamRosterManager({
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  // Close roster action dropdowns on click outside
+  useEffect(() => {
+    function handleRosterClickOutside(event: MouseEvent) {
+      if (activeDropdownMemberId) {
+        const target = event.target as HTMLElement
+        if (!target.closest(".roster-dropdown-trigger") && !target.closest(".roster-dropdown-panel")) {
+          setActiveDropdownMemberId(null)
+        }
+      }
+    }
+    document.addEventListener("mousedown", handleRosterClickOutside)
+    return () => document.removeEventListener("mousedown", handleRosterClickOutside)
+  }, [activeDropdownMemberId])
 
   // Dynamic Autocomplete Search & Sorting Logic
   const getFilteredCandidates = () => {
@@ -322,6 +342,12 @@ export function TeamRosterManager({
             const isOwner = member.player_id === ownerPlayerId
             const isCaptain = member.role === "captain"
 
+            const isViewerOwner = currentPlayerId === ownerPlayerId
+            const isViewerCaptain = !isViewerOwner && members.find(m => m.player_id === currentPlayerId)?.role === "captain"
+
+            // Permissions to manage this row member
+            const canManageThisMember = isManager && !isOwner && (isViewerOwner || (isViewerCaptain && !isCaptain))
+
             return (
               <div
                 key={member.player_id}
@@ -330,7 +356,7 @@ export function TeamRosterManager({
                 <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
                   {member.avatar_url ? (
                     <img
-                      src={member.avatar_url}
+                       src={member.avatar_url}
                       alt=""
                       className="h-8 w-8 rounded-full object-cover border border-white/10 shrink-0"
                     />
@@ -352,7 +378,12 @@ export function TeamRosterManager({
                           {t.profile.meta.captain}
                         </span>
                       )}
-                      {!isCaptain && !isOwner && (
+                      {member.role === "substitute" && (
+                        <span className="rounded-full bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 text-[8px] font-extrabold text-blue-300 uppercase tracking-wider">
+                          {t.profile.meta.substitute}
+                        </span>
+                      )}
+                      {member.role === "member" && !isOwner && (
                         <span className="rounded-full bg-white/5 border border-white/10 px-1.5 py-0.5 text-[8px] font-extrabold text-white/60 uppercase tracking-wider">
                           {t.profile.meta.member}
                         </span>
@@ -361,49 +392,99 @@ export function TeamRosterManager({
                   </div>
                 </div>
 
-                {/* Roster Controls (Manager-only) */}
-                {isManager && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <form action={updateTeamMemberRole} className="inline">
-                      <input type="hidden" name="team_id" value={teamId} />
-                      <input type="hidden" name="player_id" value={member.player_id} />
-                      {isCaptain ? (
-                        !isOwner && (
+                {/* Custom compact Manage Role Dropdown (Manager-only) */}
+                {canManageThisMember && (
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdownMemberId(activeDropdownMemberId === member.player_id ? null : member.player_id)}
+                      className="roster-dropdown-trigger flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer"
+                    >
+                      {t.account.roster.manageRole}
+                      <span className="text-[7px] text-white/40">▼</span>
+                    </button>
+
+                    {activeDropdownMemberId === member.player_id && (
+                      <div className="roster-dropdown-panel absolute right-0 mt-1.5 z-50 w-44 rounded-xl border border-white/10 bg-black/95 p-1 shadow-2xl backdrop-blur-md flex flex-col gap-0.5">
+                        {/* Make / Remove Captain (Owner only) */}
+                        {isViewerOwner && (
+                          isCaptain ? (
+                            <form action={updateTeamMemberRole} className="w-full">
+                              <input type="hidden" name="team_id" value={teamId} />
+                              <input type="hidden" name="player_id" value={member.player_id} />
+                              <input type="hidden" name="role" value="member" />
+                              <button
+                                type="submit"
+                                onClick={() => setActiveDropdownMemberId(null)}
+                                className="w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] text-amber-300 hover:bg-white/[0.05] transition cursor-pointer font-medium"
+                              >
+                                {t.account.roster.removeCaptain}
+                              </button>
+                            </form>
+                          ) : (
+                            <form action={updateTeamMemberRole} className="w-full">
+                              <input type="hidden" name="team_id" value={teamId} />
+                              <input type="hidden" name="player_id" value={member.player_id} />
+                              <input type="hidden" name="role" value="captain" />
+                              <button
+                                type="submit"
+                                onClick={() => setActiveDropdownMemberId(null)}
+                                className="w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] text-emerald-400 hover:bg-white/[0.05] transition cursor-pointer font-medium"
+                              >
+                                {t.account.roster.makeCaptain}
+                              </button>
+                            </form>
+                          )
+                        )}
+
+                        {/* Set as Member (if not captain and not member) */}
+                        {member.role !== "captain" && member.role !== "member" && (
+                          <form action={updateTeamMemberRole} className="w-full">
+                            <input type="hidden" name="team_id" value={teamId} />
+                            <input type="hidden" name="player_id" value={member.player_id} />
+                            <input type="hidden" name="role" value="member" />
+                            <button
+                              type="submit"
+                              onClick={() => setActiveDropdownMemberId(null)}
+                              className="w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] text-white/80 hover:bg-white/[0.05] transition cursor-pointer font-medium"
+                            >
+                              {t.account.roster.setAsMember}
+                            </button>
+                          </form>
+                        )}
+
+                        {/* Set as Substitute (if not captain and not substitute) */}
+                        {member.role !== "captain" && member.role !== "substitute" && (
+                          <form action={updateTeamMemberRole} className="w-full">
+                            <input type="hidden" name="team_id" value={teamId} />
+                            <input type="hidden" name="player_id" value={member.player_id} />
+                            <input type="hidden" name="role" value="substitute" />
+                            <button
+                              type="submit"
+                              onClick={() => setActiveDropdownMemberId(null)}
+                              className="w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] text-blue-300 hover:bg-white/[0.05] transition cursor-pointer font-medium"
+                            >
+                              {t.account.roster.setAsSubstitute}
+                            </button>
+                          </form>
+                        )}
+
+                        {/* Divider */}
+                        <div className="h-[1px] bg-white/5 my-0.5" />
+
+                        {/* Remove from Team */}
+                        <form action={removeTeamMember} className="w-full">
+                          <input type="hidden" name="team_id" value={teamId} />
+                          <input type="hidden" name="player_id" value={member.player_id} />
                           <button
                             type="submit"
-                            name="role"
-                            value="member"
-                            className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/60 hover:bg-white/5 cursor-pointer transition"
-                            title={t.account.roster.tooltipDemote}
+                            onClick={() => setActiveDropdownMemberId(null)}
+                            className="w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] text-red-400 hover:bg-red-500/10 hover:text-red-300 transition cursor-pointer font-bold"
                           >
-                            {t.account.roster.demoteButton}
+                            {t.account.roster.removeFromTeam}
                           </button>
-                        )
-                      ) : (
-                        <button
-                          type="submit"
-                          name="role"
-                          value="captain"
-                          className="rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 cursor-pointer transition"
-                          title={t.account.roster.tooltipPromote}
-                        >
-                          {t.account.roster.promoteButton}
-                        </button>
-                      )}
-                    </form>
-
-                    {!isOwner && (
-                      <form action={removeTeamMember} className="inline">
-                        <input type="hidden" name="team_id" value={teamId} />
-                        <input type="hidden" name="player_id" value={member.player_id} />
-                        <button
-                          type="submit"
-                          className="rounded border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] text-red-300 hover:bg-red-500/10 cursor-pointer transition"
-                          title={t.account.roster.tooltipRemove}
-                        >
-                          {t.account.roster.removeButton}
-                        </button>
-                      </form>
+                        </form>
+                      </div>
                     )}
                   </div>
                 )}
