@@ -463,3 +463,183 @@ export async function updateTeamMemberRole(formData: FormData) {
   revalidatePath(`/teams/${teamId}`)
   return redirect(`/teams/${teamId}?rosterSuccess=role-updated`)
 }
+
+/**
+ * Server action to voluntarily leave a team.
+ */
+export async function leaveTeam(formData: FormData) {
+  const userProfile = await getCurrentUserProfile()
+  if (!userProfile) {
+    return redirect("/teams?teamError=discord-login-required")
+  }
+
+  const teamId = formData.get("team_id") as string
+  const redirectTo = (formData.get("redirect_to") as string) || "/account"
+  const isAccount = redirectTo.startsWith("/account")
+
+  if (!teamId) {
+    const errorKey = "missing-id"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    const errorKey = "admin-client-unavailable"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  // 1. Resolve current player profile
+  const { data: player } = await supabaseAdmin
+    .from("players")
+    .select("id, nickname, display_name, name")
+    .eq("user_id", userProfile.auth_user_id)
+    .limit(1)
+    .maybeSingle()
+
+  if (!player) {
+    const errorKey = "player-profile-not-found"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  // 2. Verify membership exists and retrieve role
+  const { data: memberEntry } = await supabaseAdmin
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("player_id", player.id)
+    .maybeSingle()
+
+  if (!memberEntry) {
+    const errorKey = "permission-denied"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  // 3. Enforce Owner Constraint
+  const isOwner = await isTeamOwner(player.id, teamId)
+  if (isOwner) {
+    const errorKey = "owner-cannot-leave"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  // 4. Verify Tournament Roster Lock
+  const { data: regs } = await supabaseAdmin
+    .from("tournament_registrations")
+    .select("tournament_id")
+    .or(`team_id.eq.${teamId},source_team_id.eq.${teamId}`)
+    .in("status", ["pending", "approved"])
+
+  if (regs && regs.length > 0) {
+    const tournamentIds = regs.map((r) => r.tournament_id)
+    const { data: activeTournaments } = await supabaseAdmin
+      .from("tournaments")
+      .select("id")
+      .in("id", tournamentIds)
+      .in("status", ["upcoming", "live"])
+
+    if (activeTournaments && activeTournaments.length > 0) {
+      const errorKey = "roster-locked"
+      if (isAccount) {
+        return redirect(`/account?teamError=${errorKey}`)
+      } else {
+        return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+      }
+    }
+  }
+
+  // 5. Delete member entry
+  const { error: deleteError } = await supabaseAdmin
+    .from("team_members")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("player_id", player.id)
+
+  if (deleteError) {
+    console.error("Failed to leave team:", deleteError)
+    const errorKey = "mutation-failed"
+    if (isAccount) {
+      return redirect(`/account?teamError=${errorKey}`)
+    } else {
+      return redirect(`/teams/${teamId}?rosterError=${errorKey}`)
+    }
+  }
+
+  // 6. Notify Owner/Captains
+  const playerName = player.nickname || player.display_name || player.name || "Player"
+  const { data: team } = await supabaseAdmin
+    .from("teams")
+    .select("name, owner_user_id")
+    .eq("id", teamId)
+    .maybeSingle()
+
+  const { data: teamMembers } = await supabaseAdmin
+    .from("team_members")
+    .select("player_id, role")
+    .eq("team_id", teamId)
+
+  const captainPlayerIds = teamMembers
+    ?.filter((m) => m.role === "captain" || m.role === "owner")
+    .map((c) => c.player_id) ?? []
+
+  const notifyUserIds = new Set<string>()
+  if (team?.owner_user_id) {
+    notifyUserIds.add(team.owner_user_id)
+  }
+
+  if (captainPlayerIds.length > 0) {
+    const { data: captainPlayers } = await supabaseAdmin
+      .from("players")
+      .select("owner_user_id")
+      .in("id", captainPlayerIds)
+
+    captainPlayers?.forEach((p) => {
+      if (p.owner_user_id) {
+        notifyUserIds.add(p.owner_user_id)
+      }
+    })
+  }
+
+  // Do not notify the leaving player themselves
+  notifyUserIds.delete(userProfile.id)
+
+  try {
+    const notifyPromises = Array.from(notifyUserIds).map(async (recipientUserId) => {
+      await createNotification({
+        userProfileId: recipientUserId,
+        playerId: player.id,
+        teamId: teamId,
+        type: "team_member_left",
+        title: "Member Left Team",
+        message: `${playerName} left the team.`,
+      })
+    })
+    await Promise.allSettled(notifyPromises)
+  } catch (notificationErr) {
+    console.error("Failed to dispatch leave notifications:", notificationErr)
+  }
+
+  revalidatePath("/account")
+  revalidatePath(`/teams/${teamId}`)
+
+  return redirect("/account?teamSuccess=team-left")
+}
+

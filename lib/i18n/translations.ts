@@ -633,6 +633,8 @@ const rawTranslations = {
         setAsSubstitute: "Зробити запасним",
         removeFromTeam: "Видалити з команди",
         manageRole: "Керувати роллю",
+        leaveTeam: "Покинути команду",
+        confirmLeave: "Ви впевнені, що хочете покинути команду?",
         errors: {
           invalidPlayerName: "Введіть дійсний нікнейм гравця.",
           permissionDenied: "У вас немає дозволу на керування складом цієї команди.",
@@ -643,6 +645,8 @@ const rawTranslations = {
           ownerDowngradeBlocked: "Роль власника команди не можна понизити.",
           lastCaptainBlocked: "Ви не можете понизити або видалити єдиного капітана команди.",
           captainCannotModifyOwner: "Капітан не може змінювати власника.",
+          ownerCannotLeave: "Власник не може покинути команду.",
+          rosterLocked: "Не можна покинути команду через активний турнір.",
           mutationFailed: "Не вдалося оновити склад складу. Спробуйте ще раз.",
           unavailable: "Сервіс бази даних тимчасово недоступний.",
         },
@@ -650,6 +654,7 @@ const rawTranslations = {
           added: "Гравця успішно додано до складу команди!",
           removed: "Гравця успішно видалено зі складу команди.",
           roleUpdated: "Роль учасника команди успішно оновлено.",
+          teamLeft: "Ви покинули команду.",
         }
       },
       invites: {
@@ -1832,6 +1837,8 @@ const rawTranslations = {
         setAsSubstitute: "Set as Substitute",
         removeFromTeam: "Remove from Team",
         manageRole: "Manage Role",
+        leaveTeam: "Leave Team",
+        confirmLeave: "Are you sure you want to leave this team?",
         errors: {
           invalidPlayerName: "Please enter a valid player name.",
           permissionDenied: "You do not have permission to manage this roster.",
@@ -1842,6 +1849,8 @@ const rawTranslations = {
           ownerDowngradeBlocked: "The team owner's role cannot be downgraded.",
           lastCaptainBlocked: "You cannot demote or remove the last captain of the team.",
           captainCannotModifyOwner: "Captain cannot modify owner.",
+          ownerCannotLeave: "Owner cannot leave team.",
+          rosterLocked: "Roster is locked due to an active tournament registration.",
           mutationFailed: "Failed to update roster. Please try again.",
           unavailable: "Database service is temporarily unavailable.",
         },
@@ -1849,6 +1858,7 @@ const rawTranslations = {
           added: "Player successfully added to the roster!",
           removed: "Player successfully removed from the roster.",
           roleUpdated: "Roster member role successfully updated.",
+          teamLeft: "You left the team.",
         }
       },
       invites: {

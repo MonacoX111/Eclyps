@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Settings,
   Inbox,
+  LogOut,
 } from "lucide-react"
 
 import { useLanguage } from "@/components/language-provider"
@@ -29,6 +30,7 @@ import { AccountAvatar } from "@/components/account-avatar"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
 import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
+import { leaveTeam } from "@/app/actions/teams"
 
 export type TeamInfo = {
   id: string
@@ -38,6 +40,7 @@ export type TeamInfo = {
   logo_url: string | null
   created_at: string | null
   roster_count: number
+  is_locked?: boolean
 }
 
 type TeamRow = {
@@ -99,7 +102,26 @@ export function AccountDashboardClient({
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [searchParams?.inviteError, searchParams?.inviteSuccess, lang, t])
+    if (searchParams?.teamError) {
+      const messages: Record<string, string> = {
+        "permission-denied": t.account.roster.errors.permissionDenied,
+        "mutation-failed": t.account.roster.errors.mutationFailed,
+        "owner-cannot-leave": t.account.roster.errors.ownerCannotLeave,
+        "roster-locked": t.account.roster.errors.rosterLocked,
+      }
+      setErrorMessage(messages[searchParams.teamError] ?? t.account.roster.errors.mutationFailed)
+      const timer = setTimeout(() => setErrorMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+    if (searchParams?.teamSuccess) {
+      const messages: Record<string, string> = {
+        "team-left": t.account.roster.success.teamLeft,
+      }
+      setSuccessMessage(messages[searchParams.teamSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
+      const timer = setTimeout(() => setSuccessMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, lang, t])
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
@@ -414,6 +436,37 @@ export function AccountDashboardClient({
                             <Settings className="h-3 w-3" />
                             {t.account.manageTeamFull}
                           </Link>
+                        )}
+                        {team.role.toLowerCase() === "owner" ? (
+                          <button
+                            disabled
+                            title={t.account.roster.errors.ownerCannotLeave}
+                            className="inline-flex items-center gap-1 rounded-full border border-red-500/10 bg-red-500/5 px-3 py-1.5 text-xs font-bold text-red-300/40 opacity-50 cursor-not-allowed"
+                          >
+                            <LogOut className="h-3.5 w-3.5" />
+                            {t.account.roster.leaveTeam}
+                          </button>
+                        ) : team.is_locked ? (
+                          <button
+                            disabled
+                            title={t.account.roster.errors.rosterLocked}
+                            className="inline-flex items-center gap-1 rounded-full border border-red-500/10 bg-red-500/5 px-3 py-1.5 text-xs font-bold text-red-300/40 opacity-50 cursor-not-allowed"
+                          >
+                            <LogOut className="h-3.5 w-3.5" />
+                            {t.account.roster.leaveTeam}
+                          </button>
+                        ) : (
+                          <form action={leaveTeam} onSubmit={(e) => { if (!confirm(t.account.roster.confirmLeave)) e.preventDefault(); }} className="inline-block">
+                            <input type="hidden" name="team_id" value={team.id} />
+                            <input type="hidden" name="redirect_to" value="/account" />
+                            <button
+                              type="submit"
+                              className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/20 cursor-pointer"
+                            >
+                              <LogOut className="h-3.5 w-3.5" />
+                              {t.account.roster.leaveTeam}
+                            </button>
+                          </form>
                         )}
                       </div>
                     </div>

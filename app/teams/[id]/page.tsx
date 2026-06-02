@@ -41,9 +41,31 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   let inviteCandidates: any[] = []
   let currentPlayerId: string | null = null
 
+  let isRosterLocked = false
+
   if (userProfile) {
     const supabaseAdmin = createSupabaseAdminClient()
     if (supabaseAdmin) {
+      // Check if roster is locked due to active tournament registrations
+      const { data: regs } = await supabaseAdmin
+        .from("tournament_registrations")
+        .select("tournament_id")
+        .or(`team_id.eq.${id},source_team_id.eq.${id}`)
+        .in("status", ["pending", "approved"])
+
+      if (regs && regs.length > 0) {
+        const tournamentIds = regs.map((r: any) => r.tournament_id)
+        const { data: activeTournaments } = await supabaseAdmin
+          .from("tournaments")
+          .select("id")
+          .in("id", tournamentIds)
+          .in("status", ["upcoming", "live"])
+
+        if (activeTournaments && activeTournaments.length > 0) {
+          isRosterLocked = true
+        }
+      }
+
       const { data: player } = await supabaseAdmin
         .from("players")
         .select("id")
@@ -55,6 +77,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         currentPlayerId = player.id
         isManager = await canManageTeam(id, player.id)
       }
+
 
       // Fetch pending invites and candidate players if user is manager
       if (isManager && player) {
@@ -157,6 +180,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         initialSuccess={resolvedParams?.rosterSuccess}
         pendingInvites={pendingInvites}
         inviteCandidates={inviteCandidates}
+        isRosterLocked={isRosterLocked}
       />
     </div>
   )

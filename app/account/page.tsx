@@ -64,6 +64,7 @@ type TeamInfo = {
   logo_url: string | null
   created_at: string | null
   roster_count: number
+  is_locked?: boolean
 }
 
 type TeamRow = {
@@ -246,20 +247,52 @@ async function AccountDashboard({
   const teamIds = teamsList.map((team) => team.id)
 
   if (teamIds.length > 0) {
-    const { data: teamMemberRows } = await supabaseAdmin
-      .from("team_members")
-      .select("team_id")
-      .in("team_id", teamIds)
+    const [teamMemberRowsRes, regsRes] = await Promise.all([
+      supabaseAdmin
+        .from("team_members")
+        .select("team_id")
+        .in("team_id", teamIds),
+      supabaseAdmin
+        .from("tournament_registrations")
+        .select("tournament_id, team_id, source_team_id")
+        .or(`team_id.in.(${teamIds.join(",")}),source_team_id.in.(${teamIds.join(",")})`)
+        .in("status", ["pending", "approved"])
+    ])
+
+    const teamMemberRows = teamMemberRowsRes.data
+    const regs = regsRes.data
 
     const rosterCounts = new Map<string, number>()
     for (const member of teamMemberRows ?? []) {
       rosterCounts.set(member.team_id, (rosterCounts.get(member.team_id) ?? 0) + 1)
     }
 
+    const lockedTeamIds = new Set<string>()
+    if (regs && regs.length > 0) {
+      const tournamentIds = Array.from(new Set(regs.map((r: any) => r.tournament_id)))
+      const { data: activeTournaments } = await supabaseAdmin
+        .from("tournaments")
+        .select("id")
+        .in("id", tournamentIds)
+        .in("status", ["upcoming", "live"])
+
+      if (activeTournaments && activeTournaments.length > 0) {
+        const activeTournamentIds = new Set(activeTournaments.map((t: any) => t.id))
+        for (const reg of regs) {
+          if (activeTournamentIds.has(reg.tournament_id)) {
+            if (reg.team_id) lockedTeamIds.add(reg.team_id)
+            if (reg.source_team_id) lockedTeamIds.add(reg.source_team_id)
+          }
+        }
+      }
+    }
+
     for (const team of teamsList) {
       team.roster_count = rosterCounts.get(team.id) ?? 0
+      team.is_locked = lockedTeamIds.has(team.id)
     }
   }
+
 
   return (
     <AccountDashboardClient

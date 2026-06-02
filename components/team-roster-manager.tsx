@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { removeTeamMember, updateTeamMemberRole } from "@/app/actions/teams"
+import { removeTeamMember, updateTeamMemberRole, leaveTeam } from "@/app/actions/teams"
 import { createTeamInvite, cancelTeamInvite } from "@/app/actions/invites"
 import { useLanguage } from "@/components/language-provider"
-import { Search, X, UserCheck, Inbox } from "lucide-react"
+import { Search, X, UserCheck, Inbox, LogOut } from "lucide-react"
 
 const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/40 pl-9 pr-8 py-2.5 text-xs text-white outline-none transition focus:border-emerald-500/60"
@@ -27,6 +27,7 @@ type TeamRosterManagerProps = {
   initialSuccess?: string | null
   pendingInvites?: any[]
   inviteCandidates?: any[]
+  isRosterLocked?: boolean
 }
 
 export function TeamRosterManager({
@@ -39,6 +40,7 @@ export function TeamRosterManager({
   initialSuccess,
   pendingInvites = [],
   inviteCandidates = [],
+  isRosterLocked = false,
 }: TeamRosterManagerProps) {
   const { t, lang } = useLanguage()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -67,6 +69,8 @@ export function TeamRosterManager({
         "mutation-failed": t.account.invites.errors.mutationFailed,
         "admin-client-unavailable": t.account.roster.errors.unavailable,
         "captain-cannot-modify-owner": t.account.roster.errors.captainCannotModifyOwner || "Captain cannot modify owner.",
+        "owner-cannot-leave": t.account.roster.errors.ownerCannotLeave,
+        "roster-locked": t.account.roster.errors.rosterLocked,
       }
       setErrorMessage(messages[initialError] ?? t.account.roster.errors.mutationFailed)
       const timer = setTimeout(() => setErrorMessage(null), 5000)
@@ -80,6 +84,7 @@ export function TeamRosterManager({
         "role-updated": t.account.roster.success.roleUpdated,
         "invite-sent": t.account.invites.success.sent,
         "invite-cancelled": t.account.invites.success.cancelled,
+        "team-left": t.account.roster.success.teamLeft,
       }
       setSuccessMessage(messages[initialSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
       // Clear autocomplete input on successful invite
@@ -391,6 +396,41 @@ export function TeamRosterManager({
                     </h4>
                   </div>
                 </div>
+
+                 {/* Leave Team Button for self-row */}
+                {member.player_id === currentPlayerId && (
+                  isOwner ? (
+                    <button
+                      disabled
+                      title={t.account.roster.errors.ownerCannotLeave}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-500/10 bg-red-500/5 px-2.5 py-1 text-[10px] font-semibold text-red-300/40 opacity-50 cursor-not-allowed whitespace-nowrap"
+                    >
+                      <LogOut className="h-3 w-3" />
+                      {t.account.roster.leaveTeam}
+                    </button>
+                  ) : isRosterLocked ? (
+                    <button
+                      disabled
+                      title={t.account.roster.errors.rosterLocked}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-500/10 bg-red-500/5 px-2.5 py-1 text-[10px] font-semibold text-red-300/40 opacity-50 cursor-not-allowed whitespace-nowrap"
+                    >
+                      <LogOut className="h-3 w-3" />
+                      {t.account.roster.leaveTeam}
+                    </button>
+                  ) : (
+                    <form action={leaveTeam} onSubmit={(e) => { if (!confirm(t.account.roster.confirmLeave)) e.preventDefault(); }} className="shrink-0">
+                      <input type="hidden" name="team_id" value={teamId} />
+                      <input type="hidden" name="redirect_to" value={`/teams/${teamId}`} />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/5 px-2.5 py-1 text-[10px] font-semibold text-red-300 transition hover:bg-red-500/10 cursor-pointer whitespace-nowrap"
+                      >
+                        <LogOut className="h-3 w-3" />
+                        {t.account.roster.leaveTeam}
+                      </button>
+                    </form>
+                  )
+                )}
 
                 {/* Custom compact Manage Role Dropdown (Manager-only) */}
                 {canManageThisMember && (
