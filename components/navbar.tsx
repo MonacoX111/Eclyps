@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
+import { ChevronDown } from "lucide-react"
 import { logoutDiscord } from "@/app/auth/actions"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { useLanguage } from "@/components/language-provider"
@@ -23,6 +24,7 @@ export function Navbar({
   userProfile = null,
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -36,15 +38,18 @@ export function Navbar({
     }
   }, [open])
 
-  const navLinks = [
+  const primaryNavLinks = [
     { href: "/tournament", label: t.navbar.tournament },
     { href: "/registration", label: t.navbar.registration },
     { href: "/teams", label: t.navbar.teams },
     { href: "/players", label: t.navbar.players },
-    { href: "/schedule", label: t.navbar.schedule },
-    { href: "/results", label: t.navbar.results },
+    { href: "/matches", label: t.navbar.matches },
+  ]
+  const secondaryNavLinks = [
+    { href: "/tournaments", label: t.navbar.archive },
     { href: "/news", label: t.navbar.news },
   ]
+  const mobileNavLinks = [...primaryNavLinks, ...secondaryNavLinks]
 
   return (
     <m.nav
@@ -79,8 +84,8 @@ export function Navbar({
           </a>
 
           {/* Desktop links */}
-          <div className="hidden items-center gap-8 md:flex">
-            {navLinks.map((link) => (
+          <div className="hidden items-center gap-5 md:flex lg:gap-7">
+            {primaryNavLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -89,6 +94,31 @@ export function Navbar({
                 {link.label}
               </a>
             ))}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((value) => !value)}
+                onBlur={() => window.setTimeout(() => setMoreOpen(false), 120)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-primary"
+                aria-expanded={moreOpen}
+              >
+                {t.navbar.more}
+                <ChevronDown className={`h-3.5 w-3.5 transition ${moreOpen ? "rotate-180" : ""}`} />
+              </button>
+              {moreOpen ? (
+                <div className="glass-card absolute right-0 top-8 z-50 grid min-w-40 gap-1 rounded-xl border border-white/10 bg-black/90 p-2 shadow-[0_18px_60px_oklch(0.02_0.01_180_/_0.55)]">
+                  {secondaryNavLinks.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      className="rounded-lg px-3 py-2 text-sm font-medium text-white/65 transition hover:bg-primary/10 hover:text-primary"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="flex items-center gap-4">
               <LanguageSwitcher />
               {userProfile && <NotificationsBell userProfile={userProfile} />}
@@ -145,7 +175,7 @@ export function Navbar({
           transition={{ duration: 0.2 }}
         >
           <div className="flex flex-col gap-4 px-4 py-6">
-            {navLinks.map((link) => (
+            {mobileNavLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}

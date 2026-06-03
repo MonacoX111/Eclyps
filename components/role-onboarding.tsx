@@ -73,7 +73,7 @@ export function RoleOnboarding() {
       ctas: [
         { label: t.roleOnboarding.guides.spectator.ctas.tournament, href: "/tournament" },
         { label: t.roleOnboarding.guides.spectator.ctas.bracket, href: "/bracket" },
-        { label: t.roleOnboarding.guides.spectator.ctas.schedule, href: "/schedule" },
+        { label: t.roleOnboarding.guides.spectator.ctas.schedule, href: "/matches?tab=upcoming" },
       ],
     },
     {
@@ -109,7 +109,7 @@ export function RoleOnboarding() {
       ctas: [
         { label: t.roleOnboarding.guides.player.ctas.registration, href: "/registration" },
         { label: t.roleOnboarding.guides.player.ctas.players, href: "/players" },
-        { label: t.roleOnboarding.guides.player.ctas.results, href: "/results" },
+        { label: t.roleOnboarding.guides.player.ctas.results, href: "/matches?tab=finished" },
       ],
     },
     {
@@ -145,7 +145,7 @@ export function RoleOnboarding() {
       ctas: [
         { label: t.roleOnboarding.guides.captain.ctas.registration, href: "/registration" },
         { label: t.roleOnboarding.guides.captain.ctas.teams, href: "/teams" },
-        { label: t.roleOnboarding.guides.captain.ctas.schedule, href: "/schedule" },
+        { label: t.roleOnboarding.guides.captain.ctas.schedule, href: "/matches?tab=upcoming" },
       ],
     },
   ]

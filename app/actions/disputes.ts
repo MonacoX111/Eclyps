@@ -10,17 +10,17 @@ export async function submitMatchDispute(formData: FormData) {
   const parsed = parseMatchDisputeFormData(formData)
 
   if (!parsed.ok) {
-    redirect(`/schedule?disputeError=${parsed.error}#schedule`)
+    redirectToMatches({ disputeError: parsed.error })
   }
 
   const userProfile = await getCurrentUserProfile()
   if (!userProfile) {
-    redirect("/schedule?disputeError=discord-login-required#schedule")
+    redirectToMatches({ disputeError: "discord-login-required" })
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
-    redirect("/schedule?disputeError=service-unavailable#schedule")
+    redirectToMatches({ disputeError: "service-unavailable" })
   }
 
   const { data: match, error: matchError } = await supabaseAdmin
@@ -30,7 +30,7 @@ export async function submitMatchDispute(formData: FormData) {
     .maybeSingle()
 
   if (matchError || !match?.id || !match.tournament_id) {
-    redirect("/schedule?disputeError=invalid-match#schedule")
+    redirectToMatches({ disputeError: "invalid-match" })
   }
 
   const participantIds = [match.participant_1_id, match.participant_2_id].filter(
@@ -38,7 +38,7 @@ export async function submitMatchDispute(formData: FormData) {
   )
 
   if (participantIds.length === 0) {
-    redirect("/schedule?disputeError=match-not-ready#schedule")
+    redirectToMatches({ disputeError: "match-not-ready" })
   }
 
   const { data: registration, error: registrationError } = await supabaseAdmin
@@ -53,11 +53,11 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (registrationError) {
     console.error("Failed to resolve dispute reporter registration:", registrationError)
-    redirect("/schedule?disputeError=service-unavailable#schedule")
+    redirectToMatches({ disputeError: "service-unavailable" })
   }
 
   if (!registration?.participant_id) {
-    redirect("/schedule?disputeError=not-match-participant#schedule")
+    redirectToMatches({ disputeError: "not-match-participant" })
   }
 
   const participantType = match.participant_type === "player" ? "player" : "team"
@@ -75,7 +75,7 @@ export async function submitMatchDispute(formData: FormData) {
   })
 
   if (!ownsParticipant) {
-    redirect("/schedule?disputeError=ownership-required#schedule")
+    redirectToMatches({ disputeError: "ownership-required" })
   }
 
   const { data: existingDispute, error: existingError } = await supabaseAdmin
@@ -89,11 +89,11 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (existingError) {
     console.error("Failed to check duplicate dispute:", existingError)
-    redirect("/schedule?disputeError=service-unavailable#schedule")
+    redirectToMatches({ disputeError: "service-unavailable" })
   }
 
   if (existingDispute) {
-    redirect("/schedule?disputeError=duplicate-open#schedule")
+    redirectToMatches({ disputeError: "duplicate-open" })
   }
 
   const { error } = await supabaseAdmin.from("match_disputes").insert({
@@ -115,17 +115,34 @@ export async function submitMatchDispute(formData: FormData) {
 
   if (error) {
     if (error.code === "23505") {
-      redirect("/schedule?disputeError=duplicate-open#schedule")
+      redirectToMatches({ disputeError: "duplicate-open" })
     }
 
     console.error("Failed to submit match dispute:", error)
-    redirect("/schedule?disputeError=service-unavailable#schedule")
+    redirectToMatches({ disputeError: "service-unavailable" })
   }
 
   revalidatePath("/")
-  revalidatePath("/schedule")
+  revalidatePath("/matches")
   revalidatePath("/admin")
-  redirect("/schedule?disputeSuccess=submitted#schedule")
+  redirectToMatches({ disputeSuccess: "submitted" })
+}
+
+function redirectToMatches(params: {
+  disputeError?: string
+  disputeSuccess?: string
+}): never {
+  const nextParams = new URLSearchParams({ tab: "upcoming" })
+
+  if (params.disputeError) {
+    nextParams.set("disputeError", params.disputeError)
+  }
+
+  if (params.disputeSuccess) {
+    nextParams.set("disputeSuccess", params.disputeSuccess)
+  }
+
+  redirect(`/matches?${nextParams.toString()}#matches`)
 }
 
 async function verifyReporterOwnership({

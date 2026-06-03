@@ -50,13 +50,13 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
       icon: GitBranch,
     },
     {
-      href: "/schedule",
+      href: "/matches?tab=upcoming",
       label: t.navigationHub.cards.schedule.label,
       description: t.navigationHub.cards.schedule.description,
       icon: Calendar,
     },
     {
-      href: "/results",
+      href: "/matches?tab=finished",
       label: t.navigationHub.cards.results.label,
       description: t.navigationHub.cards.results.description,
       icon: Medal,

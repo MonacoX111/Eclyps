@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
+import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
@@ -45,21 +46,22 @@ export default async function MatchPage({ params }: MatchPageProps) {
     <main className="relative min-h-screen overflow-x-hidden pt-20">
       <AdminShortcut />
       <ParticleField />
-      <Navbar
-        participantLabel={match.participantType === "player" ? "Players" : "Teams"}
-        userProfile={userProfile}
-      />
+      <MotionProvider>
+        <Navbar
+          participantLabel={match.participantType === "player" ? "Players" : "Teams"}
+          userProfile={userProfile}
+        />
 
-      <section className="relative z-10 px-4 py-16 md:py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex flex-wrap gap-3">
-            <Link href="/schedule" className={secondaryLinkClassName}>
-              {t.matchPage.backToSchedule}
-            </Link>
-            <Link href="/tournament#bracket" className={secondaryLinkClassName}>
-              {t.matchPage.backToBracket}
-            </Link>
-          </div>
+        <section className="relative z-10 px-4 py-10 md:py-14">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-6 flex flex-wrap gap-3">
+              <Link href="/matches" className={secondaryLinkClassName}>
+                {t.matchPage.backToMatches}
+              </Link>
+              <Link href="/tournament#bracket" className={secondaryLinkClassName}>
+                {t.matchPage.backToBracket}
+              </Link>
+            </div>
 
           <article className="glass-card relative overflow-hidden rounded-2xl p-5 md:p-8">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
@@ -123,7 +125,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
             </div>
           </div>
         </div>
-      </section>
+        </section>
+      </MotionProvider>
 
       <Footer />
     </main>
@@ -278,8 +281,8 @@ function DetailsSection({
           {t.matchPage.openBracket}
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
-        <Link href="/schedule" className={secondaryLinkClassName}>
-          {t.matchPage.openSchedule}
+        <Link href="/matches" className={secondaryLinkClassName}>
+          {t.matchPage.openMatches}
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
