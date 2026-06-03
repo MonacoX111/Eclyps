@@ -53,6 +53,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   let currentPlayerId: string | null = null
   let currentPlayerStatus: string | null = null
   let currentJoinRequest: CurrentJoinRequest = null
+  let latestRejectedJoinRequest: CurrentJoinRequest = null
   let isCurrentPlayerMember = false
   let pendingJoinRequests: PendingJoinRequest[] = []
 
@@ -98,21 +99,46 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
           members.some((member) => member.player_id === player.id)
 
         if (!isCurrentPlayerMember) {
-          const { data: request } = await supabaseAdmin
-            .from("team_join_requests")
-            .select("id, status, created_at")
-            .eq("team_id", id)
-            .eq("requester_player_id", player.id)
-            .in("status", ["pending", "approved", "rejected", "cancelled"])
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle()
+          const [pendingRequestRes, rejectedRequestRes] = await Promise.all([
+            supabaseAdmin
+              .from("team_join_requests")
+              .select("id, status, created_at")
+              .eq("team_id", id)
+              .eq("requester_player_id", player.id)
+              .eq("status", "pending")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabaseAdmin
+              .from("team_join_requests")
+              .select("id, status, created_at")
+              .eq("team_id", id)
+              .eq("requester_player_id", player.id)
+              .eq("status", "rejected")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+          ])
 
-          if (request) {
+          if (pendingRequestRes.error) {
+            console.error("Failed to load current pending team join request:", pendingRequestRes.error)
+          }
+
+          if (rejectedRequestRes.error) {
+            console.error("Failed to load latest rejected team join request:", rejectedRequestRes.error)
+          }
+
+          if (pendingRequestRes.data) {
             currentJoinRequest = {
-              id: request.id,
-              status: request.status,
-              created_at: request.created_at,
+              id: pendingRequestRes.data.id,
+              status: pendingRequestRes.data.status,
+              created_at: pendingRequestRes.data.created_at,
+            }
+          } else if (rejectedRequestRes.data) {
+            latestRejectedJoinRequest = {
+              id: rejectedRequestRes.data.id,
+              status: rejectedRequestRes.data.status,
+              created_at: rejectedRequestRes.data.created_at,
             }
           }
         }
@@ -248,6 +274,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
       isAlreadyMember={isCurrentPlayerMember}
       teamStatus={teamStatus}
       currentRequest={currentJoinRequest}
+      rejectedRequest={latestRejectedJoinRequest}
       initialError={resolvedParams?.joinRequestError}
       initialSuccess={resolvedParams?.joinRequestSuccess}
     />

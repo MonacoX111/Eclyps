@@ -33,6 +33,7 @@ type TeamJoinRequestCardProps = {
   isAlreadyMember: boolean
   teamStatus: string
   currentRequest: CurrentJoinRequest
+  rejectedRequest?: CurrentJoinRequest
   initialError?: string | null
   initialSuccess?: string | null
 }
@@ -44,6 +45,7 @@ export function TeamJoinRequestCard({
   isAlreadyMember,
   teamStatus,
   currentRequest,
+  rejectedRequest = null,
   initialError,
   initialSuccess,
 }: TeamJoinRequestCardProps) {
@@ -119,6 +121,20 @@ export function TeamJoinRequestCard({
                 {copy.cancelRequest}
               </button>
             </form>
+          ) : rejectedRequest ? (
+            <form action={createTeamJoinRequest} className="flex flex-wrap items-center justify-end gap-2">
+              <input type="hidden" name="team_id" value={teamId} />
+              <span className="inline-flex rounded-full border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-200">
+                {copy.requestRejected}
+              </span>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-400 px-4 py-2 text-xs font-bold text-black transition hover:bg-emerald-300"
+              >
+                <UserPlus className="h-4 w-4" />
+                {copy.requestAgain}
+              </button>
+            </form>
           ) : (
             <form action={createTeamJoinRequest}>
               <input type="hidden" name="team_id" value={teamId} />
@@ -133,6 +149,12 @@ export function TeamJoinRequestCard({
           )}
         </div>
       </div>
+
+      {!pendingRequest && rejectedRequest && (
+        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-950/25 px-4 py-2.5 text-xs text-red-100/85">
+          {copy.requestRejectedDescription}
+        </div>
+      )}
 
       {feedback && (
         <div className={`mt-4 rounded-xl border px-4 py-2.5 text-xs ${
