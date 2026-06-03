@@ -48,14 +48,14 @@ export default async function PlayerProfilePage({
         .from("team_members")
         .select(`
           role,
-          team:teams(id, name, status)
+          team:teams(id, name, status, logo_url)
         `)
         .eq("player_id", data.profile.id)
 
       // 2. Fetch owned teams just in case
       const { data: ownedTeams } = await supabaseAdmin
         .from("teams")
-        .select("id, name, status")
+        .select("id, name, status, logo_url")
         .eq("owner_player_id", data.profile.id)
 
       // Combine teams
@@ -70,6 +70,7 @@ export default async function PlayerProfilePage({
               id: t.id,
               name: t.name,
               status: t.status || "approved",
+              logo_url: t.logo_url ?? null,
               role: m.role as any,
             })
           }
@@ -84,6 +85,7 @@ export default async function PlayerProfilePage({
               id: t.id,
               name: t.name,
               status: t.status || "approved",
+              logo_url: t.logo_url ?? null,
               role: "owner",
             })
           } else {
@@ -147,15 +149,13 @@ export default async function PlayerProfilePage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <PublicProfilePage data={data} userProfile={userProfile} />
-      
-      {isOwner && (
+    <PublicProfilePage data={data} userProfile={userProfile}>
+      {isOwner ? (
         <PlayerDashboard
           teams={teams}
           registrations={registrations}
         />
-      )}
-    </div>
+      ) : null}
+    </PublicProfilePage>
   )
 }

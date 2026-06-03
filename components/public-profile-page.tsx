@@ -2,16 +2,27 @@
 
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { ArrowLeft, Shield, User } from "lucide-react"
+import {
+  ArrowLeft,
+  Calendar,
+  Crown,
+  ExternalLink,
+  Gamepad2,
+  Medal,
+  Shield,
+  Swords,
+  TrendingUp,
+  Trophy,
+  User,
+  Users,
+} from "lucide-react"
 import { Footer } from "@/components/footer"
-import { MatchSchedule } from "@/components/match-schedule"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
-import { Results } from "@/components/results"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
-import type { PublicProfileData } from "@/lib/data/profiles"
+import type { PublicPlayerTeam, PublicProfileData, PublicTeamMember } from "@/lib/data/profiles"
 import type { UserProfile } from "@/lib/auth/user-profile"
 
 type PublicProfilePageProps = {
@@ -125,112 +136,14 @@ export function PublicProfilePage({ data, userProfile = null, children }: Public
                 </div>
               </div>
             </div>
-            {children}
+            {isTeam ? (
+              <TeamProfileContent data={data} managerControls={children} />
+            ) : (
+              <PlayerProfileContent data={data} ownerControls={children} />
+            )}
           </div>
         </section>
 
-        <Divider />
-
-        <StatsSection data={data} />
-
-        <Divider />
-
-        {!isTeam && (
-          <>
-            <section className="relative z-10 px-4 py-24">
-              <div className="mx-auto max-w-5xl">
-                <SectionHeading eyebrow={t.profile.rosterHeading} title={connectionsTitle} />
-                {data.connections.length === 0 ? (
-                  <EmptyState>{emptyConnections}</EmptyState>
-                ) : (
-                  <div className="flex flex-wrap justify-center gap-4">
-                    {data.connections.map((connection) => {
-                      const logoUrl = (connection as any).logoUrl
-                      const role = (connection as any).role
-
-                      return (
-                        <Link
-                          key={connection.id}
-                          href={connection.href || "#"}
-                          className="glass-card w-full rounded-xl p-5 sm:w-[calc((100%-1rem)/2)] flex items-center justify-between gap-4 hover:border-emerald-500/20 transition group"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            {/* Team Logo or Fallback */}
-                            {logoUrl ? (
-                              <img
-                                src={logoUrl}
-                                alt=""
-                                className="h-10 w-10 rounded-lg object-cover border border-white/10 shrink-0"
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-xs font-bold text-white/45 shrink-0">
-                                <Shield className="h-5 w-5 text-emerald-400/60" />
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <p className="break-words font-semibold text-foreground group-hover:text-emerald-400 transition">
-                                {connection.label}
-                              </p>
-                              {connection.meta ? (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {connection.meta}
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          {/* Role Badge */}
-                          {role && (
-                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
-                              role === "owner"
-                                ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-                                : role === "captain"
-                                  ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
-                                  : role === "substitute"
-                                    ? "bg-blue-500/10 border border-blue-500/20 text-blue-300"
-                                    : "bg-white/5 border border-white/10 text-white/60"
-                            }`}>
-                              {role === "owner"
-                                ? t.profile.meta.owner
-                                : role === "captain"
-                                  ? t.profile.meta.captain
-                                  : role === "substitute"
-                                    ? t.profile.meta.substitute
-                                    : t.profile.meta.member}
-                            </span>
-                          )}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-            <Divider />
-          </>
-        )}
-
-        {data.matches.length > 0 ? (
-          <MatchSchedule matches={data.matches} />
-        ) : (
-          <ProfileSectionEmpty
-            eyebrow={t.profile.recentMatchesEyebrow}
-            title={t.profile.recentMatchesTitle}
-            message={t.profile.emptyRecentMatches}
-          />
-        )}
-
-        <Divider />
-
-        {data.results.length > 0 ? (
-          <Results results={data.results} />
-        ) : (
-          <ProfileSectionEmpty
-            eyebrow={t.profile.resultsEyebrow}
-            title={t.profile.resultsTitle}
-            message={t.profile.emptyResults}
-          />
-        )}
       </MotionProvider>
       <Footer />
     </main>
@@ -313,6 +226,704 @@ function StatsSection({ data }: { data: PublicProfileData }) {
       </div>
     </section>
   )
+}
+
+function PlayerProfileContent({
+  data,
+  ownerControls,
+}: {
+  data: PublicProfileData
+  ownerControls?: ReactNode
+}) {
+  return (
+    <div className="mt-6 space-y-6">
+      {ownerControls}
+      <PlayerCurrentTeams data={data} />
+      <PlayerStatsPanel data={data} />
+      <PlayerGameStats data={data} />
+      <PlayerRecentMatches data={data} />
+      <PlayerTournamentHistory data={data} />
+      <PlayerAchievements data={data} />
+    </div>
+  )
+}
+
+function PlayerCurrentTeams({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const teams = data.playerTeams ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.playerPublic.currentTeamEyebrow}
+      title={t.profile.playerPublic.currentTeamTitle}
+      description={t.profile.playerPublic.currentTeamDescription}
+    >
+      {teams.length === 0 ? (
+        <TeamEmptyState icon={Users} message={t.profile.playerPublic.noTeamLinked} />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {teams.map((team) => (
+            <Link
+              key={team.id}
+              href={team.href}
+              className="group flex min-w-0 items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4 transition hover:border-emerald-400/25 hover:bg-white/[0.035]"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {team.logo_url ? (
+                  <img
+                    src={team.logo_url}
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-xl border border-white/10 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-xs font-black text-white/45">
+                    {team.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="break-words text-sm font-bold text-white transition group-hover:text-emerald-300">
+                      {team.name}
+                    </p>
+                    <RoleBadge role={team.role} />
+                  </div>
+                  {team.status && (
+                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                      {displayStatusLabel(team.status, t)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <span className="hidden shrink-0 items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/45 transition group-hover:border-emerald-400/20 group-hover:text-emerald-300 sm:inline-flex">
+                {t.profile.playerPublic.viewTeam}
+                <ExternalLink className="h-3 w-3" />
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function PlayerStatsPanel({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const stats = getPlayerProfileStats(data)
+  const bestPlacement = getBestPlayerPlacement(data)
+  const rating = getProfileRating(data)
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.playerPublic.statsEyebrow}
+      title={t.profile.playerPublic.statsTitle}
+      description={t.profile.playerPublic.statsDescription}
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <TeamMetric icon={Gamepad2} label={t.profile.playerPublic.matchesPlayed} value={String(stats.matches)} />
+        <TeamMetric icon={Trophy} label={t.profile.stats.wins} value={String(stats.wins)} />
+        <TeamMetric icon={Swords} label={t.profile.stats.losses} value={String(stats.losses)} />
+        <TeamMetric icon={TrendingUp} label={t.profile.stats.winRate} value={`${stats.winRate}%`} />
+        <TeamMetric icon={Shield} label={t.profile.stats.streak} value={stats.streak} />
+        <TeamMetric icon={Calendar} label={t.profile.teamPublic.tournamentsPlayed} value={String(data.playerTournamentHistory?.length ?? 0)} />
+        <TeamMetric icon={Medal} label={t.profile.teamPublic.bestPlacement} value={bestPlacement ? `#${bestPlacement}` : t.profile.playerPublic.notEnoughData} />
+        <TeamMetric icon={Trophy} label={t.profile.stats.rating} value={String(rating)} />
+      </div>
+    </TeamPanel>
+  )
+}
+
+function PlayerGameStats({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const gameStats = data.playerGameStats ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.playerPublic.gameStatsEyebrow}
+      title={t.profile.playerPublic.gameStatsTitle}
+      description={t.profile.playerPublic.gameStatsDescription}
+    >
+      {gameStats.length === 0 ? (
+        <TeamEmptyState icon={Gamepad2} message={t.profile.playerPublic.noGameStats} />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {gameStats.map((item) => (
+            <div key={item.game} className="rounded-xl border border-white/5 bg-black/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="break-words text-sm font-bold text-white">{item.game}</h3>
+                {item.rating !== null && (
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+                    ELO {item.rating}
+                  </span>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                <MiniMetric label={t.profile.playerPublic.matchesShort} value={String(item.matches)} />
+                <MiniMetric label={t.profile.stats.wins} value={String(item.wins)} />
+                <MiniMetric label={t.profile.stats.losses} value={String(item.losses)} />
+                <MiniMetric label={t.profile.stats.winRate} value={`${item.winRate}%`} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function PlayerRecentMatches({ data }: { data: PublicProfileData }) {
+  const { t, lang } = useLanguage()
+  const matches = data.playerMatchHistory ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.recentMatchesEyebrow}
+      title={t.profile.recentMatchesTitle}
+      description={t.profile.playerPublic.matchesDescription}
+    >
+      {matches.length === 0 ? (
+        <TeamEmptyState icon={Swords} message={t.profile.playerPublic.noMatches} />
+      ) : (
+        <div className="space-y-3">
+          {matches.map((match) => (
+            <div
+              key={match.id}
+              className="flex flex-col gap-3 rounded-xl border border-white/5 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-white">
+                  {t.profile.vs} {match.opponent}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                  {match.tournament_name}
+                  {match.game ? ` · ${match.game}` : ""}
+                  {match.date ? ` · ${formatProfileDate(match.date, lang)}` : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {match.scoreline && <span className="font-mono text-white/55">{match.scoreline}</span>}
+                <ResultBadge result={match.result} />
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold text-white/45">
+                  {match.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function PlayerTournamentHistory({ data }: { data: PublicProfileData }) {
+  const { t, lang } = useLanguage()
+  const history = data.playerTournamentHistory ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.tournamentHistoryEyebrow}
+      title={t.profile.teamPublic.tournamentHistoryTitle}
+      description={t.profile.playerPublic.tournamentHistoryDescription}
+    >
+      {history.length === 0 ? (
+        <TeamEmptyState icon={Calendar} message={t.profile.playerPublic.noTournaments} />
+      ) : (
+        <div className="space-y-3">
+          {history.map((item) => (
+            <div
+              key={item.id}
+              className="grid gap-3 rounded-xl border border-white/5 bg-black/20 p-4 md:grid-cols-[minmax(0,1fr)_auto]"
+            >
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-white">{item.tournament_name}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                  {item.game && <span>{item.game}</span>}
+                  <span>{item.participant_type === "team" ? t.profile.meta.team : t.profile.meta.player}</span>
+                  {item.team_name && <span>{item.team_name}</span>}
+                  {item.registration_status && <span>{displayStatusLabel(item.registration_status, t)}</span>}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                {item.placement && (
+                  <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
+                    #{item.placement}
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-white/45">
+                  {formatProfileDate(item.event_date ?? item.created_at, lang) ?? t.profile.meta.tba}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function PlayerAchievements({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const placements = (data.playerTournamentHistory ?? []).filter((item) => item.placement === 1 || item.placement === 2)
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.achievementsEyebrow}
+      title={t.profile.teamPublic.achievementsTitle}
+      description={t.profile.playerPublic.achievementsDescription}
+    >
+      {placements.length === 0 ? (
+        <TeamEmptyState icon={Medal} message={t.profile.playerPublic.noAchievements} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {placements.map((item) => (
+            <div key={`${item.id}-${item.placement}`} className="rounded-xl border border-amber-400/15 bg-amber-400/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                  {item.placement === 1 ? <Crown className="h-5 w-5" /> : <Medal className="h-5 w-5" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-white">
+                    {item.placement === 1 ? t.profile.teamPublic.champion : t.profile.teamPublic.finalist}
+                  </p>
+                  <p className="mt-1 break-words text-xs text-white/45">{item.tournament_name}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function TeamProfileContent({
+  data,
+  managerControls,
+}: {
+  data: PublicProfileData
+  managerControls?: ReactNode
+}) {
+  return (
+    <div className="mt-6 space-y-6">
+      <TeamQuickMeta data={data} />
+      <TeamRosterSection data={data} />
+      {managerControls}
+      <TeamStatsPanel data={data} />
+      <TeamRecentMatches data={data} />
+      <TeamTournamentHistory data={data} />
+      <TeamAchievements data={data} />
+    </div>
+  )
+}
+
+function TeamQuickMeta({ data }: { data: PublicProfileData }) {
+  const { t, lang } = useLanguage()
+  const members = data.teamMembers ?? []
+  const mainPlayers = members.filter((member) => member.role !== "substitute").length
+  const substitutes = members.filter((member) => member.role === "substitute").length
+  const createdAt = formatProfileDate(data.profile.created_at, lang)
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <TeamMetric icon={Users} label={t.profile.teamPublic.members} value={String(members.length)} />
+      <TeamMetric icon={Shield} label={t.profile.teamPublic.mainPlayers} value={String(mainPlayers)} />
+      <TeamMetric icon={User} label={t.profile.teamPublic.substitutes} value={String(substitutes)} />
+      <TeamMetric icon={Calendar} label={t.profile.teamPublic.createdAt} value={createdAt ?? t.profile.meta.tba} />
+    </div>
+  )
+}
+
+function TeamRosterSection({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const members = data.teamMembers ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.rosterEyebrow}
+      title={t.profile.teamPublic.rosterTitle}
+      description={t.profile.teamPublic.rosterDescription}
+    >
+      {members.length === 0 ? (
+        <TeamEmptyState icon={Users} message={t.profile.emptyConnectionsTeams} />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {members.map((member) => (
+            <TeamRosterCard key={member.player_id} member={member} />
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function TeamRosterCard({ member }: { member: PublicTeamMember }) {
+  const { t } = useLanguage()
+
+  return (
+    <Link
+      href={member.href}
+      className="group flex min-w-0 items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4 transition hover:border-emerald-400/25 hover:bg-white/[0.035]"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        {member.avatar_url ? (
+          <img
+            src={member.avatar_url}
+            alt=""
+            className="h-11 w-11 shrink-0 rounded-full border border-white/10 object-cover"
+          />
+        ) : (
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-xs font-black text-white/45">
+            {member.display_name.slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="break-words text-sm font-bold text-white transition group-hover:text-emerald-300">
+              {member.display_name}
+            </p>
+            <RoleBadge role={member.role} />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-white/45">
+            {member.real_name && <span className="break-words">{member.real_name}</span>}
+            {member.region && <span className="break-words">{member.region}</span>}
+          </div>
+        </div>
+      </div>
+      <span className="hidden shrink-0 items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/45 transition group-hover:border-emerald-400/20 group-hover:text-emerald-300 sm:inline-flex">
+        {t.profile.teamPublic.viewPlayer}
+        <ExternalLink className="h-3 w-3" />
+      </span>
+    </Link>
+  )
+}
+
+function TeamStatsPanel({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const { stats } = data
+  const tournamentsPlayed = data.teamTournamentHistory?.length ?? 0
+  const placements = (data.teamTournamentHistory ?? [])
+    .map((item) => item.placement)
+    .filter((placement): placement is number => placement !== null)
+  const bestPlacement = placements.length > 0 ? Math.min(...placements) : null
+  const streakLabel =
+    stats.currentStreak.result && stats.currentStreak.count > 0
+      ? `${stats.currentStreak.count}${stats.currentStreak.result === "win" ? "W" : "L"}`
+      : t.profile.stats.none
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.statsEyebrow}
+      title={t.profile.teamPublic.statsTitle}
+      description={t.profile.teamPublic.statsDescription}
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <TeamMetric icon={Gamepad2} label={t.profile.teamPublic.matchesPlayed} value={String(stats.totalMatches)} />
+        <TeamMetric icon={Trophy} label={t.profile.stats.wins} value={String(stats.wins)} />
+        <TeamMetric icon={Swords} label={t.profile.stats.losses} value={String(stats.losses)} />
+        <TeamMetric icon={TrendingUp} label={t.profile.stats.winRate} value={`${stats.winRate}%`} />
+        <TeamMetric icon={Shield} label={t.profile.stats.streak} value={streakLabel} />
+        <TeamMetric icon={Calendar} label={t.profile.teamPublic.tournamentsPlayed} value={String(tournamentsPlayed)} />
+        <TeamMetric
+          icon={Medal}
+          label={t.profile.teamPublic.bestPlacement}
+          value={bestPlacement ? `#${bestPlacement}` : t.profile.teamPublic.notEnoughData}
+        />
+      </div>
+    </TeamPanel>
+  )
+}
+
+function TeamRecentMatches({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const recent = data.stats.recentHistory.slice(0, 8)
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.recentMatchesEyebrow}
+      title={t.profile.recentMatchesTitle}
+      description={t.profile.teamPublic.matchesDescription}
+    >
+      {recent.length === 0 ? (
+        <TeamEmptyState icon={Swords} message={t.profile.teamPublic.noCompletedMatches} />
+      ) : (
+        <div className="space-y-3">
+          {recent.map((match) => (
+            <div
+              key={match.id}
+              className="flex flex-col gap-3 rounded-xl border border-white/5 bg-black/20 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-white">
+                  {t.profile.vs} {match.opponent}
+                </p>
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
+                  {data.tournamentName ?? t.profile.meta.tournamentTba} · {match.round}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                {match.scoreline && <span className="font-mono text-white/55">{match.scoreline}</span>}
+                <span
+                  className={
+                    match.result === "win"
+                      ? "rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 font-bold text-emerald-300"
+                      : "rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 font-bold text-red-300"
+                  }
+                >
+                  {match.result === "win" ? t.profile.win : t.profile.loss}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function TeamTournamentHistory({ data }: { data: PublicProfileData }) {
+  const { t, lang } = useLanguage()
+  const history = data.teamTournamentHistory ?? []
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.tournamentHistoryEyebrow}
+      title={t.profile.teamPublic.tournamentHistoryTitle}
+      description={t.profile.teamPublic.tournamentHistoryDescription}
+    >
+      {history.length === 0 ? (
+        <TeamEmptyState icon={Calendar} message={t.profile.teamPublic.noTournaments} />
+      ) : (
+        <div className="space-y-3">
+          {history.map((item) => (
+            <div
+              key={item.id}
+              className="grid gap-3 rounded-xl border border-white/5 bg-black/20 p-4 md:grid-cols-[minmax(0,1fr)_auto]"
+            >
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-white">{item.tournament_name}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                  {item.game && <span>{item.game}</span>}
+                  {item.tournament_status && <span>{displayStatusLabel(item.tournament_status, t)}</span>}
+                  {item.registration_status && <span>{displayStatusLabel(item.registration_status, t)}</span>}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                {item.placement && (
+                  <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
+                    #{item.placement}
+                  </span>
+                )}
+                <span className="text-xs font-semibold text-white/45">
+                  {formatProfileDate(item.event_date ?? item.created_at, lang) ?? t.profile.meta.tba}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function TeamAchievements({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const placements = (data.teamTournamentHistory ?? []).filter((item) => item.placement === 1 || item.placement === 2)
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.teamPublic.achievementsEyebrow}
+      title={t.profile.teamPublic.achievementsTitle}
+      description={t.profile.teamPublic.achievementsDescription}
+    >
+      {placements.length === 0 ? (
+        <TeamEmptyState icon={Medal} message={t.profile.teamPublic.noAchievements} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {placements.map((item) => (
+            <div key={`${item.id}-${item.placement}`} className="rounded-xl border border-amber-400/15 bg-amber-400/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
+                  {item.placement === 1 ? <Crown className="h-5 w-5" /> : <Medal className="h-5 w-5" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-white">
+                    {item.placement === 1 ? t.profile.teamPublic.champion : t.profile.teamPublic.finalist}
+                  </p>
+                  <p className="mt-1 break-words text-xs text-white/45">{item.tournament_name}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </TeamPanel>
+  )
+}
+
+function TeamPanel({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string
+  title: string
+  description?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="rounded-2xl border border-emerald-400/20 bg-white/[0.025] p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)] backdrop-blur sm:p-6">
+      <div className="mb-5 border-b border-white/5 pb-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-400">{eyebrow}</p>
+        <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
+        {description && <p className="mt-1 text-xs leading-5 text-white/55">{description}</p>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function TeamMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Shield
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+        <Icon className="h-3.5 w-3.5 text-emerald-300" />
+        <span className="break-words">{label}</span>
+      </div>
+      <p className="mt-2 break-words text-2xl font-black text-white">{value}</p>
+    </div>
+  )
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.025] px-2 py-2">
+      <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-white/35">{label}</p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  )
+}
+
+function TeamEmptyState({
+  icon: Icon,
+  message,
+}: {
+  icon: typeof Shield
+  message: string
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-8 text-center">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-emerald-400/15 bg-emerald-400/10 text-emerald-300">
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">{message}</p>
+    </div>
+  )
+}
+
+function RoleBadge({ role }: { role: PublicTeamMember["role"] | PublicPlayerTeam["role"] }) {
+  const { t } = useLanguage()
+  const label =
+    role === "owner"
+      ? t.profile.meta.owner
+      : role === "captain"
+        ? t.profile.meta.captain
+        : role === "substitute"
+          ? t.profile.meta.substitute
+          : t.profile.meta.member
+  const className =
+    role === "owner"
+      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+      : role === "captain"
+        ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
+        : role === "substitute"
+          ? "border-blue-400/20 bg-blue-400/10 text-blue-300"
+          : "border-white/10 bg-white/5 text-white/60"
+
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+function ResultBadge({ result }: { result: "win" | "loss" | "draw" }) {
+  const { t } = useLanguage()
+  const className =
+    result === "win"
+      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+      : result === "loss"
+        ? "border-red-400/20 bg-red-400/10 text-red-300"
+        : "border-white/10 bg-white/5 text-white/55"
+  const label = result === "win" ? t.profile.win : result === "loss" ? t.profile.loss : t.profile.playerPublic.draw
+
+  return (
+    <span className={`rounded-full border px-3 py-1 font-bold ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+function displayStatusLabel(status: string, t: ReturnType<typeof useLanguage>["t"]) {
+  if (status === "approved" || status === "pending" || status === "rejected") {
+    return t.profile.meta[status]
+  }
+
+  return status
+}
+
+function getPlayerProfileStats(data: PublicProfileData) {
+  const finished = (data.playerMatchHistory ?? []).filter((match) => match.status === "finished")
+  const wins = finished.filter((match) => match.result === "win").length
+  const losses = finished.filter((match) => match.result === "loss").length
+  const matches = finished.length
+  const latest = finished[0]
+  let streakCount = 0
+
+  if (latest && latest.result !== "draw") {
+    for (const match of finished) {
+      if (match.result !== latest.result) break
+      streakCount += 1
+    }
+  }
+
+  return {
+    matches,
+    wins,
+    losses,
+    winRate: matches > 0 ? Math.round((wins / matches) * 100) : 0,
+    streak:
+      latest && latest.result !== "draw" && streakCount > 0
+        ? `${streakCount}${latest.result === "win" ? "W" : "L"}`
+        : data.playerMatchHistory && data.playerMatchHistory.length > 0
+          ? "0"
+          : "0",
+  }
+}
+
+function getBestPlayerPlacement(data: PublicProfileData) {
+  const placements = (data.playerTournamentHistory ?? [])
+    .map((item) => item.placement)
+    .filter((placement): placement is number => placement !== null)
+
+  return placements.length > 0 ? Math.min(...placements) : null
+}
+
+function formatProfileDate(date: string | null | undefined, lang: string) {
+  if (!date) return null
+
+  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(date))
 }
 
 function getProfileRating(data: PublicProfileData) {

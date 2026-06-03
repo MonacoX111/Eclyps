@@ -29,16 +29,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden pt-20 pb-12 bg-background">
+    <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-background">
       <ParticleField />
       <MotionProvider>
-        <Suspense fallback={null}>
-          <ActiveNavbar userProfile={userProfile} />
-        </Suspense>
+        <div className="relative z-10 flex-1 pt-20 pb-12">
+          <Suspense fallback={null}>
+            <ActiveNavbar userProfile={userProfile} />
+          </Suspense>
 
-        <Suspense fallback={<AccountDashboardLoading />}>
           <AccountDashboard userProfile={userProfile} searchParams={resolvedParams} />
-        </Suspense>
+        </div>
       </MotionProvider>
       <Footer />
     </main>

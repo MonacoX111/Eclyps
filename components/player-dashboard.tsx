@@ -8,6 +8,7 @@ export type TeamItem = {
   id: string
   name: string
   status: string
+  logo_url?: string | null
   role: "owner" | "captain" | "member"
 }
 
@@ -85,19 +86,27 @@ export function PlayerDashboard({ teams, registrations }: PlayerDashboardProps) 
                   className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 p-4 transition hover:border-white/10 hover:bg-white/[0.01]"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-white/[0.05] flex items-center justify-center border border-white/10">
-                      <Shield className="h-4 w-4 text-emerald-400" />
-                    </div>
+                    {team.logo_url ? (
+                      <img
+                        src={team.logo_url}
+                        alt=""
+                        className="h-8 w-8 rounded-lg border border-white/10 object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-lg bg-white/[0.05] flex items-center justify-center border border-white/10">
+                        <Shield className="h-4 w-4 text-emerald-400" />
+                      </div>
+                    )}
                     <div>
                       <h4 className="font-semibold text-xs text-white transition hover:text-emerald-400">
                         {team.name}
                       </h4>
                       <span className="text-[9px] font-bold text-white/45 uppercase tracking-wider">
                         {team.role === "owner"
-                          ? t.profile.ownedOrCaptained
+                          ? t.profile.meta.owner
                           : team.role === "captain"
-                          ? t.profile.ownedOrCaptained
-                          : t.profile.memberOf}
+                            ? t.profile.meta.captain
+                            : t.profile.memberOf}
                       </span>
                     </div>
                   </div>

@@ -54,6 +54,7 @@ export type PublicProfileRecord = {
   user_id?: string | null
   discord_username?: string | null
   owner_player_id?: string | null
+  created_at?: string | null
 }
 
 export type PublicProfileConnection = {
@@ -71,7 +72,80 @@ export type PublicProfileData = {
   ranking: RankingRow | null
   matches: MatchScheduleItem[]
   results: ResultCard[]
-  teamMembers?: any[]
+  teamMembers?: PublicTeamMember[]
+  teamTournamentHistory?: PublicTeamTournamentHistory[]
+  playerTeams?: PublicPlayerTeam[]
+  playerTournamentHistory?: PublicPlayerTournamentHistory[]
+  playerMatchHistory?: PublicPlayerMatchHistory[]
+  playerGameStats?: PublicPlayerGameStat[]
+}
+
+export type PublicTeamMember = {
+  player_id: string
+  role: "owner" | "captain" | "member" | "substitute"
+  display_name: string
+  real_name: string | null
+  region: string | null
+  avatar_url: string | null
+  href: string
+}
+
+export type PublicTeamTournamentHistory = {
+  id: string
+  tournament_id: string
+  tournament_name: string
+  game: string | null
+  tournament_status: string | null
+  registration_status: string | null
+  participant_id: string | null
+  placement: number | null
+  event_date: string | null
+  created_at: string | null
+}
+
+export type PublicPlayerTeam = {
+  id: string
+  name: string
+  status: string | null
+  role: "owner" | "captain" | "member" | "substitute"
+  logo_url: string | null
+  href: string
+}
+
+export type PublicPlayerTournamentHistory = {
+  id: string
+  tournament_id: string
+  tournament_name: string
+  game: string | null
+  tournament_status: string | null
+  registration_status: string | null
+  participant_type: "player" | "team"
+  team_name: string | null
+  participant_id: string | null
+  placement: number | null
+  event_date: string | null
+  created_at: string | null
+}
+
+export type PublicPlayerMatchHistory = {
+  id: string
+  tournament_id: string
+  tournament_name: string
+  game: string | null
+  opponent: string
+  date: string | null
+  scoreline: string | null
+  result: "win" | "loss" | "draw"
+  status: "upcoming" | "live" | "finished"
+}
+
+export type PublicPlayerGameStat = {
+  game: string
+  matches: number
+  wins: number
+  losses: number
+  winRate: number
+  rating: number | null
 }
 
 type ProfileParticipant = {
@@ -106,6 +180,7 @@ type ProfileTeam = {
   status: string | null
   owner_player_id?: string | null
   logo_url?: string | null
+  created_at?: string | null
 }
 
 type ProfilePlayer = {
@@ -139,8 +214,8 @@ const PLAYER_SELECT_WITH_REGION_NO_RATING =
 const PLAYER_SELECT_FALLBACK =
   "id, tournament_id, name, nickname, seed, wins, losses, status, user_id"
 const TEAM_SELECT_WITH_RATING =
-  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses, status, owner_player_id, logo_url"
-const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses, status, owner_player_id, logo_url"
+  "id, tournament_id, name, seed, rating, rating_matches_played, rank_position, wins, losses, status, owner_player_id, logo_url, created_at"
+const TEAM_SELECT_FALLBACK = "id, tournament_id, name, seed, wins, losses, status, owner_player_id, logo_url, created_at"
 const PARTICIPANT_SELECT_WITH_REGION =
   "id, tournament_id, participant_type, display_name, region, seed, logo_url, avatar_url, source_team_id, source_player_id"
 const PARTICIPANT_SELECT_FALLBACK =
@@ -208,31 +283,47 @@ async function getPublicProfile(
   let captainName: string | null = null
   let memberCount: number | null = null
   let status: string | null = null
-  let teamMembers: any[] = []
+  let teamMembers: PublicTeamMember[] = []
+  let teamTournamentHistory: PublicTeamTournamentHistory[] = []
+  let playerTeams: PublicPlayerTeam[] = []
+  let playerTournamentHistory: PublicPlayerTournamentHistory[] = []
+  let playerMatchHistory: PublicPlayerMatchHistory[] = []
+  let playerGameStats: PublicPlayerGameStat[] = []
   let connections: PublicProfileConnection[] = []
 
   if (kind === "team") {
     const teamId = source?.id ?? id
+    const teamSource = source as ProfileTeam | null
     const membersRes = await supabase
       .from("team_members")
       .select(`
         player_id,
         role,
-        players!team_members_player_id_fkey(display_name, nickname, name, avatar_url)
+        players!team_members_player_id_fkey(display_name, nickname, name, real_name, region, avatar_url)
       `)
       .eq("team_id", teamId)
 
     if (membersRes.data) {
-      teamMembers = (membersRes.data ?? []).map((m: any) => ({
-        player_id: m.player_id,
-        role: m.role,
-        display_name: m.players?.display_name ?? m.players?.nickname ?? m.players?.name ?? "Unknown player",
-        avatar_url: m.players?.avatar_url ?? null,
-      }))
+      teamMembers = (membersRes.data ?? [])
+        .map((m: any) => {
+          const displayName = m.players?.display_name ?? m.players?.nickname ?? m.players?.name ?? "Unknown player"
+          const role = teamSource?.owner_player_id === m.player_id ? "owner" : normalizePublicTeamRole(m.role)
+
+          return {
+            player_id: m.player_id,
+            role,
+            display_name: displayName,
+            real_name: m.players?.real_name ?? null,
+            region: m.players?.region ?? null,
+            avatar_url: m.players?.avatar_url ?? null,
+            href: `/players/${m.player_id}`,
+          }
+        })
+        .sort(comparePublicTeamMembers)
 
       memberCount = teamMembers.length
 
-      const captain = teamMembers.find((m: any) => m.role === "captain")
+      const captain = teamMembers.find((m) => m.role === "captain") ?? teamMembers.find((m) => m.role === "owner")
       if (captain) {
         captainName = captain.display_name
       }
@@ -241,6 +332,8 @@ async function getPublicProfile(
     if (source && "status" in source) {
       status = source.status
     }
+
+    teamTournamentHistory = await getTeamTournamentHistory(teamId, profileNameCandidates(source, sourceParticipant))
   } else if (kind === "player") {
     const playerId = source?.id ?? id
 
@@ -259,7 +352,7 @@ async function getPublicProfile(
       .select("id, name, status, logo_url")
       .eq("owner_player_id", playerId)
 
-    const teamMap = new Map<string, any>()
+    const teamMap = new Map<string, PublicPlayerTeam>()
 
     if (membershipsRes.data) {
       for (const m of membershipsRes.data) {
@@ -268,8 +361,10 @@ async function getPublicProfile(
           teamMap.set(t.id, {
             id: t.id,
             name: t.name,
+            status: t.status,
             logo_url: t.logo_url,
-            role: m.role,
+            role: normalizePublicTeamRole(m.role),
+            href: `/teams/${t.id}`,
           })
         }
       }
@@ -282,21 +377,27 @@ async function getPublicProfile(
             teamMap.set(t.id, {
               id: t.id,
               name: t.name,
+              status: t.status,
               logo_url: t.logo_url,
               role: "owner",
+              href: `/teams/${t.id}`,
             })
           } else {
             const existing = teamMap.get(t.id)
-            teamMap.set(t.id, {
-              ...existing,
-              role: "owner",
-            })
+            if (existing) {
+              teamMap.set(t.id, {
+                ...existing,
+                role: "owner",
+              })
+            }
           }
         }
       }
     }
 
-    connections = Array.from(teamMap.values()).map((t) => ({
+    playerTeams = Array.from(teamMap.values()).sort(comparePublicPlayerTeams)
+
+    connections = playerTeams.map((t) => ({
       id: t.id,
       label: t.name,
       href: `/teams/${t.id}`,
@@ -304,6 +405,16 @@ async function getPublicProfile(
       logoUrl: t.logo_url ?? null,
       role: t.role,
     }))
+
+    const playerHistory = await getPlayerPublicHistory({
+      playerId,
+      playerNameCandidates: profileNameCandidates(source, sourceParticipant),
+      playerTeams,
+      profileRating: source && "rating" in source ? source.rating : null,
+    })
+    playerTournamentHistory = playerHistory.tournaments
+    playerMatchHistory = playerHistory.matches
+    playerGameStats = playerHistory.gameStats
   }
 
   const profile = toPublicProfileRecord({
@@ -340,6 +451,11 @@ async function getPublicProfile(
     matches: getProfileMatches(matches, profile),
     results: getProfileResults(results, tournament, profile, lang),
     teamMembers,
+    teamTournamentHistory,
+    playerTeams,
+    playerTournamentHistory,
+    playerMatchHistory,
+    playerGameStats,
   }
 }
 
@@ -730,6 +846,7 @@ function toPublicProfileRecord({
     user_id: source && "user_id" in source ? source.user_id : null,
     discord_username: source && "owner_profile" in source ? source.owner_profile?.discord_username ?? null : null,
     owner_player_id: source && "owner_player_id" in source ? source.owner_player_id : null,
+    created_at: source && "created_at" in source ? source.created_at ?? null : null,
   }
 }
 
@@ -757,6 +874,254 @@ function getProfileMatches(
       score1: match.score1,
       score2: match.score2,
     }))
+}
+
+async function getTeamTournamentHistory(
+  teamId: string,
+  nameCandidates: string[],
+): Promise<PublicTeamTournamentHistory[]> {
+  try {
+    const registrationsResult = await supabase!
+      .from("tournament_registrations")
+      .select(`
+        id,
+        tournament_id,
+        status,
+        participant_id,
+        created_at,
+        tournaments:tournaments(id, name, game, status, event_date)
+      `)
+      .or(`team_id.eq.${teamId},source_team_id.eq.${teamId}`)
+      .order("created_at", { ascending: false })
+
+    if (registrationsResult.error) {
+      if (!isMissingColumnError(registrationsResult.error)) {
+        console.error("Failed to fetch team tournament history:", registrationsResult.error)
+      }
+      return []
+    }
+
+    const rows = registrationsResult.data ?? []
+    if (rows.length === 0) return []
+
+    const tournamentIds = rows
+      .map((row: any) => readStringId(row.tournament_id))
+      .filter((value): value is string => Boolean(value))
+
+    const resultsByParticipant = new Map<string, number>()
+    const resultsByTournamentAndName = new Map<string, number>()
+
+    if (tournamentIds.length > 0) {
+      const resultsResult = await supabase!
+        .from("results")
+        .select("tournament_id, participant_id, team, placement")
+        .in("tournament_id", tournamentIds)
+
+      if (!resultsResult.error) {
+        for (const result of resultsResult.data ?? []) {
+          const participantId = readStringId((result as any).participant_id)
+          const placement = readNullableInteger((result as any).placement)
+          const tournamentId = readStringId((result as any).tournament_id)
+          const teamName = readNullableString((result as any).team)
+
+          if (participantId && placement !== null) {
+            resultsByParticipant.set(participantId, placement)
+          }
+
+          if (tournamentId && teamName && placement !== null) {
+            resultsByTournamentAndName.set(`${tournamentId}:${normalizeName(teamName)}`, placement)
+          }
+        }
+      }
+    }
+
+    return rows.map((row: any) => {
+      const tournament = row.tournaments as any
+      const participantId = readStringId(row.participant_id)
+      const tournamentId = readStringId(row.tournament_id) ?? ""
+      const placement =
+        (participantId ? resultsByParticipant.get(participantId) : undefined) ??
+        nameCandidates
+          .map((name) => resultsByTournamentAndName.get(`${tournamentId}:${normalizeName(name)}`))
+          .find((value) => value !== undefined) ??
+        null
+
+      return {
+        id: readStringId(row.id) ?? `${tournamentId}-${readNullableString(row.created_at) ?? "registration"}`,
+        tournament_id: tournamentId,
+        tournament_name: readNullableString(tournament?.name) ?? "Tournament",
+        game: readNullableString(tournament?.game),
+        tournament_status: readNullableString(tournament?.status),
+        registration_status: readNullableString(row.status),
+        participant_id: participantId,
+        placement,
+        event_date: readNullableString(tournament?.event_date),
+        created_at: readNullableString(row.created_at),
+      }
+    })
+  } catch (error) {
+    console.error("Unexpected error while fetching team tournament history:", error)
+    return []
+  }
+}
+
+async function getPlayerPublicHistory({
+  playerId,
+  playerNameCandidates,
+  playerTeams,
+  profileRating,
+}: {
+  playerId: string
+  playerNameCandidates: string[]
+  playerTeams: PublicPlayerTeam[]
+  profileRating: number | null
+}): Promise<{
+  tournaments: PublicPlayerTournamentHistory[]
+  matches: PublicPlayerMatchHistory[]
+  gameStats: PublicPlayerGameStat[]
+}> {
+  const empty = { tournaments: [], matches: [], gameStats: [] }
+  const teamIds = playerTeams.map((team) => team.id)
+  const teamById = new Map(playerTeams.map((team) => [team.id, team]))
+
+  try {
+    const registrationFilters = [
+      `player_id.eq.${playerId}`,
+      `source_player_id.eq.${playerId}`,
+      ...(teamIds.length > 0
+        ? [`team_id.in.(${teamIds.join(",")})`, `source_team_id.in.(${teamIds.join(",")})`]
+        : []),
+    ]
+
+    const registrationsResult = await supabase!
+      .from("tournament_registrations")
+      .select(`
+        id,
+        tournament_id,
+        status,
+        registration_type,
+        player_id,
+        source_player_id,
+        team_id,
+        source_team_id,
+        participant_id,
+        created_at,
+        tournaments:tournaments(id, name, game, status, event_date)
+      `)
+      .or(registrationFilters.join(","))
+      .order("created_at", { ascending: false })
+
+    if (registrationsResult.error) {
+      if (!isMissingColumnError(registrationsResult.error)) {
+        console.error("Failed to fetch player tournament history:", registrationsResult.error)
+      }
+      return empty
+    }
+
+    const rows = registrationsResult.data ?? []
+    if (rows.length === 0) return empty
+
+    const tournamentIds = Array.from(
+      new Set(
+        rows
+          .map((row: any) => readStringId(row.tournament_id))
+          .filter((value): value is string => Boolean(value)),
+      ),
+    )
+
+    const [matchesByTournament, resultsByTournament] = await Promise.all([
+      Promise.all(tournamentIds.map((tournamentId) => getMatchesForTournament(tournamentId))),
+      Promise.all(tournamentIds.map((tournamentId) => getResultsForTournament(tournamentId))),
+    ])
+
+    const results = resultsByTournament.flat()
+    const resultPlacementByParticipant = new Map<string, number>()
+    const resultPlacementByTournamentAndName = new Map<string, number>()
+
+    for (const result of results) {
+      if (result.placement === null) continue
+
+      if (result.participant_id) {
+        resultPlacementByParticipant.set(result.participant_id, result.placement)
+      }
+
+      if (result.team) {
+        resultPlacementByTournamentAndName.set(
+          `${result.tournament_id}:${normalizeName(result.team)}`,
+          result.placement,
+        )
+      }
+    }
+
+    const participantIds = new Set<string>()
+    const namesByTournament = new Map<string, Set<string>>()
+    const tournamentMeta = new Map<string, { name: string; game: string | null; status: string | null; eventDate: string | null }>()
+
+    const tournaments = rows.map((row: any) => {
+      const tournament = row.tournaments as any
+      const tournamentId = readStringId(row.tournament_id) ?? ""
+      const participantId = readStringId(row.participant_id)
+      const teamId = readStringId(row.team_id) ?? readStringId(row.source_team_id)
+      const team = teamId ? teamById.get(teamId) : null
+      const participantType = team ? "team" : "player"
+      const names = namesByTournament.get(tournamentId) ?? new Set<string>()
+      const nameCandidates = team ? [team.name] : playerNameCandidates
+
+      for (const name of nameCandidates) {
+        names.add(normalizeName(name))
+      }
+      namesByTournament.set(tournamentId, names)
+
+      if (participantId) {
+        participantIds.add(participantId)
+      }
+
+      tournamentMeta.set(tournamentId, {
+        name: readNullableString(tournament?.name) ?? "Tournament",
+        game: readNullableString(tournament?.game),
+        status: readNullableString(tournament?.status),
+        eventDate: readNullableString(tournament?.event_date),
+      })
+
+      const placement =
+        (participantId ? resultPlacementByParticipant.get(participantId) : undefined) ??
+        nameCandidates
+          .map((name) => resultPlacementByTournamentAndName.get(`${tournamentId}:${normalizeName(name)}`))
+          .find((value) => value !== undefined) ??
+        null
+
+      return {
+        id: readStringId(row.id) ?? `${tournamentId}-${participantType}`,
+        tournament_id: tournamentId,
+        tournament_name: readNullableString(tournament?.name) ?? "Tournament",
+        game: readNullableString(tournament?.game),
+        tournament_status: readNullableString(tournament?.status),
+        registration_status: readNullableString(row.status),
+        participant_type: participantType,
+        team_name: team?.name ?? null,
+        participant_id: participantId,
+        placement,
+        event_date: readNullableString(tournament?.event_date),
+        created_at: readNullableString(row.created_at),
+      } satisfies PublicPlayerTournamentHistory
+    })
+
+    const matches = filterDuplicateBracketMatches(matchesByTournament.flat())
+      .filter((match) => isMatchConnectedToPlayerHistory(match, participantIds, namesByTournament))
+      .map((match) => toPublicPlayerMatchHistory(match, participantIds, namesByTournament, tournamentMeta))
+      .filter((match): match is PublicPlayerMatchHistory => match !== null)
+      .sort(comparePlayerMatchHistoryNewestFirst)
+      .slice(0, 10)
+
+    return {
+      tournaments,
+      matches,
+      gameStats: buildPlayerGameStats(matches, profileRating),
+    }
+  } catch (error) {
+    console.error("Unexpected error while fetching player public history:", error)
+    return empty
+  }
 }
 
 function getProfileResults(
@@ -825,6 +1190,184 @@ function isResultConnectedToProfile(
   return (
     (participantId && result.participant_id === participantId) ||
     names.has(normalizeName(result.team))
+  )
+}
+
+function normalizePublicTeamRole(role: unknown): PublicTeamMember["role"] {
+  if (role === "owner") return "owner"
+  if (role === "captain") return "captain"
+  if (role === "substitute" || role === "sub") return "substitute"
+  return "member"
+}
+
+function comparePublicTeamMembers(a: PublicTeamMember, b: PublicTeamMember) {
+  const priority: Record<PublicTeamMember["role"], number> = {
+    owner: 0,
+    captain: 1,
+    member: 2,
+    substitute: 3,
+  }
+
+  return priority[a.role] - priority[b.role] || a.display_name.localeCompare(b.display_name)
+}
+
+function comparePublicPlayerTeams(a: PublicPlayerTeam, b: PublicPlayerTeam) {
+  const priority: Record<PublicPlayerTeam["role"], number> = {
+    owner: 0,
+    captain: 1,
+    member: 2,
+    substitute: 3,
+  }
+
+  return priority[a.role] - priority[b.role] || a.name.localeCompare(b.name)
+}
+
+function isMatchConnectedToPlayerHistory(
+  match: TournamentMatch,
+  participantIds: Set<string>,
+  namesByTournament: Map<string, Set<string>>,
+) {
+  const names = namesByTournament.get(match.tournament_id) ?? new Set<string>()
+
+  return Boolean(
+    (match.participant_1_id && participantIds.has(match.participant_1_id)) ||
+      (match.participant_2_id && participantIds.has(match.participant_2_id)) ||
+      names.has(normalizeName(match.team1)) ||
+      names.has(normalizeName(match.team2)),
+  )
+}
+
+function toPublicPlayerMatchHistory(
+  match: TournamentMatch,
+  participantIds: Set<string>,
+  namesByTournament: Map<string, Set<string>>,
+  tournamentMeta: Map<string, { name: string; game: string | null; status: string | null; eventDate: string | null }>,
+): PublicPlayerMatchHistory | null {
+  const slot = getPlayerHistoryMatchSlot(match, participantIds, namesByTournament)
+  if (!slot) return null
+
+  const result = getPlayerHistoryMatchResult(match, slot.slot)
+  const tournament = tournamentMeta.get(match.tournament_id)
+
+  return {
+    id: match.id,
+    tournament_id: match.tournament_id,
+    tournament_name: tournament?.name ?? "Tournament",
+    game: tournament?.game ?? null,
+    opponent: slot.opponentName ?? "TBD",
+    date: match.scheduled_at ?? tournament?.eventDate ?? null,
+    scoreline:
+      match.score1 !== null && match.score2 !== null
+        ? `${match.score1}-${match.score2}`
+        : null,
+    result,
+    status: match.status,
+  }
+}
+
+function getPlayerHistoryMatchSlot(
+  match: TournamentMatch,
+  participantIds: Set<string>,
+  namesByTournament: Map<string, Set<string>>,
+) {
+  const names = namesByTournament.get(match.tournament_id) ?? new Set<string>()
+
+  if (match.participant_1_id && participantIds.has(match.participant_1_id)) {
+    return { slot: 1 as const, opponentName: match.team2 }
+  }
+
+  if (match.participant_2_id && participantIds.has(match.participant_2_id)) {
+    return { slot: 2 as const, opponentName: match.team1 }
+  }
+
+  if (names.has(normalizeName(match.team1))) {
+    return { slot: 1 as const, opponentName: match.team2 }
+  }
+
+  if (names.has(normalizeName(match.team2))) {
+    return { slot: 2 as const, opponentName: match.team1 }
+  }
+
+  return null
+}
+
+function getPlayerHistoryMatchResult(match: TournamentMatch, slot: 1 | 2): PublicPlayerMatchHistory["result"] {
+  if (match.status !== "finished") return "draw"
+
+  if (match.winner_participant_id) {
+    if (slot === 1) return match.participant_1_id === match.winner_participant_id ? "win" : "loss"
+    return match.participant_2_id === match.winner_participant_id ? "win" : "loss"
+  }
+
+  if (match.score1 === null || match.score2 === null || match.score1 === match.score2) {
+    return "draw"
+  }
+
+  if (slot === 1) return match.score1 > match.score2 ? "win" : "loss"
+  return match.score2 > match.score1 ? "win" : "loss"
+}
+
+function comparePlayerMatchHistoryNewestFirst(
+  left: PublicPlayerMatchHistory,
+  right: PublicPlayerMatchHistory,
+) {
+  return getPublicHistoryTime(right.date) - getPublicHistoryTime(left.date)
+}
+
+function getPublicHistoryTime(date: string | null) {
+  if (!date) return 0
+  const time = new Date(date).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
+function buildPlayerGameStats(
+  matches: PublicPlayerMatchHistory[],
+  profileRating: number | null,
+): PublicPlayerGameStat[] {
+  const statsByGame = new Map<string, PublicPlayerGameStat>()
+
+  for (const match of matches.filter((item) => item.status === "finished")) {
+    const game = match.game ?? "Other"
+    const current = statsByGame.get(game) ?? {
+      game,
+      matches: 0,
+      wins: 0,
+      losses: 0,
+      winRate: 0,
+      rating: null,
+    }
+
+    current.matches += 1
+    if (match.result === "win") current.wins += 1
+    if (match.result === "loss") current.losses += 1
+    current.winRate = current.matches > 0 ? Math.round((current.wins / current.matches) * 100) : 0
+    statsByGame.set(game, current)
+  }
+
+  if (statsByGame.size === 1 && profileRating !== null) {
+    const only = Array.from(statsByGame.values())[0]
+    only.rating = profileRating
+  }
+
+  return Array.from(statsByGame.values()).sort((a, b) => a.game.localeCompare(b.game))
+}
+
+function profileNameCandidates(
+  source: ProfileTeam | ProfilePlayer | null,
+  participant: ProfileParticipant | null,
+) {
+  return Array.from(
+    new Set(
+      [
+        participant?.display_name,
+        source?.name,
+        source && "display_name" in source ? source.display_name : null,
+        source && "nickname" in source ? source.nickname : null,
+      ]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
   )
 }
 
@@ -1040,6 +1583,7 @@ function normalizeTeam(row: Record<string, unknown>): ProfileTeam | null {
     status: readNullableString(row.status),
     owner_player_id: readStringId(row.owner_player_id),
     logo_url: readNullableString(row.logo_url),
+    created_at: readNullableString(row.created_at),
   }
 }
 

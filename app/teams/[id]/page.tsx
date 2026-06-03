@@ -36,6 +36,10 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   const ownerPlayerId = data.profile.owner_player_id ?? null
   const teamStatus = data.profile.status ?? "approved"
   const members = data.teamMembers ?? []
+  const managementMembers = members.map((member) => ({
+    ...member,
+    role: member.role === "owner" ? "captain" as const : member.role,
+  }))
 
   let pendingInvites: any[] = []
   let inviteCandidates: any[] = []
@@ -163,17 +167,15 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
   if (teamStatus !== "approved" && !isManager) {
     return <PublicProfileError message={t.profile.teamUnavailable} userProfile={userProfile} />
   }
-  const rosterManagement = (
+  const rosterManagement = isManager ? (
     <div className="mt-6">
-      {isManager && (
-        <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
-          {t.account.roster.managerBadge}
-        </div>
-      )}
+      <div className="mb-4 inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
+        {t.account.roster.managerBadge}
+      </div>
       <TeamRosterManager
         teamId={id}
         isManager={isManager}
-        members={members}
+        members={managementMembers}
         ownerPlayerId={ownerPlayerId}
         currentPlayerId={currentPlayerId}
         initialError={resolvedParams?.rosterError}
@@ -183,7 +185,7 @@ export default async function TeamProfilePage({ params, searchParams }: TeamProf
         isRosterLocked={isRosterLocked}
       />
     </div>
-  )
+  ) : null
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
