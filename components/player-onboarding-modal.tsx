@@ -87,10 +87,10 @@ export function PlayerOnboardingModal({
             {t.playerOnboarding.discordConnected}
           </p>
           <h2 className="mt-3 text-3xl font-semibold text-white">
-            {t.playerOnboarding.becomePlayer}
+            {t.playerOnboarding.createPlayerProfileTitle}
           </h2>
           <p className={advisoryClassName}>
-            {t.playerOnboarding.advisory}
+            {t.playerOnboarding.createPlayerProfileDescription}
           </p>
 
           {isApplying ? (
@@ -117,7 +117,7 @@ export function PlayerOnboardingModal({
                   type="submit"
                   className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
                 >
-                  {t.playerOnboarding.submit}
+                  {t.playerOnboarding.submitPlayerApplication}
                 </button>
                 <button
                   type="button"
@@ -135,7 +135,7 @@ export function PlayerOnboardingModal({
                 onClick={() => setIsApplying(true)}
                 className="rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"
               >
-                {t.playerOnboarding.apply}
+                {t.playerOnboarding.submitPlayerApplication}
               </button>
               <form
                 action={dismissPlayerOnboarding}

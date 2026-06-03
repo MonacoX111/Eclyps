@@ -41,7 +41,7 @@ export function RegistrationSection({
   checkInFeedback,
   platformState,
 }: RegistrationSectionProps) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
 
   if (!summary) return null
 
@@ -73,6 +73,7 @@ export function RegistrationSection({
     summary,
     hasUser: Boolean(userProfile),
     hasApprovedPlayer: Boolean(approvedPlayer),
+    playerApplicationStatus: playerApplication?.status ?? null,
     registration: tournamentRegistration,
     t,
   })
@@ -170,7 +171,6 @@ export function RegistrationSection({
               {userProfile && !approvedPlayer ? (
                 <PlayerApplicationState
                   status={applicationStatus}
-                  lang={lang}
                   onApplyClick={() => setShowOnboardingModal(true)}
                 />
               ) : null}
@@ -459,12 +459,14 @@ function getCheckInState({
   summary,
   hasUser,
   hasApprovedPlayer,
+  playerApplicationStatus,
   registration,
   t,
 }: {
   summary: TournamentRegistrationSummary
   hasUser: boolean
   hasApprovedPlayer: boolean
+  playerApplicationStatus: "pending" | "approved" | "rejected" | null
   registration: PlatformUserState["tournamentRegistration"]
   t: any
 }): CheckInState {
@@ -479,6 +481,26 @@ function getCheckInState({
   }
 
   if (!hasApprovedPlayer) {
+    if (playerApplicationStatus === "pending") {
+      return {
+        label: t.registration.checkIn.states.playerApplicationPending.label,
+        message: t.registration.checkIn.states.playerApplicationPending.message,
+        tone: "warning",
+        canCheckIn: false,
+        checkedInAt: null,
+      }
+    }
+
+    if (playerApplicationStatus === "rejected") {
+      return {
+        label: t.registration.checkIn.states.playerApplicationRejected.label,
+        message: t.registration.checkIn.states.playerApplicationRejected.message,
+        tone: "warning",
+        canCheckIn: false,
+        checkedInAt: null,
+      }
+    }
+
     return {
       label: t.registration.checkIn.states.playerRequired.label,
       message: t.registration.checkIn.states.playerRequired.message,
@@ -576,11 +598,9 @@ function getCheckInCardClassName(tone: CheckInState["tone"]) {
 
 function PlayerApplicationState({
   status,
-  lang,
   onApplyClick,
 }: {
   status: "pending" | "approved" | "rejected" | null
-  lang: "uk" | "en"
   onApplyClick: () => void
 }) {
   const { t } = useLanguage()
@@ -594,6 +614,13 @@ function PlayerApplicationState({
         <p className="mt-2 text-sm leading-6 text-white/70">
           {t.registration.alertsExtra.profilePendingMessage}
         </p>
+        <button
+          type="button"
+          disabled
+          className="mt-4 rounded-xl bg-white/20 px-4 py-2 text-sm font-semibold text-white/50 cursor-not-allowed"
+        >
+          {t.registration.buttons.waitingForApproval}
+        </button>
       </div>
     )
   }
@@ -615,7 +642,7 @@ function PlayerApplicationState({
             onClick={onApplyClick}
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-black transition hover:bg-primary/90 cursor-pointer shadow-[0_0_24px_rgba(0,200,150,0.18)]"
           >
-            {t.playerOnboarding.apply}
+            {t.registration.buttons.submitAgain}
           </button>
         </div>
       </div>
@@ -637,8 +664,8 @@ function PlayerApplicationState({
           type="button"
           onClick={onApplyClick}
           className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-black transition hover:bg-primary/90 cursor-pointer shadow-[0_0_24px_rgba(0,200,150,0.18)]"
-        >
-          {t.playerOnboarding.apply}
+          >
+          {t.registration.buttons.submitPlayerApplication}
         </button>
       </div>
     </div>

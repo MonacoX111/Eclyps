@@ -25,19 +25,23 @@ export async function submitPlayerApplication(formData: FormData) {
 
   await markOnboardingSeen(userProfile.id)
 
-  const { data: approvedPlayer, error: approvedPlayerError } = await supabaseAdmin
+  const { data: existingPlayer, error: existingPlayerError } = await supabaseAdmin
     .from("players")
-    .select("id")
+    .select("id, status")
     .eq("owner_user_id", userProfile.id)
     .limit(1)
     .maybeSingle()
 
-  if (approvedPlayerError && !isMissingApplicationStorageError(approvedPlayerError)) {
+  if (existingPlayerError && !isMissingApplicationStorageError(existingPlayerError)) {
     redirect("/registration?registrationError=mutation-failed#registration")
   }
 
-  if (approvedPlayer) {
+  if (existingPlayer?.status === "approved") {
     redirect("/registration?registrationSuccess=player-approved#registration")
+  }
+
+  if (existingPlayer?.status === "pending") {
+    redirect("/registration?registrationSuccess=player-application-pending#registration")
   }
 
   const { data: pendingApplication, error: pendingError } = await supabaseAdmin
@@ -71,6 +75,7 @@ export async function submitPlayerApplication(formData: FormData) {
 
   revalidatePath("/")
   revalidatePath("/registration")
+  revalidatePath("/account")
   redirect("/registration?registrationSuccess=player-application-submitted#registration")
 }
 

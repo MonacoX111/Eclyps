@@ -24,6 +24,10 @@ export type ApprovedPlayerProfile = {
   region: string | null
 }
 
+type OwnedPlayerProfile = ApprovedPlayerProfile & {
+  status: PlayerApplicationStatus
+}
+
 export type CurrentTournamentRegistration = {
   id: string
   display_name: string
@@ -83,9 +87,9 @@ export async function getPlatformUserState({
     }
   }
 
-  const [application, approvedPlayer, registration] = await Promise.all([
+  const [application, ownedPlayer, registration] = await Promise.all([
     fetchLatestPlayerApplication(userProfile.id),
-    fetchApprovedPlayer(userProfile.id),
+    fetchOwnedPlayerProfile(userProfile.id),
     tournamentId
       ? fetchTournamentRegistration({
           userProfileId: userProfile.id,
@@ -93,6 +97,8 @@ export async function getPlatformUserState({
         })
       : Promise.resolve(null),
   ])
+  const approvedPlayer = ownedPlayer?.status === "approved" ? toApprovedPlayer(ownedPlayer) : null
+  const effectiveApplication = application ?? playerProfileToApplicationState(ownedPlayer, userProfile.id)
 
   let manageableTeams: ApprovedTeamSummary[] = []
   if (approvedPlayer) {
@@ -101,7 +107,7 @@ export async function getPlatformUserState({
 
   return {
     userProfile,
-    playerApplication: application,
+    playerApplication: effectiveApplication,
     approvedPlayer,
     tournamentRegistration: registration,
     manageableTeams,
@@ -127,7 +133,7 @@ async function fetchLatestPlayerApplication(userProfileId: string) {
   return normalizePlayerApplication(data)
 }
 
-async function fetchApprovedPlayer(userProfileId: string) {
+async function fetchOwnedPlayerProfile(userProfileId: string): Promise<OwnedPlayerProfile | null> {
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) return null
 
@@ -143,7 +149,8 @@ async function fetchApprovedPlayer(userProfileId: string) {
     console.error("Failed to fetch approved player profile:", error)
   }
 
-  if (!data || typeof data.id !== "string" || typeof data.name !== "string" || data.status !== "approved") {
+  const status = readApplicationStatus(data?.status)
+  if (!data || typeof data.id !== "string" || typeof data.name !== "string" || !status) {
     return null
   }
 
@@ -152,6 +159,34 @@ async function fetchApprovedPlayer(userProfileId: string) {
     name: data.name,
     nickname: typeof data.nickname === "string" ? data.nickname : null,
     region: typeof data.region === "string" ? data.region : null,
+    status,
+  }
+}
+
+function toApprovedPlayer(player: OwnedPlayerProfile): ApprovedPlayerProfile {
+  return {
+    id: player.id,
+    name: player.name,
+    nickname: player.nickname,
+    region: player.region,
+  }
+}
+
+function playerProfileToApplicationState(
+  player: OwnedPlayerProfile | null,
+  userProfileId: string,
+): PlayerApplication | null {
+  if (!player || player.status === "approved") return null
+
+  return {
+    id: `player-${player.id}`,
+    user_profile_id: userProfileId,
+    requested_nickname: player.nickname ?? player.name,
+    requested_region: player.region,
+    status: player.status,
+    created_player_id: player.id,
+    created_at: null,
+    reviewed_at: null,
   }
 }
 
