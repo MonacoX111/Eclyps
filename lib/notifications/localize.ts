@@ -134,6 +134,40 @@ export function getLocalizedNotification(
         message: `Ваше запрошення приєднатися до команди "${teamName}" було скасовано.`,
       }
     }
+    case "team_join_request_received": {
+      const matches = Array.from(notification.message.matchAll(/"([^"]+)"/g))
+      const playerName = matches[0]?.[1] || "гравець"
+      const teamName = matches[1]?.[1] || "команди"
+      return {
+        title: "Нова заявка до команди",
+        message: `Гравець "${playerName}" подав заявку до команди "${teamName}".`,
+      }
+    }
+    case "team_join_request_approved": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const teamName = match ? match[1] : "команди"
+      return {
+        title: "Заявку схвалено",
+        message: `Вашу заявку до команди "${teamName}" було схвалено.`,
+      }
+    }
+    case "team_join_request_rejected": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const teamName = match ? match[1] : "команди"
+      return {
+        title: "Заявку відхилено",
+        message: `Вашу заявку до команди "${teamName}" було відхилено.`,
+      }
+    }
+    case "team_join_request_cancelled": {
+      const matches = Array.from(notification.message.matchAll(/"([^"]+)"/g))
+      const playerName = matches[0]?.[1] || "гравець"
+      const teamName = matches[1]?.[1] || "команди"
+      return {
+        title: "Заявку скасовано",
+        message: `Гравець "${playerName}" скасував заявку до команди "${teamName}".`,
+      }
+    }
     default:
       return { title: notification.title, message: notification.message }
   }

@@ -6,6 +6,7 @@ import { removeTeamMember, updateTeamMemberRole, leaveTeam } from "@/app/actions
 import { createTeamInvite, cancelTeamInvite } from "@/app/actions/invites"
 import { useLanguage } from "@/components/language-provider"
 import { Search, X, UserCheck, Inbox, LogOut } from "lucide-react"
+import { TeamJoinRequestsPanel, type PendingJoinRequest } from "@/components/team-join-requests"
 
 const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/40 pl-9 pr-8 py-2.5 text-xs text-white outline-none transition focus:border-emerald-500/60"
@@ -28,6 +29,7 @@ type TeamRosterManagerProps = {
   pendingInvites?: any[]
   inviteCandidates?: any[]
   isRosterLocked?: boolean
+  pendingJoinRequests?: PendingJoinRequest[]
 }
 
 export function TeamRosterManager({
@@ -41,6 +43,7 @@ export function TeamRosterManager({
   pendingInvites = [],
   inviteCandidates = [],
   isRosterLocked = false,
+  pendingJoinRequests = [],
 }: TeamRosterManagerProps) {
   const { t, lang } = useLanguage()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -65,6 +68,9 @@ export function TeamRosterManager({
         "self-invite-blocked": t.account.invites.errors.selfInviteBlocked,
         "already-in-team": t.account.invites.errors.alreadyInTeam,
         "invite-already-pending": t.account.invites.errors.inviteAlreadyPending,
+        "request-already-pending": t.account.joinRequests.errors.requestAlreadyPending,
+        "invalid-request": t.account.joinRequests.errors.invalidRequest,
+        "team-not-approved": t.account.joinRequests.errors.teamNotApproved,
         "multiple-players-found": t.account.invites.errors.multiplePlayersFound,
         "mutation-failed": t.account.invites.errors.mutationFailed,
         "admin-client-unavailable": t.account.roster.errors.unavailable,
@@ -84,6 +90,8 @@ export function TeamRosterManager({
         "role-updated": t.account.roster.success.roleUpdated,
         "invite-sent": t.account.invites.success.sent,
         "invite-cancelled": t.account.invites.success.cancelled,
+        "approved": t.account.joinRequests.success.approved,
+        "rejected": t.account.joinRequests.success.rejected,
         "team-left": t.account.roster.success.teamLeft,
       }
       setSuccessMessage(messages[initialSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
@@ -568,6 +576,10 @@ export function TeamRosterManager({
             ))}
           </div>
         </div>
+      )}
+
+      {isManager && (
+        <TeamJoinRequestsPanel teamId={teamId} pendingRequests={pendingJoinRequests} />
       )}
     </section>
   )

@@ -31,6 +31,7 @@ import type { UserProfile } from "@/lib/auth/user-profile"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
 import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
 import { leaveTeam } from "@/app/actions/teams"
+import { cancelTeamJoinRequest } from "@/app/actions/team-join-requests"
 
 export type TeamInfo = {
   id: string
@@ -63,8 +64,11 @@ export type AccountDashboardClientProps = {
     teamSuccess?: string
     inviteError?: string
     inviteSuccess?: string
+    joinRequestError?: string
+    joinRequestSuccess?: string
   }
   invitesList?: any[]
+  joinRequestsList?: any[]
 }
 
 export function AccountDashboardClient({
@@ -75,6 +79,7 @@ export function AccountDashboardClient({
   notifications,
   searchParams,
   invitesList = [],
+  joinRequestsList = [],
 }: AccountDashboardClientProps) {
   const { t, lang } = useLanguage()
 
@@ -121,7 +126,28 @@ export function AccountDashboardClient({
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, lang, t])
+    if (searchParams?.joinRequestError) {
+      const messages: Record<string, string> = {
+        "login-required": t.account.joinRequests.errors.loginRequired,
+        "missing-id": t.account.joinRequests.errors.invalidRequest,
+        "permission-denied": t.account.joinRequests.errors.permissionDenied,
+        "invalid-request": t.account.joinRequests.errors.invalidRequest,
+        "mutation-failed": t.account.joinRequests.errors.mutationFailed,
+        "admin-client-unavailable": t.account.joinRequests.errors.mutationFailed,
+      }
+      setErrorMessage(messages[searchParams.joinRequestError] ?? t.account.joinRequests.errors.mutationFailed)
+      const timer = setTimeout(() => setErrorMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+    if (searchParams?.joinRequestSuccess) {
+      const messages: Record<string, string> = {
+        "cancelled": t.account.joinRequests.success.cancelled,
+      }
+      setSuccessMessage(messages[searchParams.joinRequestSuccess] ?? t.account.joinRequests.success.cancelled)
+      const timer = setTimeout(() => setSuccessMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, searchParams?.joinRequestError, searchParams?.joinRequestSuccess, lang, t])
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
@@ -390,6 +416,57 @@ export function AccountDashboardClient({
                       >
                         {t.account.invites.declineButton}
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DashboardPanel>
+
+          <DashboardPanel title={t.account.joinRequests.myTeamRequests} description={t.account.joinRequests.myTeamRequestsDescription}>
+            {joinRequestsList.length === 0 ? (
+              <EmptyState icon={UserCheck} title={t.account.joinRequests.noTeamRequestsYet} body={t.account.joinRequests.noTeamRequestsYetBody} />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {joinRequestsList.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-white/5 bg-white/[0.025] p-4 transition hover:border-emerald-400/30 hover:bg-white/[0.04]">
+                    <div className="flex items-start gap-4">
+                      <TeamLogo url={request.team_logo_url} name={request.team_name} />
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/teams/${request.team_id}`} className="truncate text-base font-bold text-white transition hover:text-emerald-300">
+                          {request.team_name}
+                        </Link>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadgeClass(request.status)}`}>
+                            {displayJoinRequestStatus(request.status, t)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-col gap-3 border-t border-white/5 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-xs font-semibold text-white/45">
+                        {request.created_at ? formatActivityDate(request.created_at, lang) : t.account.notSpecified}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link href={`/teams/${request.team_id}`} className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 transition hover:bg-white/10">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          {t.account.joinRequests.viewTeam}
+                        </Link>
+                        {request.status === "pending" && (
+                          <form action={cancelTeamJoinRequest}>
+                            <input type="hidden" name="request_id" value={request.id} />
+                            <input type="hidden" name="team_id" value={request.team_id} />
+                            <input type="hidden" name="redirect_to" value="/account" />
+                            <button
+                              type="submit"
+                              className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/20"
+                            >
+                              <LogOut className="h-3.5 w-3.5" />
+                              {t.account.joinRequests.cancelRequest}
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -703,4 +780,12 @@ function formatActivityDate(date: string | null, lang: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(date))
+}
+
+function displayJoinRequestStatus(status: string | null | undefined, t: ReturnType<typeof useLanguage>["t"]) {
+  if (status === "approved") return t.account.joinRequests.statusApproved
+  if (status === "rejected") return t.account.joinRequests.statusRejected
+  if (status === "cancelled") return t.account.joinRequests.statusCancelled
+  if (status === "expired") return t.account.joinRequests.statusExpired
+  return t.account.joinRequests.statusPending
 }

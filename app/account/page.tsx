@@ -18,6 +18,8 @@ type AccountPageProps = {
   searchParams?: Promise<{
     teamError?: string
     teamSuccess?: string
+    joinRequestError?: string
+    joinRequestSuccess?: string
   }>
 }
 
@@ -84,6 +86,8 @@ async function AccountDashboard({
   searchParams?: {
     teamError?: string
     teamSuccess?: string
+    joinRequestError?: string
+    joinRequestSuccess?: string
   }
 }) {
   const userProfileId = userProfile.id
@@ -132,6 +136,7 @@ async function AccountDashboard({
     registrationsRes,
     notificationsRes,
     invitesRes,
+    joinRequestsRes,
   ] = await Promise.all([
     supabaseAdmin
       .from("teams")
@@ -170,6 +175,17 @@ async function AccountDashboard({
       .eq("invited_user_profile_id", userProfileId)
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("team_join_requests")
+      .select(`
+        id,
+        team_id,
+        status,
+        created_at,
+        teams:teams(name, logo_url)
+      `)
+      .eq("requester_user_profile_id", userProfileId)
+      .order("created_at", { ascending: false }),
   ])
 
   const ownedTeams = ownedTeamsRes.data ?? []
@@ -203,6 +219,23 @@ async function AccountDashboard({
       team_name: tObj?.name || "Unknown Team",
       inviter_name: pObj?.display_name?.trim() || pObj?.nickname?.trim() || pObj?.name?.trim() || "Captain",
       created_at: inv.created_at,
+    }
+  })
+
+  const rawJoinRequests = joinRequestsRes.data ?? []
+  if (joinRequestsRes.error) {
+    console.error(`Error fetching team join requests: [${joinRequestsRes.error.code || "No code"}] ${joinRequestsRes.error.message || "No message"}`)
+  }
+
+  const joinRequestsList = rawJoinRequests.map((request: any) => {
+    const teamObj = request.teams as { name?: string; logo_url?: string | null } | null
+    return {
+      id: request.id,
+      team_id: request.team_id,
+      team_name: teamObj?.name || "Unknown Team",
+      team_logo_url: teamObj?.logo_url || null,
+      status: request.status,
+      created_at: request.created_at,
     }
   })
 
@@ -303,6 +336,7 @@ async function AccountDashboard({
       notifications={notifications}
       searchParams={searchParams}
       invitesList={invitesList}
+      joinRequestsList={joinRequestsList}
     />
   )
 }
