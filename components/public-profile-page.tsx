@@ -5,7 +5,6 @@ import type { ReactNode } from "react"
 import {
   ArrowLeft,
   Calendar,
-  Crown,
   ExternalLink,
   Gamepad2,
   Medal,
@@ -16,12 +15,14 @@ import {
   User,
   Users,
 } from "lucide-react"
+import { AchievementsSection } from "@/components/achievements-section"
 import { Footer } from "@/components/footer"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { getPlayerAchievements, getTeamAchievements } from "@/lib/data/achievements"
 import type { PublicPlayerTeam, PublicProfileData, PublicTeamMember } from "@/lib/data/profiles"
 import type { UserProfile } from "@/lib/auth/user-profile"
 
@@ -462,7 +463,7 @@ function PlayerTournamentHistory({ data }: { data: PublicProfileData }) {
 
 function PlayerAchievements({ data }: { data: PublicProfileData }) {
   const { t } = useLanguage()
-  const placements = (data.playerTournamentHistory ?? []).filter((item) => item.placement === 1 || item.placement === 2)
+  const achievements = getPlayerAchievements(data)
 
   return (
     <TeamPanel
@@ -470,27 +471,7 @@ function PlayerAchievements({ data }: { data: PublicProfileData }) {
       title={t.profile.teamPublic.achievementsTitle}
       description={t.profile.playerPublic.achievementsDescription}
     >
-      {placements.length === 0 ? (
-        <TeamEmptyState icon={Medal} message={t.profile.playerPublic.noAchievements} />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {placements.map((item) => (
-            <div key={`${item.id}-${item.placement}`} className="rounded-xl border border-amber-400/15 bg-amber-400/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
-                  {item.placement === 1 ? <Crown className="h-5 w-5" /> : <Medal className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-white">
-                    {item.placement === 1 ? t.profile.teamPublic.champion : t.profile.teamPublic.finalist}
-                  </p>
-                  <p className="mt-1 break-words text-xs text-white/45">{item.tournament_name}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AchievementsSection achievements={achievements} emptyMessage={t.profile.playerPublic.noAchievements} />
     </TeamPanel>
   )
 }
@@ -726,7 +707,7 @@ function TeamTournamentHistory({ data }: { data: PublicProfileData }) {
 
 function TeamAchievements({ data }: { data: PublicProfileData }) {
   const { t } = useLanguage()
-  const placements = (data.teamTournamentHistory ?? []).filter((item) => item.placement === 1 || item.placement === 2)
+  const achievements = getTeamAchievements(data)
 
   return (
     <TeamPanel
@@ -734,27 +715,7 @@ function TeamAchievements({ data }: { data: PublicProfileData }) {
       title={t.profile.teamPublic.achievementsTitle}
       description={t.profile.teamPublic.achievementsDescription}
     >
-      {placements.length === 0 ? (
-        <TeamEmptyState icon={Medal} message={t.profile.teamPublic.noAchievements} />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {placements.map((item) => (
-            <div key={`${item.id}-${item.placement}`} className="rounded-xl border border-amber-400/15 bg-amber-400/5 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10 text-amber-300">
-                  {item.placement === 1 ? <Crown className="h-5 w-5" /> : <Medal className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-white">
-                    {item.placement === 1 ? t.profile.teamPublic.champion : t.profile.teamPublic.finalist}
-                  </p>
-                  <p className="mt-1 break-words text-xs text-white/45">{item.tournament_name}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AchievementsSection achievements={achievements} emptyMessage={t.profile.teamPublic.noAchievements} />
     </TeamPanel>
   )
 }
