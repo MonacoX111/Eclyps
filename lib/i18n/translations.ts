@@ -440,6 +440,15 @@ const rawTranslations = {
       backToEclyps: "Назад до Eclyps",
       teamProfile: "Профіль Команди",
       playerProfile: "Профіль Гравця",
+      tabs: {
+        overview: "Огляд",
+        team: "Команда",
+        roster: "Склад",
+        stats: "Статистика",
+        matches: "Матчі",
+        tournaments: "Турніри",
+        achievements: "Досягнення",
+      },
       meta: {
         tournament: "Турнір",
         region: "Регіон",
@@ -550,6 +559,8 @@ const rawTranslations = {
         finalist: "Фіналіст",
       },
       playerPublic: {
+        overviewTitle: "Огляд гравця",
+        overviewDescription: "Короткий підсумок рейтингу, активності та командного зв'язку.",
         currentTeamEyebrow: "Командний зв'язок",
         currentTeamTitle: "Поточна команда",
         currentTeamDescription: "Команди, до яких гравець прив'язаний через склад.",
@@ -589,6 +600,14 @@ const rawTranslations = {
     },
     account: {
       dashboard: "Панель гравця",
+      tabs: {
+        overview: "Огляд",
+        teams: "Команди",
+        registrations: "Реєстрації",
+        invites: "Запрошення",
+        notifications: "Сповіщення",
+        settings: "Налаштування",
+      },
       welcomeBack: "Ласкаво просимо назад",
       manageDescription: "Керуйте своїми профілями, участю в ростерах та реєстраціями на турніри.",
       viewPublicProfile: "Переглянути публічний профіль",
@@ -611,6 +630,7 @@ const rawTranslations = {
       notCheckedIn: "Чек-ін не пройдено",
       checkInState: "Чек-ін",
       pendingPlacement: "Очікує",
+      settingsDescription: "Оновіть дані профілю або відкрийте публічний профіль.",
       stats: {
         elo: "ELO",
         matches: "Матчі",
@@ -1786,6 +1806,15 @@ const rawTranslations = {
       backToEclyps: "Back to Eclyps",
       teamProfile: "Team Profile",
       playerProfile: "Player Profile",
+      tabs: {
+        overview: "Overview",
+        team: "Team",
+        roster: "Roster",
+        stats: "Stats",
+        matches: "Matches",
+        tournaments: "Tournaments",
+        achievements: "Achievements",
+      },
       meta: {
         tournament: "Tournament",
         region: "Region",
@@ -1896,6 +1925,8 @@ const rawTranslations = {
         finalist: "Finalist",
       },
       playerPublic: {
+        overviewTitle: "Player Overview",
+        overviewDescription: "A quick summary of rating, activity, and team connection.",
         currentTeamEyebrow: "Team Link",
         currentTeamTitle: "Current Team",
         currentTeamDescription: "Teams connected to this player through roster membership.",
@@ -1935,6 +1966,14 @@ const rawTranslations = {
     },
     account: {
       dashboard: "Player Dashboard",
+      tabs: {
+        overview: "Overview",
+        teams: "Teams",
+        registrations: "Registrations",
+        invites: "Invites",
+        notifications: "Notifications",
+        settings: "Settings",
+      },
       welcomeBack: "Welcome back",
       manageDescription: "Manage your profiles, roster participations, and registrations.",
       viewPublicProfile: "View Public Profile",
@@ -1957,6 +1996,7 @@ const rawTranslations = {
       notCheckedIn: "Not checked in",
       checkInState: "Check-in",
       pendingPlacement: "Pending",
+      settingsDescription: "Update profile details or open the public profile.",
       stats: {
         elo: "ELO",
         matches: "Matches",

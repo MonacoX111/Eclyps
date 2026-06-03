@@ -22,6 +22,7 @@ import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { ProfileTabs, useProfileTab, type ProfileTabItem } from "@/components/profile-tabs"
 import { getPlayerAchievements, getTeamAchievements } from "@/lib/data/achievements"
 import type { PublicPlayerTeam, PublicProfileData, PublicTeamMember } from "@/lib/data/profiles"
 import type { UserProfile } from "@/lib/auth/user-profile"
@@ -236,16 +237,65 @@ function PlayerProfileContent({
   data: PublicProfileData
   ownerControls?: ReactNode
 }) {
+  const { t } = useLanguage()
+  const tabs: ProfileTabItem<PlayerProfileTab>[] = [
+    { id: "overview", label: t.profile.tabs.overview },
+    { id: "team", label: t.profile.tabs.team },
+    { id: "stats", label: t.profile.tabs.stats },
+    { id: "matches", label: t.profile.tabs.matches },
+    { id: "tournaments", label: t.profile.tabs.tournaments },
+    { id: "achievements", label: t.profile.tabs.achievements },
+  ]
+  const [activeTab, setActiveTab] = useProfileTab(
+    ["overview", "team", "stats", "matches", "tournaments", "achievements"] as const,
+    "overview",
+  )
+
   return (
     <div className="mt-6 space-y-6">
-      {ownerControls}
-      <PlayerCurrentTeams data={data} />
-      <PlayerStatsPanel data={data} />
-      <PlayerGameStats data={data} />
-      <PlayerRecentMatches data={data} />
-      <PlayerTournamentHistory data={data} />
-      <PlayerAchievements data={data} />
+      <ProfileTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {activeTab === "overview" && (
+        <>
+          {ownerControls}
+          <PlayerOverviewPanel data={data} />
+        </>
+      )}
+      {activeTab === "team" && <PlayerCurrentTeams data={data} />}
+      {activeTab === "stats" && (
+        <>
+          <PlayerStatsPanel data={data} />
+          <PlayerGameStats data={data} />
+        </>
+      )}
+      {activeTab === "matches" && <PlayerRecentMatches data={data} />}
+      {activeTab === "tournaments" && <PlayerTournamentHistory data={data} />}
+      {activeTab === "achievements" && <PlayerAchievements data={data} />}
     </div>
+  )
+}
+
+type PlayerProfileTab = "overview" | "team" | "stats" | "matches" | "tournaments" | "achievements"
+
+function PlayerOverviewPanel({ data }: { data: PublicProfileData }) {
+  const { t } = useLanguage()
+  const stats = getPlayerProfileStats(data)
+  const rating = getProfileRating(data)
+  const rankPosition = getProfileRankPosition(data)
+  const teamsCount = data.playerTeams?.length ?? 0
+
+  return (
+    <TeamPanel
+      eyebrow={t.profile.tabs.overview}
+      title={t.profile.playerPublic.overviewTitle}
+      description={t.profile.playerPublic.overviewDescription}
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <TeamMetric icon={Trophy} label={t.profile.stats.rating} value={String(rating)} />
+        <TeamMetric icon={Medal} label={t.profile.stats.rank} value={rankPosition ? `#${rankPosition}` : t.profile.stats.unranked} />
+        <TeamMetric icon={Gamepad2} label={t.profile.playerPublic.matchesPlayed} value={String(stats.matches)} />
+        <TeamMetric icon={Users} label={t.profile.tabs.team} value={String(teamsCount)} />
+      </div>
+    </TeamPanel>
   )
 }
 
@@ -483,18 +533,39 @@ function TeamProfileContent({
   data: PublicProfileData
   managerControls?: ReactNode
 }) {
+  const { t } = useLanguage()
+  const tabs: ProfileTabItem<TeamProfileTab>[] = [
+    { id: "overview", label: t.profile.tabs.overview },
+    { id: "roster", label: t.profile.tabs.roster },
+    { id: "stats", label: t.profile.tabs.stats },
+    { id: "matches", label: t.profile.tabs.matches },
+    { id: "tournaments", label: t.profile.tabs.tournaments },
+    { id: "achievements", label: t.profile.tabs.achievements },
+  ]
+  const [activeTab, setActiveTab] = useProfileTab(
+    ["overview", "roster", "stats", "matches", "tournaments", "achievements"] as const,
+    "overview",
+  )
+
   return (
     <div className="mt-6 space-y-6">
-      <TeamQuickMeta data={data} />
-      <TeamRosterSection data={data} />
-      {managerControls}
-      <TeamStatsPanel data={data} />
-      <TeamRecentMatches data={data} />
-      <TeamTournamentHistory data={data} />
-      <TeamAchievements data={data} />
+      <ProfileTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      {activeTab === "overview" && <TeamQuickMeta data={data} />}
+      {activeTab === "roster" && (
+        <>
+          <TeamRosterSection data={data} />
+          {managerControls}
+        </>
+      )}
+      {activeTab === "stats" && <TeamStatsPanel data={data} />}
+      {activeTab === "matches" && <TeamRecentMatches data={data} />}
+      {activeTab === "tournaments" && <TeamTournamentHistory data={data} />}
+      {activeTab === "achievements" && <TeamAchievements data={data} />}
     </div>
   )
 }
+
+type TeamProfileTab = "overview" | "roster" | "stats" | "matches" | "tournaments" | "achievements"
 
 function TeamQuickMeta({ data }: { data: PublicProfileData }) {
   const { t, lang } = useLanguage()

@@ -27,6 +27,7 @@ import { EditProfileForm } from "@/components/edit-profile-form"
 import { CreateTeamModal } from "@/components/create-team-modal"
 import { AccountNotificationsList } from "@/components/account-notifications-list"
 import { AccountAvatar } from "@/components/account-avatar"
+import { ProfileTabs, useProfileTab, type ProfileTabItem } from "@/components/profile-tabs"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
 import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
@@ -260,6 +261,18 @@ export function AccountDashboardClient({
     .sort((a, b) => new Date(b.date || "").getTime() - new Date(a.date || "").getTime())
     .slice(0, 6)
   const manageableTeams = teamsList.filter((team) => team.role === "Owner" || team.role === "Captain")
+  const accountTabs: ProfileTabItem<AccountTab>[] = [
+    { id: "overview", label: t.account.tabs.overview },
+    { id: "teams", label: t.account.tabs.teams },
+    { id: "registrations", label: t.account.tabs.registrations },
+    { id: "invites", label: t.account.tabs.invites },
+    { id: "notifications", label: t.account.tabs.notifications },
+    { id: "settings", label: t.account.tabs.settings },
+  ]
+  const [activeTab, setActiveTab] = useProfileTab(
+    ["overview", "teams", "registrations", "invites", "notifications", "settings"] as const,
+    "overview",
+  )
 
   return (
     <section className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -334,6 +347,10 @@ export function AccountDashboardClient({
         </div>
       </div>
 
+      <ProfileTabs tabs={accountTabs} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "overview" && (
+      <>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         {statCards.map((stat) => (
           <div key={stat.label} className="glass-card rounded-2xl p-4">
@@ -358,7 +375,7 @@ export function AccountDashboardClient({
             {manageableTeams.length === 1 ? (
               <ActionLink href={`/teams/${manageableTeams[0].id}`} icon={Users} label={t.account.manageTeamFull} />
             ) : manageableTeams.length > 1 ? (
-              <ActionLink href="#my-teams" icon={Users} label={t.account.myTeams} />
+              <ActionButton icon={Users} label={t.account.myTeams} onClick={() => setActiveTab("teams")} />
             ) : (
               <CreateTeamModal
                 hasApprovedPlayer={player.status === "approved"}
@@ -370,8 +387,10 @@ export function AccountDashboardClient({
           </div>
         </div>
       </div>
+      </>
+      )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.75fr)]">
+      <div className="mt-6 space-y-6">
         <div className="space-y-6">
           {/* Invites Feedback Alerts */}
           {successMessage && (
@@ -386,6 +405,8 @@ export function AccountDashboardClient({
           )}
 
           {/* Team Invites Panel */}
+          {activeTab === "invites" && (
+          <>
           <DashboardPanel title={t.account.invites.title} description={t.account.invites.description}>
             {invitesList.length === 0 ? (
               <EmptyState icon={Inbox} title={t.account.invites.emptyStateTitle} body={t.account.invites.emptyStateBody} />
@@ -473,7 +494,10 @@ export function AccountDashboardClient({
               </div>
             )}
           </DashboardPanel>
+          </>
+          )}
 
+          {activeTab === "teams" && (
           <DashboardPanel id="my-teams" title={t.account.myTeams} description={t.account.teamsDescription}>
             {teamsList.length === 0 ? (
               <EmptyState icon={Users} title={t.account.emptyStates.noTeamsTitle} body={t.account.noTeams}>
@@ -552,7 +576,9 @@ export function AccountDashboardClient({
               </div>
             )}
           </DashboardPanel>
+          )}
 
+          {activeTab === "registrations" && (
           <DashboardPanel title={t.account.myRegistrations} description={t.account.registrationsDescription}>
 
             {registrations && registrations.length > 0 ? (
@@ -620,14 +646,39 @@ export function AccountDashboardClient({
               </EmptyState>
             )}
           </DashboardPanel>
+          )}
+
+          {activeTab === "settings" && (
+          <DashboardPanel title={t.account.tabs.settings} description={t.account.settingsDescription}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <EditProfileForm
+                initialNickname={player.nickname}
+                initialRealName={player.real_name}
+                initialRegion={player.region}
+                variant="modal"
+                buttonClassName="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.25)] cursor-pointer"
+              />
+              <Link
+                href={`/players/${player.id}`}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
+              >
+                <ExternalLink className="h-4 w-4" />
+                {t.account.viewPublicProfile}
+              </Link>
+            </div>
+          </DashboardPanel>
+          )}
 
         </div>
 
         <div className="space-y-6">
+          {activeTab === "notifications" && (
           <div className="glass-card rounded-2xl border border-white/5 p-6">
             <AccountNotificationsList initialNotifications={notifications} />
           </div>
+          )}
 
+          {activeTab === "overview" && (
           <DashboardPanel title={t.account.activity.title} description={t.account.activity.description}>
             {activityItems.length > 0 ? (
               <div className="space-y-4">
@@ -658,11 +709,14 @@ export function AccountDashboardClient({
               <EmptyState icon={Inbox} title={t.account.activity.emptyTitle} body={t.account.activity.emptyBody} />
             )}
           </DashboardPanel>
+          )}
         </div>
       </div>
     </section>
   )
 }
+
+type AccountTab = "overview" | "teams" | "registrations" | "invites" | "notifications" | "settings"
 
 function HeroMetric({
   icon: Icon,
@@ -770,6 +824,27 @@ function ActionLink({
       <Icon className="h-4 w-4 shrink-0" />
       <span>{label}</span>
     </Link>
+  )
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Trophy
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span>{label}</span>
+    </button>
   )
 }
 
