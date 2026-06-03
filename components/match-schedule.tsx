@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { m } from "framer-motion"
-import { AlertTriangle, Clock, Play } from "lucide-react"
+import { AlertTriangle, Clock, ExternalLink, Play } from "lucide-react"
 import { submitMatchDispute } from "@/app/actions/disputes"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
@@ -115,6 +116,13 @@ export function MatchSchedule({
                             <Play className="h-3 w-3" />
                             {formatStatusLabel(match.status, t)}
                           </span>
+                          <Link
+                            href={`/matches/${match.id}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-white/65 transition hover:border-primary/40 hover:text-primary"
+                          >
+                            {t.matchPage.matchPage}
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
                         </div>
                         {userCanReport ? (
                           <MatchDisputeControl match={match} dispute={dispute} />

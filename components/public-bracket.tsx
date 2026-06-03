@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect } from "react"
+import Link from "next/link"
 import { m } from "framer-motion"
-import { Radio, Trophy } from "lucide-react"
+import { ExternalLink, Radio, Trophy } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
 
@@ -121,6 +122,8 @@ function FinalOnlyBracket({
   champion: string | null
   labels: PublicBracketLabels
 }) {
+  const { t } = useLanguage()
+
   return (
     <div className="relative">
       <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)]">
@@ -161,6 +164,15 @@ function FinalOnlyBracket({
             label={labels.participantLabel}
           />
         </m.div>
+      </div>
+      <div className="mt-6 flex justify-center">
+        <Link
+          href={`/matches/${match.id}`}
+          className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary/50 hover:bg-primary/15"
+        >
+          {t.matchPage.matchPage}
+          <ExternalLink className="h-4 w-4" />
+        </Link>
       </div>
     </div>
   )
@@ -344,9 +356,10 @@ function BracketMatchCard({
   showConnector: boolean
 }) {
   return (
-    <div
+    <Link
+      href={`/matches/${match.id}`}
       className={[
-        "glass-card group relative rounded-xl p-3 transition-all duration-300",
+        "glass-card group relative block rounded-xl p-3 transition-all duration-300 hover:border-primary/35",
         match.status === "live"
           ? "bracket-live-pulse border-primary/40"
           : "",
@@ -369,7 +382,7 @@ function BracketMatchCard({
           />
         ))}
       </div>
-    </div>
+    </Link>
   )
 }
 
