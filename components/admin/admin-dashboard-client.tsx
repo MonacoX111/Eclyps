@@ -681,6 +681,7 @@ export function AdminDashboardClient({
               {/* Tab 7: Matches */}
               {activeTab === "matches" && (
                 <MatchesPanel
+                  mode="matches"
                   matches={matches}
                   tournaments={tournaments}
                   teams={teams}
@@ -691,9 +692,10 @@ export function AdminDashboardClient({
                 />
               )}
 
-              {/* Tab 8: Bracket lifecycle controls (integrated in matches) */}
+              {/* Tab 8: Bracket lifecycle controls */}
               {activeTab === "bracket" && (
                 <MatchesPanel
+                  mode="bracket"
                   matches={matches}
                   tournaments={tournaments}
                   teams={teams}

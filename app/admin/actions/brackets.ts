@@ -23,13 +23,13 @@ const BRACKET_FINAL_RESULT_NOTE_PREFIX = "synced:bracket-final:"
 export async function generateBracketTemplate(formData: FormData) {
   await requireAdminSession()
   const parsed = parseBracketTemplateFormData(formData)
-  if (!parsed.ok) redirect(`/admin?matchError=${parsed.error}#matches`)
+  if (!parsed.ok) redirect(`/admin?tab=bracket&matchError=${parsed.error}#bracket`)
   if (!isBracketSize(parsed.data.bracket_size)) {
-    redirect("/admin?matchError=invalid-bracket-size#matches")
+    redirect("/admin?tab=bracket&matchError=invalid-bracket-size#bracket")
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
-  if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
 
   const existingBracketMatches = await supabaseAdmin
     .from("matches")
@@ -39,17 +39,17 @@ export async function generateBracketTemplate(formData: FormData) {
 
   if (existingBracketMatches.error) {
     logMutationError("count bracket matches before bracket generation", existingBracketMatches.error)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   const existingBracketStatus = await getTournamentBracketEditBlocker(
     supabaseAdmin,
     parsed.data.tournament_id,
   )
-  if (existingBracketStatus) redirect(`/admin?matchError=${existingBracketStatus}#matches`)
+  if (existingBracketStatus) redirect(`/admin?tab=bracket&matchError=${existingBracketStatus}#bracket`)
 
   if ((existingBracketMatches.count ?? 0) > 0 && !parsed.data.confirm_regenerate) {
-    redirect("/admin?matchError=bracket-confirm-required#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-confirm-required#bracket")
   }
 
   if (parsed.data.confirm_regenerate) {
@@ -63,7 +63,7 @@ export async function generateBracketTemplate(formData: FormData) {
 
     if (deleteExistingBracket.error) {
       logMutationError("delete existing bracket template", deleteExistingBracket.error)
-      redirect("/admin?matchError=mutation-failed#matches")
+      redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
     }
   }
 
@@ -74,7 +74,7 @@ export async function generateBracketTemplate(formData: FormData) {
     .maybeSingle()
 
   if (tournamentErr || !tournament) {
-    redirect("/admin?matchError=tournament-not-found#matches")
+    redirect("/admin?tab=bracket&matchError=tournament-not-found#bracket")
   }
 
   const startingMatchOrder = await getNextMatchOrder(
@@ -89,7 +89,7 @@ export async function generateBracketTemplate(formData: FormData) {
   })
 
   if (!hasValidNextMatchChain(matches)) {
-    redirect("/admin?matchError=invalid-bracket-chain#matches")
+    redirect("/admin?tab=bracket&matchError=invalid-bracket-chain#bracket")
   }
 
   const { error } = await runSupabaseMutation("generate bracket template", () =>
@@ -97,20 +97,20 @@ export async function generateBracketTemplate(formData: FormData) {
   )
   if (error) {
     logMutationError("generate bracket template", error)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   revalidatePath("/admin")
-  redirect("/admin?matchSuccess=bracket-generated#matches")
+  redirect("/admin?tab=bracket&matchSuccess=bracket-generated#bracket")
 }
 
 export async function assignBracketSlot(formData: FormData) {
   await requireAdminSession()
   const parsed = parseBracketSlotAssignmentFormData(formData)
-  if (!parsed.ok) redirect(`/admin?matchError=${parsed.error}#matches`)
+  if (!parsed.ok) redirect(`/admin?tab=bracket&matchError=${parsed.error}#bracket`)
 
   const supabaseAdmin = createSupabaseAdminClient()
-  if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
 
   const { data: match, error: matchError } = await supabaseAdmin
     .from("matches")
@@ -120,19 +120,19 @@ export async function assignBracketSlot(formData: FormData) {
 
   if (matchError) {
     logMutationError("fetch bracket match for assignment", matchError)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   if (!match || match.tournament_id !== parsed.data.tournament_id) {
-    redirect("/admin?matchError=bracket-match-not-found#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-match-not-found#bracket")
   }
 
   if (!match.bracket_id) {
-    redirect("/admin?matchError=not-bracket-match#matches")
+    redirect("/admin?tab=bracket&matchError=not-bracket-match#bracket")
   }
 
   if (match.status === "live" || match.status === "finished") {
-    redirect("/admin?matchError=finished-match-locked#matches")
+    redirect("/admin?tab=bracket&matchError=finished-match-locked#bracket")
   }
 
   if (
@@ -140,11 +140,11 @@ export async function assignBracketSlot(formData: FormData) {
     match.bracket_status === "active" ||
     match.bracket_status === "finished"
   ) {
-    redirect("/admin?matchError=bracket-locked#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-locked#bracket")
   }
 
   if (await bracketHasActiveMatches(supabaseAdmin, match.bracket_id)) {
-    redirect("/admin?matchError=bracket-active-locked#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-active-locked#bracket")
   }
 
   const participant = parsed.data.participant_id
@@ -156,7 +156,7 @@ export async function assignBracketSlot(formData: FormData) {
     : null
 
   if (parsed.data.participant_id && !participant) {
-    redirect("/admin?matchError=invalid-participant#matches")
+    redirect("/admin?tab=bracket&matchError=invalid-participant#bracket")
   }
 
   if (participant) {
@@ -170,7 +170,7 @@ export async function assignBracketSlot(formData: FormData) {
     )
 
     if (assignedParticipantTypes.some((type) => type !== participant.participant_type)) {
-      redirect("/admin?matchError=invalid-participant-type#matches")
+      redirect("/admin?tab=bracket&matchError=invalid-participant-type#bracket")
     }
 
     const duplicate = await findDuplicateBracketAssignment(supabaseAdmin, {
@@ -181,7 +181,7 @@ export async function assignBracketSlot(formData: FormData) {
     })
 
     if (duplicate) {
-      redirect("/admin?matchError=duplicate-bracket-participant#matches")
+      redirect("/admin?tab=bracket&matchError=duplicate-bracket-participant#bracket")
     }
 
     await updateBracketParticipantType(supabaseAdmin, {
@@ -210,20 +210,20 @@ export async function assignBracketSlot(formData: FormData) {
   )
   if (error) {
     logMutationError("assign bracket slot", error)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   revalidatePath("/admin")
-  redirect("/admin?matchSuccess=bracket-slot-updated#matches")
+  redirect("/admin?tab=bracket&matchSuccess=bracket-slot-updated#bracket")
 }
 
 export async function updateBracketStatus(formData: FormData) {
   await requireAdminSession()
   const parsed = parseBracketStatusFormData(formData)
-  if (!parsed.ok) redirect(`/admin?matchError=${parsed.error}#matches`)
+  if (!parsed.ok) redirect(`/admin?tab=bracket&matchError=${parsed.error}#bracket`)
 
   const supabaseAdmin = createSupabaseAdminClient()
-  if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
 
   const { data: matches, error } = await supabaseAdmin
     .from("matches")
@@ -232,7 +232,7 @@ export async function updateBracketStatus(formData: FormData) {
 
   if (error) {
     logMutationError("fetch bracket for status update", error)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   const bracketMatches = matches ?? []
@@ -240,18 +240,10 @@ export async function updateBracketStatus(formData: FormData) {
     bracketMatches.length === 0 ||
     bracketMatches.some((match) => match.tournament_id !== parsed.data.tournament_id)
   ) {
-    redirect("/admin?matchError=bracket-match-not-found#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-match-not-found#bracket")
   }
 
-  const hasLiveOrFinished = bracketMatches.some(
-    (match) => match.status === "live" || match.status === "finished",
-  )
-
   if (parsed.data.action === "unlock") {
-    if (hasLiveOrFinished) {
-      redirect("/admin?matchError=bracket-unlock-blocked#matches")
-    }
-
     const { error: updateError } = await runSupabaseMutation("unlock bracket", () =>
       supabaseAdmin
         .from("matches")
@@ -260,15 +252,11 @@ export async function updateBracketStatus(formData: FormData) {
     )
     if (updateError) {
       logMutationError("unlock bracket", updateError)
-      redirect("/admin?matchError=mutation-failed#matches")
+      redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
     }
 
     revalidatePath("/admin")
-    redirect("/admin?matchSuccess=bracket-unlocked#matches")
-  }
-
-  if (hasLiveOrFinished) {
-    redirect("/admin?matchError=bracket-active-locked#matches")
+    redirect("/admin?tab=bracket&matchSuccess=bracket-unlocked#bracket")
   }
 
   const { error: updateError } = await runSupabaseMutation("lock bracket", () =>
@@ -279,20 +267,20 @@ export async function updateBracketStatus(formData: FormData) {
   )
   if (updateError) {
     logMutationError("lock bracket", updateError)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   revalidatePath("/admin")
-  redirect("/admin?matchSuccess=bracket-locked#matches")
+  redirect("/admin?tab=bracket&matchSuccess=bracket-locked#bracket")
 }
 
 export async function updateBracketMatch(formData: FormData) {
   await requireAdminSession()
   const parsed = parseBracketMatchUpdateFormData(formData)
-  if (!parsed.ok) redirect(`/admin?matchError=${parsed.error}#matches`)
+  if (!parsed.ok) redirect(`/admin?tab=bracket&matchError=${parsed.error}#bracket`)
 
   const supabaseAdmin = createSupabaseAdminClient()
-  if (!supabaseAdmin) redirect("/admin?matchError=admin-client-unavailable#matches")
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
 
   const { data: match, error: matchError } = await supabaseAdmin
     .from("matches")
@@ -302,30 +290,22 @@ export async function updateBracketMatch(formData: FormData) {
 
   if (matchError) {
     logMutationError("fetch bracket match for result update", matchError)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   if (!match || match.tournament_id !== parsed.data.tournament_id) {
-    redirect("/admin?matchError=bracket-match-not-found#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-match-not-found#bracket")
   }
 
   if (!match.bracket_id) {
-    redirect("/admin?matchError=not-bracket-match#matches")
-  }
-
-  if (
-    match.bracket_status !== "locked" &&
-    match.bracket_status !== "active" &&
-    match.bracket_status !== "finished"
-  ) {
-    redirect("/admin?matchError=bracket-match-controls-locked#matches")
+    redirect("/admin?tab=bracket&matchError=not-bracket-match#bracket")
   }
 
   if (
     (parsed.data.status === "live" || parsed.data.status === "finished") &&
     (!match.participant_1_id || !match.participant_2_id)
   ) {
-    redirect("/admin?matchError=bracket-match-incomplete#matches")
+    redirect("/admin?tab=bracket&matchError=bracket-match-incomplete#bracket")
   }
 
   const winnerResult = resolveMatchWinner({
@@ -338,7 +318,7 @@ export async function updateBracketMatch(formData: FormData) {
   })
 
   if (!winnerResult.ok) {
-    redirect(`/admin?matchError=${winnerResult.error}#matches`)
+    redirect(`/admin?tab=bracket&matchError=${winnerResult.error}#bracket`)
   }
 
   const { error: updateError } = await runSupabaseMutation("update bracket match", () =>
@@ -356,7 +336,7 @@ export async function updateBracketMatch(formData: FormData) {
 
   if (updateError) {
     logMutationError("update bracket match", updateError)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   const propagationResult = await syncBracketWinnerPropagation(supabaseAdmin, {
@@ -377,7 +357,7 @@ export async function updateBracketMatch(formData: FormData) {
   })
 
   if (!propagationResult.ok) {
-    redirect(`/admin?matchError=${propagationResult.error}#matches`)
+    redirect(`/admin?tab=bracket&matchError=${propagationResult.error}#bracket`)
   }
 
   const resultSync = await syncFinalBracketResults(supabaseAdmin, {
@@ -396,7 +376,7 @@ export async function updateBracketMatch(formData: FormData) {
   })
 
   if (!resultSync.ok) {
-    redirect(`/admin?matchError=${resultSync.error}#matches`)
+    redirect(`/admin?tab=bracket&matchError=${resultSync.error}#bracket`)
   }
 
   const lifecycleStatus = await resolveBracketLifecycleStatus(
@@ -405,7 +385,7 @@ export async function updateBracketMatch(formData: FormData) {
   )
 
   if (!lifecycleStatus.ok) {
-    redirect(`/admin?matchError=${lifecycleStatus.error}#matches`)
+    redirect(`/admin?tab=bracket&matchError=${lifecycleStatus.error}#bracket`)
   }
 
   const { error: lifecycleError } = await runSupabaseMutation("update bracket lifecycle", () =>
@@ -417,12 +397,12 @@ export async function updateBracketMatch(formData: FormData) {
 
   if (lifecycleError) {
     logMutationError("update bracket lifecycle", lifecycleError)
-    redirect("/admin?matchError=mutation-failed#matches")
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
   }
 
   revalidatePath("/admin")
   revalidatePath("/")
-  redirect("/admin?matchSuccess=bracket-match-updated#matches")
+  redirect("/admin?tab=bracket&matchSuccess=bracket-match-updated#bracket")
 }
 
 async function getNextMatchOrder(
@@ -915,12 +895,12 @@ async function resolveBracketLifecycleStatus(
   supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
   bracketId: string,
 ): Promise<
-  | { ok: true; status: "locked" | "active" | "finished" }
+  | { ok: true; status: "template" | "locked" | "active" | "finished" }
   | { ok: false; error: string }
 > {
   const { data, error } = await supabaseAdmin
     .from("matches")
-    .select("status")
+    .select("status, bracket_status")
     .eq("bracket_id", bracketId)
 
   if (error) {
@@ -929,6 +909,7 @@ async function resolveBracketLifecycleStatus(
   }
 
   const statuses = (data ?? []).map((match) => match.status)
+  const storedStatuses = (data ?? []).map((match) => match.bracket_status)
   if (statuses.length === 0) {
     return { ok: false, error: "bracket-match-not-found" }
   }
@@ -941,7 +922,11 @@ async function resolveBracketLifecycleStatus(
     return { ok: true, status: "active" }
   }
 
-  return { ok: true, status: "locked" }
+  if (storedStatuses.some((status) => status === "locked")) {
+    return { ok: true, status: "locked" }
+  }
+
+  return { ok: true, status: "template" }
 }
 
 function hasValidNextMatchChain(matches: BracketTemplateMatch[]) {

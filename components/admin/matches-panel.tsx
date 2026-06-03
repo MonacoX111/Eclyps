@@ -22,6 +22,7 @@ import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton, Tou
 import { useLanguage } from "@/components/language-provider"
 
 export function MatchesPanel({
+  mode = "matches",
   matches,
   tournaments,
   teams,
@@ -30,6 +31,7 @@ export function MatchesPanel({
   fetchError,
   feedback,
 }: {
+  mode?: "matches" | "bracket"
   matches: AdminMatch[]
   tournaments: AdminTournament[]
   teams: AdminTeam[]
@@ -43,43 +45,52 @@ export function MatchesPanel({
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
   const bracketMatches = matches.filter((match) => match.bracket_id)
+  const isBracketMode = mode === "bracket"
 
   return (
     <AdminSection
-      id="matches"
-      title={t.admin.matches.title}
-      description={t.admin.matches.description}
+      id={isBracketMode ? "bracket" : "matches"}
+      title={isBracketMode ? t.admin.tabs.bracket : t.admin.matches.title}
+      description={
+        isBracketMode
+          ? t.admin.matches.bracketPanelDescription
+          : t.admin.matches.description
+      }
       feedback={feedback}
       fetchError={fetchError}
-      fetchLabel="matches"
+      fetchLabel={isBracketMode ? "bracket" : "matches"}
     >
       <div className={panelGridClassName}>
-        <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
-          <BracketTemplateForm tournaments={tournaments} />
-        </article>
+        {isBracketMode ? (
+          <>
+            <article className={innerPanelClassName}>
+              <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
+              <BracketTemplateForm tournaments={tournaments} />
+            </article>
 
-        <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">{t.admin.matches.bracketEditor}</h3>
-          <BracketEditor
-            matches={bracketMatches}
-            participants={participants}
-            tournamentNames={tournamentNames}
-          />
-        </article>
+            <article className={innerPanelClassName}>
+              <h3 className="text-lg font-medium">{t.admin.matches.bracketEditor}</h3>
+              <BracketEditor
+                matches={bracketMatches}
+                participants={participants}
+                tournamentNames={tournamentNames}
+              />
+            </article>
+          </>
+        ) : (
+          <article className={innerPanelClassName}>
+            <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
+            <MatchForm
+              action={createMatch}
+              submitLabel={t.admin.matches.createMatch}
+              tournaments={tournaments}
+              teamNames={teamNames}
+              playerNames={playerNames}
+            />
+          </article>
+        )}
 
-        <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
-          <MatchForm
-            action={createMatch}
-            submitLabel={t.admin.matches.createMatch}
-            tournaments={tournaments}
-            teamNames={teamNames}
-            playerNames={playerNames}
-          />
-        </article>
-
-        <article className={innerPanelClassName}>
+        {!isBracketMode && <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.matches.existingMatches}</h3>
           {matches.length === 0 ? (
             <AdminEmptyState>{t.admin.matches.noMatchesDb}</AdminEmptyState>
@@ -101,7 +112,7 @@ export function MatchesPanel({
               ))}
             </div>
           )}
-        </article>
+        </article>}
       </div>
     </AdminSection>
   )
@@ -194,7 +205,6 @@ function BracketEditor({
               bracketId={bracket.bracketId}
               tournamentId={bracket.tournamentId}
               status={bracket.status}
-              hasActiveMatches={bracket.hasActiveMatches}
             />
 
             <ParticipantPool
@@ -231,42 +241,60 @@ function BracketStatusControls({
   bracketId,
   tournamentId,
   status,
-  hasActiveMatches,
 }: {
   bracketId: string
   tournamentId: string
   status: string
-  hasActiveMatches: boolean
 }) {
   const { t } = useLanguage()
   const isLocked = isLockedBracketStatus(status)
+  const statusLabel = isLocked
+    ? t.admin.matches.bracketLockedStatus
+    : t.admin.matches.bracketEditableStatus
+  const statusDescription = isLocked
+    ? t.admin.matches.bracketLockedDesc
+    : t.admin.matches.bracketUnlockedDesc
 
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+    <div className="mt-4 space-y-3">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm">
+        <span className="font-medium text-white">{statusLabel}</span>
+        <p className="mt-1 text-xs leading-5 text-white/50">{statusDescription}</p>
+      </div>
+      {!isLocked ? (
       <form action={updateBracketStatus}>
         <input type="hidden" name="tournament_id" value={tournamentId} />
         <input type="hidden" name="bracket_id" value={bracketId} />
         <input type="hidden" name="action" value="lock" />
         <button
           type="submit"
-          disabled={isLocked || hasActiveMatches}
+          disabled={isLocked}
           className="w-full rounded-xl bg-emerald-300 px-3 py-2 text-sm font-medium text-black transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
         >
           {t.admin.matches.lockBracket}
         </button>
       </form>
-      <form action={updateBracketStatus}>
+      ) : (
+      <form
+        action={updateBracketStatus}
+        onSubmit={(event) => {
+          if (!window.confirm(t.admin.matches.unlockBracketWarning)) {
+            event.preventDefault()
+          }
+        }}
+      >
         <input type="hidden" name="tournament_id" value={tournamentId} />
         <input type="hidden" name="bracket_id" value={bracketId} />
         <input type="hidden" name="action" value="unlock" />
         <button
           type="submit"
-          disabled={status !== "locked" || hasActiveMatches}
+          disabled={!isLocked}
           className="w-full rounded-xl border border-white/10 px-3 py-2 text-sm text-white/80 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:border-white/5 disabled:text-white/35"
         >
           {t.admin.matches.unlockBracket}
         </button>
       </form>
+      )}
     </div>
   )
 }
@@ -349,18 +377,22 @@ function BracketMatchResultForm({
   bracketStatus: BracketLifecycleStatus
 }) {
   const { t } = useLanguage()
-  const isTemplateBracket = bracketStatus === "template"
-  const isBracketEditable = isLockedBracketStatus(bracketStatus)
+  const isBracketFinished = bracketStatus === "finished"
   const hasParticipants = Boolean(match.participant_1_id && match.participant_2_id)
-  const disabled = !isBracketEditable || !hasParticipants
+  const disabled = isBracketFinished || !hasParticipants
 
   return (
     <form action={updateBracketMatch} className="mt-3 grid gap-3 border-t border-white/10 pt-3 sm:grid-cols-2">
       <input type="hidden" name="tournament_id" value={match.tournament_id ?? ""} />
       <input type="hidden" name="match_id" value={match.id} />
-      {isTemplateBracket && (
+      {isBracketFinished && (
         <p className="text-xs text-white/45 sm:col-span-2">
-          {t.admin.matches.lockDesc}
+          {t.admin.matches.bracketLockedDesc}
+        </p>
+      )}
+      {!isBracketFinished && !hasParticipants && (
+        <p className="text-xs text-white/45 sm:col-span-2">
+          {t.admin.matches.bracketMatchIncompleteDesc}
         </p>
       )}
       <StatusSelect value={match.status} disabled={disabled} />
@@ -410,7 +442,8 @@ function BracketSlotForm({
   assignedIds: Set<string>
 }) {
   const { t } = useLanguage()
-  const disabled = match.status === "finished" || isLockedBracketStatus(bracketStatus)
+  const disabled =
+    match.status === "live" || match.status === "finished" || isLockedBracketStatus(bracketStatus)
 
   return (
     <form action={assignBracketSlot} className="space-y-2">
