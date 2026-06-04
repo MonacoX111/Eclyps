@@ -9,6 +9,7 @@ import type {
   PublicBracketRound,
 } from "@/components/public-bracket"
 import { supabase } from "@/lib/supabase/client"
+import { getDisplayGameName } from "@/lib/games"
 import {
   readMatchStatus,
   readNullableInteger,
@@ -320,7 +321,7 @@ function normalizeTournamentRow(row: TournamentRow) {
   return {
     id,
     name,
-    game: readNullableString(row.game),
+    game: getDisplayGameName(readNullableString(row.game)),
     gameMode: readNullableString(row.game_mode),
     status,
     eventDate: readNullableString(row.event_date),

@@ -538,7 +538,7 @@ export function AdminDashboardClient({
                                 {activeTournament.name || "Untitled Tournament"}
                               </h4>
                               <p className="text-xs text-white/40 mt-1">
-                                {activeTournament.game || "CS2"} {"\u2022"} {formatDisplayDate(activeTournament.event_date, lang)}
+                                {activeTournament.game || "CS 2"} {"\u2022"} {formatDisplayDate(activeTournament.event_date, lang)}
                               </p>
                             </div>
                             <div className="grid grid-cols-2 gap-4 rounded-xl bg-black/20 p-4 border border-white/5 text-xs text-white/70">

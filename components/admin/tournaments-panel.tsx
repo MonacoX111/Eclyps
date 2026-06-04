@@ -71,7 +71,7 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           <div className="min-w-0">
             <h4 className="break-words font-medium">{tournament.name ?? t.admin.tournaments.untitledTournament}</h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {normalizeGame(tournament.game) === "CS2" && tournament.game_mode ? `CS2 (${gameConfig.name})` : (tournament.game ?? t.admin.tournaments.unknownGame)} {"\u2022"} {formatDisplayDate(tournament.event_date)}
+              {normalizeGame(tournament.game) === "CS 2" && tournament.game_mode ? `CS 2 (${gameConfig.name})` : (tournament.game ?? t.admin.tournaments.unknownGame)} {"\u2022"} {formatDisplayDate(tournament.event_date)}
             </p>
           </div>
 
@@ -146,11 +146,11 @@ function TournamentForm({
   const { t } = useLanguage()
   const supportedGames = getSupportedGames()
 
-  const normalizedGame = normalizeGame(tournament?.game ?? "CS2")
+  const normalizedGame = normalizeGame(tournament?.game ?? "CS 2")
   const [selectedGame, setSelectedGame] = useState<string>(normalizedGame)
   
   const initialMode = tournament?.game_mode ?? (
-    tournament?.game && normalizeGame(tournament.game) === "CS2"
+    tournament?.game && normalizeGame(tournament.game) === "CS 2"
       ? (tournament.participant_type === "player" ? "1v1" : "5v5")
       : (tournament?.game ? getGameConfig(tournament.game).defaultModeId : "5v5")
   )
@@ -202,8 +202,8 @@ function TournamentForm({
         </select>
       </AdminField>
 
-      {selectedGame === "CS2" ? (
-        <AdminField label="CS2 Format / Mode">
+      {selectedGame === "CS 2" ? (
+        <AdminField label="CS 2 Format / Mode">
           <select
             name="game_mode"
             value={selectedMode}

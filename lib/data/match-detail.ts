@@ -2,6 +2,7 @@ import "server-only"
 
 import { unstable_noStore as noStore } from "next/cache"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { getDisplayGameName } from "@/lib/games"
 import { supabase } from "@/lib/supabase/client"
 import {
   readMatchStatus,
@@ -165,7 +166,7 @@ function normalizeMatchRow(row: MatchRow): MatchDetail | null {
     tournament: {
       id: readStringId(row.tournament_id) ?? readStringId(tournament?.id),
       name: readNullableString(tournament?.name),
-      game: readNullableString(tournament?.game),
+      game: getDisplayGameName(readNullableString(tournament?.game)),
       gameMode: readNullableString(tournament?.game_mode),
       participantType,
       format: readNullableString(tournament?.format),

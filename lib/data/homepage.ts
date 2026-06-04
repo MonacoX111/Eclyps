@@ -12,6 +12,7 @@ import type { ResultCard } from "@/components/results"
 import type { TeamCard } from "@/components/teams-grid"
 import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
 import { getLanguage } from "@/lib/i18n/server"
+import { getDisplayGameName } from "@/lib/games"
 import { supabase } from "@/lib/supabase/client"
 import {
   readMatchStatus,
@@ -512,7 +513,7 @@ function normalizeHomepageTournament(
     name: readNullableString(row.name),
     title: readNullableString(row.title),
     display_name: readNullableString(row.display_name),
-    game: readNullableString(row.game),
+    game: getDisplayGameName(readNullableString(row.game)),
     game_mode: readNullableString(row.game_mode),
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
@@ -745,7 +746,7 @@ function getTournamentBlocksView(
     heroName: readString(tournament.name, tournament.title),
     sectionName: readString(tournament.name, tournament.display_name, tournament.title),
     date: formatEventDate(tournament.event_date, lang),
-    game: readString(tournament.game),
+    game: readString(getDisplayGameName(tournament.game)),
     format: readString(tournament.format),
     teamCount: String(participantCount),
     status: formatStatus(readString(tournament.status)),

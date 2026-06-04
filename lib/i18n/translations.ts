@@ -5,7 +5,7 @@ const rawTranslations = {
     metadata: {
       title: "Eclyps — Змагальні Кіберспортивні Турніри",
       description: "Беріть участь у турнірах Eclyps, стежте за матчами в прямому ефірі, переглядайте зареєстровані команди та гравців, розклад та результати змагань.",
-      keywords: "Eclyps, кіберспорт, турніри, CS2, Counter-Strike 2, геймінг, онлайн турніри, змагання",
+      keywords: "Eclyps, кіберспорт, турніри, CS 2, Counter-Strike 2, геймінг, онлайн турніри, змагання",
     },
     navbar: {
       tournament: "Турнір",
@@ -1496,7 +1496,7 @@ const rawTranslations = {
     metadata: {
       title: "Eclyps — Competitive Esports Tournaments",
       description: "Join Eclyps tournaments, follow live matches, registered teams and players, schedules, and results for competitive esports events.",
-      keywords: "Eclyps, esports, tournaments, CS2, Counter-Strike 2, gaming, online tournaments, competitive gaming",
+      keywords: "Eclyps, esports, tournaments, CS 2, Counter-Strike 2, gaming, online tournaments, competitive gaming",
     },
     navbar: {
       tournament: "Tournament",

@@ -6,6 +6,7 @@ import type { MatchScheduleItem } from "@/components/match-schedule"
 import type { ResultCard } from "@/components/results"
 import { formatEventMonthYear } from "@/lib/date-format"
 import { getLanguage } from "@/lib/i18n/server"
+import { getDisplayGameName } from "@/lib/games"
 import { getMatchesForTournament, type TournamentMatch } from "@/lib/data/matches"
 import {
   readNullableInteger,
@@ -950,7 +951,7 @@ async function getTeamTournamentHistory(
         id: readStringId(row.id) ?? `${tournamentId}-${readNullableString(row.created_at) ?? "registration"}`,
         tournament_id: tournamentId,
         tournament_name: readNullableString(tournament?.name) ?? "Tournament",
-        game: readNullableString(tournament?.game),
+        game: getDisplayGameName(readNullableString(tournament?.game)),
         tournament_status: readNullableString(tournament?.status),
         registration_status: readNullableString(row.status),
         participant_id: participantId,
@@ -1078,7 +1079,7 @@ async function getPlayerPublicHistory({
 
       tournamentMeta.set(tournamentId, {
         name: readNullableString(tournament?.name) ?? "Tournament",
-        game: readNullableString(tournament?.game),
+        game: getDisplayGameName(readNullableString(tournament?.game)),
         status: readNullableString(tournament?.status),
         eventDate: readNullableString(tournament?.event_date),
       })
@@ -1094,7 +1095,7 @@ async function getPlayerPublicHistory({
         id: readStringId(row.id) ?? `${tournamentId}-${participantType}`,
         tournament_id: tournamentId,
         tournament_name: readNullableString(tournament?.name) ?? "Tournament",
-        game: readNullableString(tournament?.game),
+        game: getDisplayGameName(readNullableString(tournament?.game)),
         tournament_status: readNullableString(tournament?.status),
         registration_status: readNullableString(row.status),
         participant_type: participantType,
@@ -1253,7 +1254,7 @@ function toPublicPlayerMatchHistory(
     id: match.id,
     tournament_id: match.tournament_id,
     tournament_name: tournament?.name ?? "Tournament",
-    game: tournament?.game ?? null,
+    game: getDisplayGameName(tournament?.game),
     opponent: slot.opponentName ?? "TBD",
     date: match.scheduled_at ?? tournament?.eventDate ?? null,
     scoreline:

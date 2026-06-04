@@ -3,6 +3,7 @@ import "server-only"
 import { unstable_noStore as noStore } from "next/cache"
 import { supabase } from "@/lib/supabase/client"
 import { runAdminRowsQuery } from "@/lib/admin/query"
+import { getDisplayGameName } from "@/lib/games"
 import {
   readNullableInteger,
   readNullableString,
@@ -81,7 +82,7 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
   return {
     id,
     name: readNullableString(row.name),
-    game: readNullableString(row.game),
+    game: getDisplayGameName(readNullableString(row.game)),
     game_mode: readNullableString(row.game_mode),
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),

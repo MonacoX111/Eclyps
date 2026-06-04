@@ -1,4 +1,4 @@
-export type SupportedGame = "CS2" | "Valorant" | "Dota2" | "Clash Royale" | "Fortnite" | "FC" | "Other"
+export type SupportedGame = "CS 2" | "Valorant" | "Dota2" | "Clash Royale" | "Fortnite" | "FC" | "Other"
 
 export interface GameModeConfig {
   modeId: string
@@ -20,8 +20,8 @@ export interface GameConfig {
 }
 
 export const GAME_CONFIGS: Record<SupportedGame, GameConfig> = {
-  CS2: {
-    name: "CS2",
+  "CS 2": {
+    name: "CS 2",
     fullName: "Counter-Strike 2",
     scoreFormat: "rounds",
     mapPool: ["Mirage", "Inferno", "Nuke", "Anubis", "Ancient", "Overpass", "Vertigo"],
@@ -171,7 +171,7 @@ export function normalizeGame(game: string | null | undefined): SupportedGame {
   const clean = game.trim().toLowerCase()
 
   if (clean === "cs2" || clean === "counter-strike 2" || clean === "counterstrike2" || clean === "cs 2") {
-    return "CS2"
+    return "CS 2"
   }
   if (clean === "valorant") {
     return "Valorant"
@@ -200,6 +200,10 @@ export function normalizeGame(game: string | null | undefined): SupportedGame {
   return "Other"
 }
 
+export function getDisplayGameName(game: string | null | undefined): string | null {
+  return game ? normalizeGame(game) : null
+}
+
 export type ResolvedGameConfig = Omit<GameConfig, "name"> & GameModeConfig & {
   gameName: SupportedGame
 }
@@ -224,5 +228,5 @@ export function getGameConfig(
 }
 
 export function getSupportedGames(): SupportedGame[] {
-  return ["CS2", "Valorant", "Dota2", "Clash Royale", "Fortnite", "FC", "Other"]
+  return ["CS 2", "Valorant", "Dota2", "Clash Royale", "Fortnite", "FC", "Other"]
 }
