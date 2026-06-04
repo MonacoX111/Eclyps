@@ -35,6 +35,9 @@ export type AdminMatch = {
   scheduled_at: string | null
   timezone: string | null
   schedule_note: string | null
+  broadcast_type: string | null
+  broadcast_url: string | null
+  broadcast_label: string | null
 }
 
 export type AdminMatchQueryResult = {
@@ -52,7 +55,7 @@ export async function getAdminMatches(): Promise<AdminMatchQueryResult> {
   const { rows, error } = await runAdminRowsQuery("matches", async () => {
     const result = await supabase
       .from("matches")
-      .select("id, tournament_id, round, team1, team2, score1, score2, status, match_order, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note")
+      .select("id, tournament_id, round, team1, team2, score1, score2, status, match_order, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note, broadcast_type, broadcast_url, broadcast_label")
       .order("scheduled_at", { ascending: true, nullsFirst: false })
       .order("round_order", { ascending: true, nullsFirst: false })
       .order("bracket_position", { ascending: true, nullsFirst: false })
@@ -100,6 +103,9 @@ function normalizeMatch(row: Record<string, unknown>): AdminMatch | null {
     scheduled_at: readNullableString(row.scheduled_at),
     timezone: readNullableString(row.timezone),
     schedule_note: readNullableString(row.schedule_note),
+    broadcast_type: readNullableString(row.broadcast_type),
+    broadcast_url: readNullableString(row.broadcast_url),
+    broadcast_label: readNullableString(row.broadcast_label),
   }
 }
 

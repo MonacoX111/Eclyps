@@ -27,6 +27,9 @@ type MatchMutationData = {
   scheduled_at: string | null
   timezone: string | null
   schedule_note: string | null
+  broadcast_type: "twitch" | "youtube" | "kick" | "discord" | "other" | null
+  broadcast_url: string | null
+  broadcast_label: string | null
 }
 
 type MatchMutationResult =
@@ -136,6 +139,9 @@ async function withMatchParticipantReferences(
     schedule_time: string | null
     timezone: string
     schedule_note: string | null
+    broadcast_type: "twitch" | "youtube" | "kick" | "discord" | "other" | null
+    broadcast_url: string | null
+    broadcast_label: string | null
   },
 ): Promise<MatchMutationResult> {
   const {

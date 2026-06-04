@@ -679,6 +679,36 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
+      <AdminField label={t.admin.matches.channelTypeField}>
+        <select
+          name="broadcast_type"
+          defaultValue={match?.broadcast_type ?? "other"}
+          className={inputClassName}
+        >
+          <option value="twitch">Twitch</option>
+          <option value="youtube">YouTube</option>
+          <option value="kick">Kick</option>
+          <option value="discord">{t.admin.matches.discordVoiceChannel}</option>
+          <option value="other">{t.admin.matches.otherChannelLink}</option>
+        </select>
+      </AdminField>
+      <AdminField label={t.admin.matches.channelUrlField}>
+        <input
+          name="broadcast_url"
+          type="url"
+          inputMode="url"
+          defaultValue={match?.broadcast_url ?? ""}
+          placeholder="https://"
+          className={inputClassName}
+        />
+      </AdminField>
+      <AdminField label={t.admin.matches.channelLabelField}>
+        <input
+          name="broadcast_label"
+          defaultValue={match?.broadcast_label ?? ""}
+          className={inputClassName}
+        />
+      </AdminField>
       <AdminField label={t.admin.matches.matchOrderField}>
         <input name="match_order" type="number" min={1} step={1} defaultValue={match?.match_order ?? ""} required className={inputClassName} />
       </AdminField>

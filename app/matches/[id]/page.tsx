@@ -291,27 +291,68 @@ function DetailsSection({
 }
 
 function WatchSection({ match, t }: { match: MatchDetail; t: any }) {
+  const channel = match.broadcast
+  const typeLabel = channel ? getChannelTypeLabel(channel.type, t) : null
+  const description =
+    channel?.type === "discord"
+      ? t.matchPage.discordChannelDescription
+      : channel?.type === "other"
+        ? t.matchPage.externalMatchChannel
+        : null
+  const buttonLabel = channel ? getChannelButtonLabel(channel.type, t) : null
+
   return (
     <section className="glass-card rounded-2xl p-5 md:p-6">
-      <h2 className="text-xl font-bold text-foreground">{t.matchPage.watchLive}</h2>
-      {match.streamUrl ? (
-        <a
-          href={match.streamUrl}
-          target="_blank"
-          rel="noreferrer"
-          className={`${primaryLinkClassName} mt-5 w-full justify-center`}
-        >
-          <Radio className="h-4 w-4" />
-          {t.matchPage.watchLive}
-          <ExternalLink className="h-4 w-4" />
-        </a>
+      <h2 className="text-xl font-bold text-foreground">{t.matchPage.matchChannel}</h2>
+      {channel?.url ? (
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              {typeLabel}
+            </p>
+            {channel.label ? (
+              <p className="mt-2 min-w-0 break-words text-sm font-semibold text-white/80">
+                {channel.label}
+              </p>
+            ) : null}
+            {description ? (
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          <a
+            href={channel.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${primaryLinkClassName} w-full justify-center`}
+          >
+            <Radio className="h-4 w-4" />
+            {buttonLabel}
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
       ) : (
         <p className="mt-4 text-sm leading-6 text-white/60">
-          {t.matchPage.noStreamAvailable}
+          {t.matchPage.noMatchChannel}
         </p>
       )}
     </section>
   )
+}
+
+function getChannelTypeLabel(type: NonNullable<MatchDetail["broadcast"]>["type"], t: any) {
+  if (type === "twitch") return "Twitch"
+  if (type === "youtube") return "YouTube"
+  if (type === "kick") return "Kick"
+  if (type === "discord") return t.matchPage.discordVoice
+  return t.matchPage.externalMatchChannel
+}
+
+function getChannelButtonLabel(type: NonNullable<MatchDetail["broadcast"]>["type"], t: any) {
+  if (type === "discord") return t.matchPage.openDiscord
+  if (type === "other") return t.matchPage.openLink
+  return t.matchPage.openStream
 }
 
 function DisputeSection({ match, t }: { match: MatchDetail; t: any }) {

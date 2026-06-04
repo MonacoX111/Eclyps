@@ -18,6 +18,7 @@ const disputeTypes = [
   "other",
 ] as const
 const disputeStatuses = ["open", "under_review", "resolved", "rejected"] as const
+const broadcastTypes = ["twitch", "youtube", "kick", "discord", "other"] as const
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -86,6 +87,9 @@ export const matchSchema = z
     schedule_time: optionalTimeInput(),
     timezone: timezoneSchema(),
     schedule_note: optionalString(),
+    broadcast_type: broadcastTypeSchema(),
+    broadcast_url: optionalHttpsUrlString(),
+    broadcast_label: optionalString(),
   })
   .superRefine((value, context) => {
     if (value.team1.toLowerCase() === value.team2.toLowerCase()) {
@@ -272,6 +276,8 @@ export function parseMatchFormData(formData: FormData): ParseResult<MatchInput> 
     schedule_date: "invalid-schedule",
     schedule_time: "invalid-schedule",
     timezone: "invalid-timezone",
+    broadcast_type: "invalid-channel-type",
+    broadcast_url: "invalid-channel-url",
   })
 }
 
@@ -503,6 +509,28 @@ function optionalUrlString() {
   )
 }
 
+function optionalHttpsUrlString() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const trimmedValue = value.trim()
+      return trimmedValue.length > 0 ? trimmedValue : null
+    },
+    z
+      .string()
+      .url()
+      .refine((value) => {
+        try {
+          return new URL(value).protocol === "https:"
+        } catch {
+          return false
+        }
+      })
+      .nullable(),
+  )
+}
+
 function optionalStringArray() {
   return z.preprocess(
     (value) => {
@@ -557,6 +585,18 @@ function statusSchema() {
 
 function participantTypeSchema() {
   return z.enum(participantTypes)
+}
+
+function broadcastTypeSchema() {
+  return z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return null
+
+      const normalized = value.trim().toLowerCase()
+      return normalized.length > 0 ? normalized : null
+    },
+    z.enum(broadcastTypes).nullable(),
+  )
 }
 
 function winnerSelectionSchema() {

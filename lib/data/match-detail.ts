@@ -22,6 +22,14 @@ export type MatchDetailParticipant = {
   href: string | null
 }
 
+export type MatchBroadcastType = "twitch" | "youtube" | "kick" | "discord" | "other"
+
+export type MatchBroadcast = {
+  type: MatchBroadcastType
+  url: string | null
+  label: string | null
+}
+
 export type MatchDetail = {
   id: string
   tournament: {
@@ -33,6 +41,7 @@ export type MatchDetail = {
     format: string | null
     status: string | null
     streamUrl: string | null
+    broadcast: MatchBroadcast | null
   }
   participantType: "team" | "player"
   participants: [MatchDetailParticipant, MatchDetailParticipant]
@@ -52,6 +61,7 @@ export type MatchDetail = {
   score2: number | null
   winnerParticipantId: string | null
   streamUrl: string | null
+  broadcast: MatchBroadcast | null
   disputeStatus: "none" | "open" | "under_review" | "resolved" | "rejected"
   isIncomplete: boolean
 }
@@ -93,21 +103,31 @@ export async function getPublicMatchDetail(id: string): Promise<MatchDetail | nu
     .map((participant) => participant.sourceId)
     .filter((value): value is string => Boolean(value))
 
-  const [sourceImages, streamUrl, tournamentStreamUrl, disputeStatus, nextMatchLabel] =
+  const [sourceImages, matchBroadcast, tournamentBroadcast, streamUrl, tournamentStreamUrl, disputeStatus, nextMatchLabel] =
     await Promise.all([
       fetchSourceImages(match.participantType, participantIds),
+      fetchOptionalBroadcast("matches", match.id),
+      match.tournament.id ? fetchOptionalBroadcast("tournaments", match.tournament.id) : null,
       fetchOptionalStreamUrl("matches", match.id),
       match.tournament.id ? fetchOptionalStreamUrl("tournaments", match.tournament.id) : null,
       fetchPublicDisputeStatus(match.id),
       match.nextMatchId ? fetchNextMatchLabel(match.nextMatchId) : null,
     ])
+  const broadcast =
+    matchBroadcast ??
+    tournamentBroadcast ??
+    (streamUrl ?? tournamentStreamUrl
+      ? { type: "twitch" as const, url: streamUrl ?? tournamentStreamUrl, label: null }
+      : null)
 
   return {
     ...match,
     streamUrl: streamUrl ?? tournamentStreamUrl,
+    broadcast,
     tournament: {
       ...match.tournament,
       streamUrl: tournamentStreamUrl,
+      broadcast: tournamentBroadcast,
     },
     disputeStatus,
     nextMatchLabel,
@@ -151,6 +171,7 @@ function normalizeMatchRow(row: MatchRow): MatchDetail | null {
       format: readNullableString(tournament?.format),
       status: readNullableString(tournament?.status),
       streamUrl: null,
+      broadcast: null,
     },
     participantType,
     participants: [participant1, participant2],
@@ -170,6 +191,7 @@ function normalizeMatchRow(row: MatchRow): MatchDetail | null {
     score2: readNullableInteger(row.score2),
     winnerParticipantId: readStringId(row.winner_participant_id),
     streamUrl: null,
+    broadcast: null,
     disputeStatus: "none",
     isIncomplete: !participant1.id || !participant2.id,
   }
@@ -250,6 +272,47 @@ async function fetchOptionalStreamUrl(table: "matches" | "tournaments", id: stri
   }
 
   return readNullableString(data?.stream_url)
+}
+
+async function fetchOptionalBroadcast(
+  table: "matches" | "tournaments",
+  id: string,
+): Promise<MatchBroadcast | null> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("broadcast_type, broadcast_url, broadcast_label")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error) {
+    if (!isMissingColumnError(error)) {
+      console.error(`Failed to fetch optional ${table} broadcast channel:`, error)
+    }
+    return null
+  }
+
+  const url = readNullableString(data?.broadcast_url)
+  if (!url) return null
+
+  return {
+    type: readBroadcastType(data?.broadcast_type),
+    url,
+    label: readNullableString(data?.broadcast_label),
+  }
+}
+
+function readBroadcastType(value: unknown): MatchBroadcastType {
+  if (
+    value === "twitch" ||
+    value === "youtube" ||
+    value === "kick" ||
+    value === "discord" ||
+    value === "other"
+  ) {
+    return value
+  }
+
+  return "other"
 }
 
 async function fetchPublicDisputeStatus(matchId: string): Promise<MatchDetail["disputeStatus"]> {
