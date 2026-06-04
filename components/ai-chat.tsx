@@ -136,7 +136,7 @@ export function AiChat() {
               <button
                 onClick={() => setIsOpen(false)}
                 className="rounded-lg p-1.5 text-muted-foreground hover:bg-white/[0.05] hover:text-white transition cursor-pointer"
-                aria-label="Close chat"
+                aria-label={t.aiChat.closeChat}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -212,7 +212,7 @@ export function AiChat() {
                 type="submit"
                 disabled={!input.trim() || isThinking}
                 className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-background transition hover:bg-emerald-300 hover:shadow-[0_0_10px_oklch(0.78_0.18_165/0.4)] disabled:bg-white/[0.05] disabled:text-white/20 disabled:shadow-none cursor-pointer"
-                aria-label="Send message"
+                aria-label={t.aiChat.sendMessage}
               >
                 <Send className="h-4 w-4" />
               </button>

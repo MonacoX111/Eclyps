@@ -29,7 +29,7 @@ export function DiscordLoginOnboarding({
           <div className="fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center overflow-y-auto px-4 py-8">
             <m.button
               type="button"
-              aria-label="Close Discord login prompt"
+              aria-label={t.discordLogin.closePrompt}
               className="fixed inset-0 bg-black/80 backdrop-blur-lg"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

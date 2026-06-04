@@ -116,7 +116,7 @@ export function AdminLoginOverlay({ isOpen, onClose }: AdminLoginOverlayProps) {
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-lg border border-white/10 text-white/50 hover:text-white hover:bg-white/5 transition"
-                aria-label="Close admin access overlay"
+                aria-label={t.admin.aria.closeAccessOverlay}
               >
                 <X className="h-4 w-4" />
               </button>

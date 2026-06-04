@@ -25,17 +25,17 @@ export function TournamentSelect({
   tournaments: AdminTournament[]
   value?: string | null
 }) {
-  const { lang } = useLanguage()
+  const { t } = useLanguage()
 
   return (
-    <AdminField label={lang === "uk" ? "Турнір" : "Tournament"}>
+    <AdminField label={t.admin.extra.tournamentLabel}>
       <select name="tournament_id" defaultValue={value ?? ""} required className={inputClassName}>
         <option value="" disabled>
-          {lang === "uk" ? "Оберіть турнір" : "Select tournament"}
+          {t.admin.extra.selectTournament}
         </option>
         {tournaments.map((tournament) => (
           <option key={tournament.id} value={tournament.id}>
-            {tournament.name ?? (lang === "uk" ? "Турнір без назви" : "Untitled tournament")}
+            {tournament.name ?? t.admin.extra.untitledTournament}
           </option>
         ))}
       </select>
@@ -50,19 +50,19 @@ export function StatusSelect({
   value?: string | null
   disabled?: boolean
 }) {
-  const { lang } = useLanguage()
+  const { t } = useLanguage()
 
   return (
-    <AdminField label={lang === "uk" ? "Статус" : "Status"}>
+    <AdminField label={t.admin.extra.statusLabel}>
       <select
         name="status"
         defaultValue={normalizeStatus(value)}
         disabled={disabled}
         className={inputClassName}
       >
-        <option value="upcoming">{lang === "uk" ? "Майбутній" : "Upcoming"}</option>
-        <option value="live">{lang === "uk" ? "Наживо" : "Live"}</option>
-        <option value="finished">{lang === "uk" ? "Завершено" : "Finished"}</option>
+        <option value="upcoming">{t.admin.extra.upcoming}</option>
+        <option value="live">{t.admin.extra.live}</option>
+        <option value="finished">{t.admin.extra.finished}</option>
       </select>
     </AdminField>
   )
@@ -83,7 +83,7 @@ export function SubmitButton({ label, disabled }: { label: string; disabled?: bo
 }
 
 export function DeleteForm({ action, id }: { action: AdminFormAction; id: string }) {
-  const { lang } = useLanguage()
+  const { t } = useLanguage()
 
   return (
     <form action={action} className="self-end">
@@ -92,7 +92,7 @@ export function DeleteForm({ action, id }: { action: AdminFormAction; id: string
         type="submit"
         className="w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10 cursor-pointer"
       >
-        {lang === "uk" ? "Видалити" : "Delete"}
+        {t.admin.extra.delete}
       </button>
     </form>
   )

@@ -12,6 +12,7 @@ import {
   getTeamFeedback,
   getTournamentFeedback,
 } from "@/lib/admin/feedback"
+import { getLanguage } from "@/lib/i18n/server"
 import { getAdminMatches } from "@/lib/admin/matches"
 import { getAdminNewsPosts } from "@/lib/admin/news"
 import { getAdminDisputes } from "@/lib/admin/disputes"
@@ -30,6 +31,7 @@ export async function AdminDashboard({
   searchParams?: AdminSearchParams
 }) {
   const [
+    lang,
     { tournaments, error: tournamentError },
     { teams, error: teamError },
     { players, error: playerError },
@@ -41,6 +43,7 @@ export async function AdminDashboard({
     { results, error: resultError },
     { posts: newsPosts, error: newsError },
   ] = await Promise.all([
+    getLanguage(),
     getAdminTournaments(),
     getAdminTeams(),
     getAdminPlayers(),
@@ -55,17 +58,17 @@ export async function AdminDashboard({
 
   // Collect feedbacks into an object
   const feedbacks = {
-    tournament: getTournamentFeedback(searchParams),
-    team: getTeamFeedback(searchParams),
-    player: getPlayerFeedback(searchParams),
-    participant: getParticipantFeedback(searchParams),
-    playerApplication: getPlayerApplicationFeedback(searchParams),
-    registration: getRegistrationFeedback(searchParams),
-    dispute: getDisputeFeedback(searchParams),
-    match: getMatchFeedback(searchParams),
-    result: getResultFeedback(searchParams),
-    activeTournament: getActiveTournamentFeedback(searchParams),
-    news: getNewsFeedback(searchParams),
+    tournament: getTournamentFeedback(searchParams, lang),
+    team: getTeamFeedback(searchParams, lang),
+    player: getPlayerFeedback(searchParams, lang),
+    participant: getParticipantFeedback(searchParams, lang),
+    playerApplication: getPlayerApplicationFeedback(searchParams, lang),
+    registration: getRegistrationFeedback(searchParams, lang),
+    dispute: getDisputeFeedback(searchParams, lang),
+    match: getMatchFeedback(searchParams, lang),
+    result: getResultFeedback(searchParams, lang),
+    activeTournament: getActiveTournamentFeedback(searchParams, lang),
+    news: getNewsFeedback(searchParams, lang),
   }
 
   return (

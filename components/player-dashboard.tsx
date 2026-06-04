@@ -196,18 +196,18 @@ export function PlayerDashboard({ teams, registrations }: PlayerDashboardProps) 
                     {reg.hasParticipant ? (
                       <span
                         className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-400"
-                        title="Roster check-in ready and synced"
+                        title={t.account.linkedTitle}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Linked
+                        {t.account.linked}
                       </span>
                     ) : (
                       <span
                         className="inline-flex items-center gap-1 text-[9px] font-semibold text-white/35"
-                        title="Pending admin approval to sync participant slot"
+                        title={t.account.unlinkedTitle}
                       >
                         <AlertCircle className="h-3.5 w-3.5" />
-                        Unlinked
+                        {t.account.unlinked}
                       </span>
                     )}
                   </div>

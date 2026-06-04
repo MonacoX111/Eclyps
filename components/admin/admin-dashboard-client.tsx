@@ -408,7 +408,7 @@ export function AdminDashboardClient({
             <button
               onClick={() => setIsMobileDrawerOpen(true)}
               className="p-2 rounded-xl border border-white/10 hover:bg-white/5 text-white/80 hover:text-white md:hidden cursor-pointer"
-              aria-label="Open sidebar menu"
+              aria-label={t.admin.aria.openSidebarMenu}
             >
               <Menu className="h-5 w-5" />
             </button>

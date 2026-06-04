@@ -46,7 +46,7 @@ export function AdminLoginForm({
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition focus:outline-none cursor-pointer p-1 rounded-lg hover:bg-white/5"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t.admin.login.hidePassword : t.admin.login.showPassword}
           >
             {showPassword ? (
               <EyeOff className="h-4.5 w-4.5" />
@@ -79,8 +79,8 @@ export function AdminLoginForm({
         <p className="text-sm text-red-300">
           {t.admin.login.errorRateLimited}
           {retryAfterLabel 
-            ? ` ${lang === "uk" ? "через" : "in"} ${retryAfterLabel}` 
-            : ` ${lang === "uk" ? "пізніше" : "later"}`}
+            ? ` ${t.admin.login.rateIn} ${retryAfterLabel}`
+            : ` ${t.admin.login.rateLater}`}
           .
         </p>
       )}

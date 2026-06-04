@@ -74,7 +74,7 @@ export function TeamRosterManager({
         "multiple-players-found": t.account.invites.errors.multiplePlayersFound,
         "mutation-failed": t.account.invites.errors.mutationFailed,
         "admin-client-unavailable": t.account.roster.errors.unavailable,
-        "captain-cannot-modify-owner": t.account.roster.errors.captainCannotModifyOwner || "Captain cannot modify owner.",
+        "captain-cannot-modify-owner": t.account.roster.errors.captainCannotModifyOwner,
         "owner-cannot-leave": t.account.roster.errors.ownerCannotLeave,
         "roster-locked": t.account.roster.errors.rosterLocked,
       }
@@ -94,7 +94,7 @@ export function TeamRosterManager({
         "rejected": t.account.joinRequests.success.rejected,
         "team-left": t.account.roster.success.teamLeft,
       }
-      setSuccessMessage(messages[initialSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
+      setSuccessMessage(messages[initialSuccess] ?? t.account.roster.success.generic)
       // Clear autocomplete input on successful invite
       if (initialSuccess === "invite-sent") {
         setSearchQuery("")

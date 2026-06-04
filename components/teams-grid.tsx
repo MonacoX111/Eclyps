@@ -68,6 +68,8 @@ export function TeamsGrid({
 }
 
 function TeamCardContent({ team }: { team: TeamCard }) {
+  const { t } = useLanguage()
+
   const content = (
     <>
       {/* Rank badge */}
@@ -107,7 +109,7 @@ function TeamCardContent({ team }: { team: TeamCard }) {
     <Link
       href={team.profileHref}
       className="flex w-full flex-col items-center gap-4"
-      aria-label={`Open ${team.name} profile`}
+      aria-label={t.teamsGrid.openProfileLabel.replace("{name}", team.name)}
     >
       {content}
     </Link>
@@ -115,6 +117,8 @@ function TeamCardContent({ team }: { team: TeamCard }) {
 }
 
 function CardAvatar({ team }: { team: TeamCard }) {
+  const { t } = useLanguage()
+
   if (team.avatarUrl) {
     return (
       <div
@@ -123,7 +127,7 @@ function CardAvatar({ team }: { team: TeamCard }) {
       >
         <Image
           src={team.avatarUrl}
-          alt={team.avatarAlt ? `${team.avatarAlt} Discord avatar` : ""}
+          alt={team.avatarAlt ? t.teamsGrid.discordAvatarAlt.replace("{name}", team.avatarAlt) : ""}
           width={64}
           height={64}
           className="h-full w-full rounded-xl object-cover"

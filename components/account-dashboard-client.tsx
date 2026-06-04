@@ -104,7 +104,7 @@ export function AccountDashboardClient({
         "accepted": t.account.invites.success.accepted,
         "declined": t.account.invites.success.declined,
       }
-      setSuccessMessage(messages[searchParams.inviteSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
+      setSuccessMessage(messages[searchParams.inviteSuccess] ?? t.account.roster.success.generic)
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
@@ -123,7 +123,7 @@ export function AccountDashboardClient({
       const messages: Record<string, string> = {
         "team-left": t.account.roster.success.teamLeft,
       }
-      setSuccessMessage(messages[searchParams.teamSuccess] ?? (lang === "uk" ? "Дію успішно виконано." : "Action successfully completed."))
+      setSuccessMessage(messages[searchParams.teamSuccess] ?? t.account.roster.success.generic)
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }

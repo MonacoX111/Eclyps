@@ -168,7 +168,37 @@ export function getLocalizedNotification(
         message: `Гравець "${playerName}" скасував заявку до команди "${teamName}".`,
       }
     }
+    case "team_member_removed": {
+      return {
+        title: "Вас видалено з команди",
+        message: "Вас видалено зі складу команди.",
+      }
+    }
+    case "team_role_updated": {
+      const match = notification.message.match(/"([^"]+)"/)
+      const role = localizeRole(match ? match[1] : "")
+      return {
+        title: "Роль оновлено",
+        message: role
+          ? `Вашу роль у складі команди оновлено на "${role}".`
+          : "Вашу роль у складі команди оновлено.",
+      }
+    }
+    case "team_member_left": {
+      const playerName = notification.message.match(/^(.+?) left the team\./)?.[1] || "Гравець"
+      return {
+        title: "Учасник покинув команду",
+        message: `${playerName} покинув команду.`,
+      }
+    }
     default:
       return { title: notification.title, message: notification.message }
   }
+}
+
+function localizeRole(role: string) {
+  if (role === "Captain") return "Капітан"
+  if (role === "Substitute") return "Запасний"
+  if (role === "Member") return "Учасник"
+  return role
 }
