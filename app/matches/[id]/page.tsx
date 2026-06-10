@@ -38,10 +38,17 @@ export default async function MatchPage({ params }: MatchPageProps) {
 
   if (!match) notFound()
 
-  const bracket =
-    homepageData.tournament?.id === match.tournament.id
-      ? homepageData.publicBracket
-      : await getArchivedTournamentBracket(match.tournament.id)
+  const isActiveTournamentMatch = homepageData.tournament?.id === match.tournament.id
+  const bracket = isActiveTournamentMatch
+    ? homepageData.publicBracket
+    : await getArchivedTournamentBracket(match.tournament.id)
+  const backHref =
+    isActiveTournamentMatch || !match.tournament.id
+      ? "/matches"
+      : `/tournaments/${match.tournament.id}`
+  const backLabel = isActiveTournamentMatch
+    ? t.matchPage.backToMatches
+    : t.tournamentArchive.backToArchive
   const title = `${participantName(match.participants[0], t)} vs ${participantName(match.participants[1], t)}`
   const scheduledTime = formatMatchScheduleTime({
     scheduledAt: match.scheduledAt,
@@ -63,8 +70,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
         <section className="relative z-10 px-4 py-10 md:py-14">
           <div className="mx-auto max-w-6xl">
             <div className="mb-6 flex flex-wrap gap-3">
-              <Link href="/matches" className={secondaryLinkClassName}>
-                {t.matchPage.backToMatches}
+              <Link href={backHref} className={secondaryLinkClassName}>
+                {backLabel}
               </Link>
             </div>
 
