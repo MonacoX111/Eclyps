@@ -1,6 +1,7 @@
 import "server-only"
 
 import type { User } from "@supabase/supabase-js"
+import { buildDiscordAvatarUrl, isSafeAvatarUrl } from "@/lib/avatar"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -16,21 +17,36 @@ export type UserProfile = {
   updated_at: string | null
 }
 
-export async function getCurrentUserProfile() {
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.getUser()
-
-  if (error || !data.user) return null
-
-  return upsertUserProfileFromAuthUser(data.user)
+export type UserProfileSyncResult = {
+  profile: UserProfile | null
+  refreshedFromDiscord: boolean
 }
 
-export async function upsertUserProfileFromAuthUser(user: User) {
-  const profileInput = readDiscordProfile(user)
-  if (!profileInput) return null
+export async function getCurrentUserProfile() {
+  const result = await syncCurrentUserProfile()
+  return result.profile
+}
+
+export async function syncCurrentUserProfile(): Promise<UserProfileSyncResult> {
+  const supabase = await createSupabaseServerClient()
+  const [{ data, error }, sessionResult] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ])
+
+  if (error || !data.user) {
+    return { profile: null, refreshedFromDiscord: false }
+  }
+
+  return upsertUserProfileFromAuthUser(data.user, sessionResult.data.session?.provider_token)
+}
+
+export async function upsertUserProfileFromAuthUser(user: User, providerToken?: string | null): Promise<UserProfileSyncResult> {
+  const profileInput = await readDiscordProfile(user, providerToken)
+  if (!profileInput) return { profile: null, refreshedFromDiscord: false }
 
   const supabaseAdmin = createSupabaseAdminClient()
-  if (!supabaseAdmin) return null
+  if (!supabaseAdmin) return { profile: null, refreshedFromDiscord: false }
 
   const now = new Date().toISOString()
   const { data, error } = await supabaseAdmin
@@ -51,7 +67,7 @@ export async function upsertUserProfileFromAuthUser(user: User) {
 
   if (error || !data) {
     logSupabaseError("Failed to sync Discord user profile:", error)
-    return null
+    return { profile: null, refreshedFromDiscord: profileInput.refreshedFromDiscord }
   }
 
   // Synchronize a global player profile for the user
@@ -68,11 +84,10 @@ export async function upsertUserProfileFromAuthUser(user: User) {
     if (playerFetchError) {
       logSupabaseError("Failed to query existing player profile during auth sync:", playerFetchError)
     } else if (existingPlayer) {
-      // Update existing player record: update display_name/avatar_url, and link user_id / owner_user_id if missing
+      // Update existing player record without overwriting user-authored display fields.
       const { error: playerUpdateError } = await supabaseAdmin
         .from("players")
         .update({
-          display_name: profileInput.displayName,
           avatar_url: profileInput.avatarUrl,
           user_id: user.id,
           owner_user_id: userProfileId,
@@ -107,21 +122,27 @@ export async function upsertUserProfileFromAuthUser(user: User) {
     console.error("Unexpected error syncing global player profile:", err)
   }
 
-  return normalizeUserProfile(data)
+  return {
+    profile: normalizeUserProfile(data),
+    refreshedFromDiscord: profileInput.refreshedFromDiscord,
+  }
 }
 
-function readDiscordProfile(user: User) {
+async function readDiscordProfile(user: User, providerToken?: string | null) {
   const metadata = user.user_metadata
   const identityData =
     user.identities?.find((identity) => identity.provider === "discord")
       ?.identity_data ?? {}
+  const discordUser = await fetchDiscordCurrentUser(providerToken)
 
   const discordId =
+    readString(discordUser?.id) ??
     readString(identityData.provider_id) ??
     readString(identityData.sub) ??
     readString(metadata.provider_id) ??
     readString(metadata.sub)
   const username =
+    formatDiscordUsername(discordUser) ??
     readString(identityData.user_name) ??
     readString(identityData.preferred_username) ??
     readString(identityData.name) ??
@@ -132,21 +153,30 @@ function readDiscordProfile(user: User) {
   if (!discordId || !username) return null
 
   const displayName =
+    readString(discordUser?.global_name) ??
     readString(identityData.full_name) ??
     readString(identityData.global_name) ??
     readString(metadata.full_name) ??
     readString(metadata.global_name) ??
     username
 
+  const avatarUrl =
+    buildDiscordAvatarUrl(discordId, readString(discordUser?.avatar)) ??
+    readAvatarUrl(identityData.avatar_url) ??
+    readAvatarUrl(identityData.picture) ??
+    readAvatarUrl(metadata.avatar_url) ??
+    readAvatarUrl(metadata.picture) ??
+    buildDiscordAvatarUrl(
+      discordId,
+      readString(identityData.avatar) ?? readString(metadata.avatar),
+    )
+
   return {
     discordId,
     discordUsername: username,
     displayName,
-    avatarUrl:
-      readString(identityData.avatar_url) ??
-      readString(identityData.picture) ??
-      readString(metadata.avatar_url) ??
-      readString(metadata.picture),
+    avatarUrl,
+    refreshedFromDiscord: Boolean(discordUser),
   }
 }
 
@@ -181,6 +211,57 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null
+}
+
+function readAvatarUrl(value: unknown) {
+  const avatarUrl = readString(value)
+  return isSafeAvatarUrl(avatarUrl) ? avatarUrl : null
+}
+
+type DiscordCurrentUser = {
+  id?: unknown
+  username?: unknown
+  discriminator?: unknown
+  global_name?: unknown
+  avatar?: unknown
+}
+
+async function fetchDiscordCurrentUser(providerToken: string | null | undefined): Promise<DiscordCurrentUser | null> {
+  const token = readString(providerToken)
+  if (!token) return null
+
+  try {
+    const response = await fetch("https://discord.com/api/users/@me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      console.warn("Discord profile refresh skipped:", {
+        status: response.status,
+        statusText: response.statusText,
+      })
+      return null
+    }
+
+    const data = await response.json()
+    return data && typeof data === "object" ? data as DiscordCurrentUser : null
+  } catch (error) {
+    console.warn("Discord profile refresh failed:", error)
+    return null
+  }
+}
+
+function formatDiscordUsername(discordUser: DiscordCurrentUser | null) {
+  if (!discordUser) return null
+
+  const username = readString(discordUser.username)
+  if (!username) return null
+
+  const discriminator = readString(discordUser.discriminator)
+  return discriminator ? `${username}#${discriminator}` : username
 }
 
 function logSupabaseError(context: string, error: unknown) {

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { removeTeamMember, updateTeamMemberRole, leaveTeam } from "@/app/actions/teams"
 import { createTeamInvite, cancelTeamInvite } from "@/app/actions/invites"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
 import { Search, X, UserCheck, Inbox, LogOut } from "lucide-react"
 import { TeamJoinRequestsPanel, type PendingJoinRequest } from "@/components/team-join-requests"
 
@@ -282,17 +283,20 @@ export function TeamRosterManager({
                       <div className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400/70">
                         {t.account.invites.approvedPlayers} ({filteredCandidates.length})
                       </div>
-                      {filteredCandidates.map((player) => (
-                        <button
-                          key={player.id}
-                          type="button"
-                          onClick={() => handleSelectCandidate(player)}
-                          className="w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-3 hover:bg-white/[0.04] transition cursor-pointer"
-                        >
+                      {filteredCandidates.map((player) => {
+                        const avatarUrl = withAvatarCacheBust(player.avatar_url, null)
+
+                        return (
+                          <button
+                            key={player.id}
+                            type="button"
+                            onClick={() => handleSelectCandidate(player)}
+                            className="w-full text-left rounded-lg px-2.5 py-2 flex items-center gap-3 hover:bg-white/[0.04] transition cursor-pointer"
+                          >
                           {/* Player Avatar */}
-                          {player.avatar_url ? (
+                          {avatarUrl ? (
                             <img
-                              src={player.avatar_url}
+                              src={avatarUrl}
                               alt=""
                               className="h-7 w-7 rounded-full object-cover border border-white/5 shrink-0"
                             />
@@ -321,8 +325,9 @@ export function TeamRosterManager({
                               )}
                             </div>
                           </div>
-                        </button>
-                      ))}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </motion.div>
@@ -354,6 +359,7 @@ export function TeamRosterManager({
           {members.map((member) => {
             const isOwner = member.player_id === ownerPlayerId
             const isCaptain = member.role === "captain"
+            const avatarUrl = withAvatarCacheBust(member.avatar_url, null)
 
             const isViewerOwner = currentPlayerId === ownerPlayerId
             const isViewerCaptain = !isViewerOwner && members.find(m => m.player_id === currentPlayerId)?.role === "captain"
@@ -367,9 +373,9 @@ export function TeamRosterManager({
                 className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 p-3.5 transition hover:border-white/10"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
-                  {member.avatar_url ? (
+                  {avatarUrl ? (
                     <img
-                       src={member.avatar_url}
+                       src={avatarUrl}
                       alt=""
                       className="h-8 w-8 rounded-full object-cover border border-white/10 shrink-0"
                     />

@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { Shield } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 export type TeamCard = {
   id: string
@@ -118,19 +120,27 @@ function TeamCardContent({ team }: { team: TeamCard }) {
 
 function CardAvatar({ team }: { team: TeamCard }) {
   const { t } = useLanguage()
+  const [imageError, setImageError] = useState(false)
+  const avatarUrl = withAvatarCacheBust(team.avatarUrl, null)
 
-  if (team.avatarUrl) {
+  useEffect(() => {
+    setImageError(false)
+  }, [avatarUrl])
+
+  if (avatarUrl && !imageError) {
     return (
       <div
         className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-primary/25 transition-shadow duration-300 group-hover:shadow-[var(--glow)]"
         style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
       >
         <Image
-          src={team.avatarUrl}
+          src={avatarUrl}
           alt={team.avatarAlt ? t.teamsGrid.discordAvatarAlt.replace("{name}", team.avatarAlt) : ""}
           width={64}
           height={64}
           className="h-full w-full rounded-xl object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setImageError(true)}
         />
       </div>
     )

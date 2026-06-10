@@ -8,6 +8,7 @@ import { AdminShortcut } from "@/components/admin-shortcut"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getApprovedPlayers } from "@/lib/data/players"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { withAvatarCacheBust } from "@/lib/avatar"
 import { getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
@@ -46,6 +47,8 @@ async function ActiveNavbar() {
 }
 
 async function ActivePlayersGrid() {
+  await getCurrentUserProfile()
+
   const [approvedPlayers, t] = await Promise.all([
     getApprovedPlayers(),
     getTranslations(),
@@ -68,7 +71,7 @@ async function ActivePlayersGrid() {
       losses: player.losses,
       rank: seed ?? index + 1,
       profileHref: `/players/${player.id}`,
-      avatarUrl: player.owner_profile?.avatar_url ?? null,
+      avatarUrl: withAvatarCacheBust(player.owner_profile?.avatar_url, player.owner_profile?.updated_at),
       avatarAlt:
         player.owner_profile?.discord_username ??
         player.owner_profile?.display_name ??

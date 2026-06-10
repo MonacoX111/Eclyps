@@ -1,8 +1,10 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { redirect } from "next/navigation"
+import { getCurrentUserProfile, upsertUserProfileFromAuthUser } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export type ActionResponse = {
   ok: boolean
@@ -87,4 +89,31 @@ export async function updateOwnPlayerProfile(formData: FormData): Promise<Action
     console.error("updateOwnPlayerProfile: Unexpected exception:", err)
     return { ok: false, error: "unexpected-error" }
   }
+}
+
+export async function refreshDiscordProfile() {
+  const supabase = await createSupabaseServerClient()
+  const [{ data, error }, sessionResult] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ])
+
+  if (error || !data.user) {
+    redirect("/account?discordRefresh=error")
+  }
+
+  const { profile: userProfile, refreshedFromDiscord } = await upsertUserProfileFromAuthUser(
+    data.user,
+    sessionResult.data.session?.provider_token,
+  )
+  if (!userProfile) {
+    redirect("/account?discordRefresh=error")
+  }
+
+  revalidatePath("/account")
+  revalidatePath("/players")
+  revalidatePath(`/players/${userProfile.id}`)
+  revalidatePath("/")
+
+  redirect(`/account?discordRefresh=${refreshedFromDiscord ? "updated" : "stale"}`)
 }

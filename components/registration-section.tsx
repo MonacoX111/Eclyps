@@ -9,6 +9,7 @@ import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { SectionHeading } from "@/components/section-heading"
 import { PlayerOnboardingModal } from "@/components/player-onboarding-modal"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
 import type { PlatformUserState } from "@/lib/auth/player-state"
 import {
   formatKyivCheckInDateWithLabel,
@@ -46,6 +47,7 @@ export function RegistrationSection({
   if (!summary) return null
 
   const userProfile = platformState?.userProfile ?? null
+  const userAvatarUrl = withAvatarCacheBust(userProfile?.avatar_url, userProfile?.updated_at)
   const approvedPlayer = platformState?.approvedPlayer ?? null
   const playerApplication = platformState?.playerApplication ?? null
   const tournamentRegistration = platformState?.tournamentRegistration ?? null
@@ -238,9 +240,9 @@ export function RegistrationSection({
               ) : null}
               {userProfile ? (
                 <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
-                  {userProfile.avatar_url ? (
+                  {userAvatarUrl ? (
                     <Image
-                      src={userProfile.avatar_url}
+                      src={userAvatarUrl}
                       alt=""
                       width={36}
                       height={36}

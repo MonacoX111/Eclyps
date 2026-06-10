@@ -29,7 +29,9 @@ import { AccountNotificationsList } from "@/components/account-notifications-lis
 import { AccountAvatar } from "@/components/account-avatar"
 import { ProfileTabs, useProfileTab, type ProfileTabItem } from "@/components/profile-tabs"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { getAvatarVersion, withAvatarCacheBust } from "@/lib/avatar"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
+import { refreshDiscordProfile } from "@/app/account/actions"
 import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
 import { leaveTeam } from "@/app/actions/teams"
 import { cancelTeamJoinRequest } from "@/app/actions/team-join-requests"
@@ -67,6 +69,7 @@ export type AccountDashboardClientProps = {
     inviteSuccess?: string
     joinRequestError?: string
     joinRequestSuccess?: string
+    discordRefresh?: string
   }
   invitesList?: any[]
   joinRequestsList?: any[]
@@ -88,6 +91,20 @@ export function AccountDashboardClient({
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
 
   React.useEffect(() => {
+    if (searchParams?.discordRefresh) {
+      if (searchParams.discordRefresh === "updated") {
+        setSuccessMessage(t.account.discordRefreshSuccess)
+      } else if (searchParams.discordRefresh === "stale") {
+        setSuccessMessage(t.account.discordRefreshSignInAgain)
+      } else {
+        setErrorMessage(t.account.discordRefreshError)
+      }
+      const timer = setTimeout(() => {
+        setErrorMessage(null)
+        setSuccessMessage(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
     if (searchParams?.inviteError) {
       const messages: Record<string, string> = {
         "unauthorized": t.account.invites.errors.unauthorized,
@@ -148,7 +165,7 @@ export function AccountDashboardClient({
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, searchParams?.joinRequestError, searchParams?.joinRequestSuccess, lang, t])
+  }, [searchParams?.discordRefresh, searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, searchParams?.joinRequestError, searchParams?.joinRequestSuccess, lang, t])
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
@@ -180,6 +197,10 @@ export function AccountDashboardClient({
   const winRate = matches > 0 ? `${Math.round((wins / matches) * 100)}%` : "0%"
   const rating = player.rating ?? 1000
   const displayName = player.nickname || player.display_name || player.name
+  const accountAvatarUrl = withAvatarCacheBust(
+    player.avatar_url || userProfile.avatar_url,
+    getAvatarVersion(userProfile.updated_at),
+  )
   const seedLabel = player.seed !== null && player.seed !== undefined ? `#${player.seed}` : t.account.notSpecified
 
   const displayStatus = (status: string | null | undefined) =>
@@ -297,7 +318,7 @@ export function AccountDashboardClient({
           </div>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <AccountAvatar
-              url={player.avatar_url || userProfile.avatar_url}
+              url={accountAvatarUrl}
               displayName={displayName}
               className="h-24 w-24 sm:h-28 sm:w-28"
               textClassName="text-4xl"
@@ -658,6 +679,14 @@ export function AccountDashboardClient({
                 variant="modal"
                 buttonClassName="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.25)] cursor-pointer"
               />
+              <form action={refreshDiscordProfile}>
+                <button
+                  type="submit"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
+                >
+                  {t.account.refreshDiscordProfile}
+                </button>
+              </form>
               <Link
                 href={`/players/${player.id}`}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"

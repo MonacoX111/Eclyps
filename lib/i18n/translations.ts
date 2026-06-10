@@ -729,6 +729,10 @@ const rawTranslations = {
       checkInState: "Чек-ін",
       pendingPlacement: "Очікує",
       settingsDescription: "Оновіть дані профілю або відкрийте публічний профіль.",
+      refreshDiscordProfile: "Оновити Discord профіль",
+      discordRefreshSuccess: "Discord профіль оновлено",
+      discordRefreshError: "Не вдалося оновити Discord профіль",
+      discordRefreshSignInAgain: "Щоб підтягнути останній аватар Discord, вийдіть і увійдіть знову",
       stats: {
         elo: "ELO",
         matches: "Матчі",
@@ -2220,6 +2224,10 @@ const rawTranslations = {
       checkInState: "Check-in",
       pendingPlacement: "Pending",
       settingsDescription: "Update profile details or open the public profile.",
+      refreshDiscordProfile: "Refresh Discord Profile",
+      discordRefreshSuccess: "Discord profile updated",
+      discordRefreshError: "Failed to refresh Discord profile",
+      discordRefreshSignInAgain: "To fetch the latest Discord avatar, sign out and sign in again",
       stats: {
         elo: "ELO",
         matches: "Matches",

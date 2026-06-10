@@ -42,6 +42,7 @@ export type PublicProfileRecord = {
   nickname: string | null
   region: string | null
   image_url: string | null
+  image_updated_at: string | null
   seed: number | null
   rating: number | null
   rating_matches_played: number | null
@@ -206,12 +207,13 @@ type ProfilePlayerOwnerProfile = {
   avatar_url: string | null
   discord_username: string | null
   display_name: string | null
+  updated_at: string | null
 }
 
 const PLAYER_SELECT_WITH_REGION =
-  "id, tournament_id, name, nickname, region, seed, rating, rating_matches_played, rank_position, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
+  "id, tournament_id, name, nickname, region, seed, rating, rating_matches_played, rank_position, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name, updated_at)"
 const PLAYER_SELECT_WITH_REGION_NO_RATING =
-  "id, tournament_id, name, nickname, region, seed, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)"
+  "id, tournament_id, name, nickname, region, seed, wins, losses, status, user_id, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name, updated_at)"
 const PLAYER_SELECT_FALLBACK =
   "id, tournament_id, name, nickname, seed, wins, losses, status, user_id"
 const TEAM_SELECT_WITH_RATING =
@@ -834,6 +836,10 @@ function toPublicProfileRecord({
         : source && "owner_profile" in source
           ? source.owner_profile?.avatar_url ?? participant?.avatar_url ?? participant?.logo_url ?? null
           : participant?.avatar_url ?? participant?.logo_url ?? null,
+    image_updated_at:
+      kind === "player" && source && "owner_profile" in source
+        ? source.owner_profile?.updated_at ?? null
+        : null,
     seed: participant?.seed ?? source?.seed ?? null,
     rating: source?.rating ?? null,
     rating_matches_played: source?.rating_matches_played ?? null,
@@ -1598,13 +1604,15 @@ function normalizePlayerOwnerProfile(
   const avatarUrl = readNullableString(record.avatar_url)
   const discordUsername = readNullableString(record.discord_username)
   const displayName = readNullableString(record.display_name)
+  const updatedAt = readNullableString(record.updated_at)
 
-  if (!avatarUrl && !discordUsername && !displayName) return null
+  if (!avatarUrl && !discordUsername && !displayName && !updatedAt) return null
 
   return {
     avatar_url: avatarUrl,
     discord_username: discordUsername,
     display_name: displayName,
+    updated_at: updatedAt,
   }
 }
 

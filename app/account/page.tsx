@@ -20,6 +20,7 @@ type AccountPageProps = {
     teamSuccess?: string
     joinRequestError?: string
     joinRequestSuccess?: string
+    discordRefresh?: string
   }>
 }
 
@@ -88,6 +89,7 @@ async function AccountDashboard({
     teamSuccess?: string
     joinRequestError?: string
     joinRequestSuccess?: string
+    discordRefresh?: string
   }
 }) {
   const userProfileId = userProfile.id

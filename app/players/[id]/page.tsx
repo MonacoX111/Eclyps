@@ -18,9 +18,9 @@ export default async function PlayerProfilePage({
   params,
 }: PlayerProfilePageProps) {
   const { id } = await params
-  const [data, userProfile, t] = await Promise.all([
+  const userProfile = await getCurrentUserProfile()
+  const [data, t] = await Promise.all([
     getPublicPlayerProfile(id),
-    getCurrentUserProfile(),
     getTranslations(),
   ])
 

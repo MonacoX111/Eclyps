@@ -8,6 +8,7 @@ import { logoutDiscord } from "@/app/auth/actions"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { withAvatarCacheBust } from "@/lib/avatar"
 import { NotificationsBell } from "@/components/notifications-bell"
 
 type NavbarProps = {
@@ -278,10 +279,12 @@ function MobileAuthAvatar({ userProfile }: { userProfile: UserProfile | null }) 
 }
 
 function Avatar({ userProfile }: { userProfile: UserProfile }) {
-  if (userProfile.avatar_url) {
+  const avatarUrl = withAvatarCacheBust(userProfile.avatar_url, userProfile.updated_at)
+
+  if (avatarUrl) {
     return (
       <Image
-        src={userProfile.avatar_url}
+        src={avatarUrl}
         alt=""
         width={28}
         height={28}

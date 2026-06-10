@@ -26,6 +26,7 @@ import { ProfileTabs, useProfileTab, type ProfileTabItem } from "@/components/pr
 import { getPlayerAchievements, getTeamAchievements } from "@/lib/data/achievements"
 import type { PublicPlayerTeam, PublicProfileData, PublicTeamMember } from "@/lib/data/profiles"
 import type { UserProfile } from "@/lib/auth/user-profile"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 type PublicProfilePageProps = {
   data: PublicProfileData
@@ -65,6 +66,7 @@ export function PublicProfilePage({ data, userProfile = null, children }: Public
               >
                 <ProfileImage
                   imageUrl={profile.image_url}
+                  imageVersion={profile.image_updated_at}
                   name={profile.display_name}
                   kind={profile.kind}
                 />
@@ -609,6 +611,7 @@ function TeamRosterSection({ data }: { data: PublicProfileData }) {
 
 function TeamRosterCard({ member }: { member: PublicTeamMember }) {
   const { t } = useLanguage()
+  const avatarUrl = withAvatarCacheBust(member.avatar_url, null)
 
   return (
     <Link
@@ -616,9 +619,9 @@ function TeamRosterCard({ member }: { member: PublicTeamMember }) {
       className="group flex min-w-0 items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/20 p-4 transition hover:border-emerald-400/25 hover:bg-white/[0.035]"
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        {member.avatar_url ? (
+        {avatarUrl ? (
           <img
-            src={member.avatar_url}
+            src={avatarUrl}
             alt=""
             className="h-11 w-11 shrink-0 rounded-full border border-white/10 object-cover"
           />
@@ -1023,22 +1026,26 @@ export function PublicProfileError({
 
 function ProfileImage({
   imageUrl,
+  imageVersion,
   name,
   kind,
 }: {
   imageUrl: string | null
+  imageVersion: string | null
   name: string
   kind: "team" | "player"
 }) {
+  const avatarUrl = withAvatarCacheBust(imageUrl, imageVersion)
+
   return (
     <div
       className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl transition-shadow duration-300 md:h-36 md:w-36"
       style={{ background: "oklch(0.78 0.18 165 / 0.08)" }}
     >
-      {imageUrl ? (
+      {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={imageUrl}
+          src={avatarUrl}
           alt={`${name} ${kind === "team" ? "logo" : "avatar"}`}
           className="h-full w-full object-cover"
         />

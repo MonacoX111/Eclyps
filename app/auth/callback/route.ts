@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser()
   if (data.user) {
-    const userProfile = await upsertUserProfileFromAuthUser(data.user)
+    const { data: sessionData } = await supabase.auth.getSession()
+    const { profile: userProfile } = await upsertUserProfileFromAuthUser(data.user, sessionData.session?.provider_token)
     if (userProfile && hasPlayerApplicationIntent) {
       await createPlayerApplicationFromIntent(userProfile)
     }

@@ -92,6 +92,7 @@ export type ApprovedPlayerCard = {
     avatar_url: string | null
     discord_username: string | null
     display_name: string | null
+    updated_at: string | null
   } | null
 }
 
@@ -106,7 +107,7 @@ export async function getApprovedPlayers(): Promise<ApprovedPlayerCard[]> {
   try {
     const { data, error } = await supabase
       .from("players")
-      .select("id, name, nickname, display_name, real_name, seed, wins, losses, status, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name)")
+      .select("id, name, nickname, display_name, real_name, seed, wins, losses, status, owner_profile:user_profiles!players_owner_user_id_fkey(avatar_url, discord_username, display_name, updated_at)")
       .eq("status", "approved")
       .order("seed", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true })
@@ -152,7 +153,7 @@ function normalizeApprovedPlayer(row: Record<string, unknown>): ApprovedPlayerCa
 
 function normalizeApprovedPlayerOwnerProfile(
   value: unknown,
-): { avatar_url: string | null; discord_username: string | null; display_name: string | null } | null {
+): { avatar_url: string | null; discord_username: string | null; display_name: string | null; updated_at: string | null } | null {
   const row = Array.isArray(value) ? value[0] : value
   if (!row || typeof row !== "object") return null
 
@@ -160,12 +161,14 @@ function normalizeApprovedPlayerOwnerProfile(
   const avatarUrl = readNullableString(record.avatar_url)
   const discordUsername = readNullableString(record.discord_username)
   const displayName = readNullableString(record.display_name)
+  const updatedAt = readNullableString(record.updated_at)
 
-  if (!avatarUrl && !discordUsername && !displayName) return null
+  if (!avatarUrl && !discordUsername && !displayName && !updatedAt) return null
 
   return {
     avatar_url: avatarUrl,
     discord_username: discordUsername,
     display_name: displayName,
+    updated_at: updatedAt,
   }
 }

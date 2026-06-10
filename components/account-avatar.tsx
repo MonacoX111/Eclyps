@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 type AccountAvatarProps = {
   url: string | null
@@ -18,11 +19,12 @@ export function AccountAvatar({ url, displayName, className, textClassName }: Ac
 
   const initial = displayName ? displayName.slice(0, 1).toUpperCase() : "M"
   const sizeClassName = className ?? "h-12 w-12"
+  const avatarUrl = withAvatarCacheBust(url, null)
 
-  if (url && !error) {
+  if (avatarUrl && !error) {
     return (
       <img
-        src={url}
+        src={avatarUrl}
         alt={displayName}
         className={`${sizeClassName} rounded-full border border-primary/30 object-cover shrink-0`}
         referrerPolicy="no-referrer"

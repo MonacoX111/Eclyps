@@ -8,6 +8,7 @@ import {
   rejectTeamJoinRequest,
 } from "@/app/actions/team-join-requests"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 export type CurrentJoinRequest = {
   id: string
@@ -191,15 +192,18 @@ export function TeamJoinRequestsPanel({
         </div>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {pendingRequests.map((request) => (
+          {pendingRequests.map((request) => {
+            const avatarUrl = withAvatarCacheBust(request.avatar_url, null)
+
+            return (
             <div
               key={request.id}
               className="rounded-xl border border-white/5 bg-black/20 p-3.5 transition hover:border-white/10"
             >
               <div className="flex items-start gap-3">
-                {request.avatar_url ? (
+                {avatarUrl ? (
                   <img
-                    src={request.avatar_url}
+                    src={avatarUrl}
                     alt=""
                     className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover"
                   />
@@ -250,7 +254,8 @@ export function TeamJoinRequestsPanel({
                 </form>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
