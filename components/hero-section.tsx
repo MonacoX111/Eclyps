@@ -2,13 +2,33 @@
 
 import { m } from "framer-motion"
 import Image from "next/image"
+import Link from "next/link"
+import { useState } from "react"
+import { ExternalLink, Radio, Swords } from "lucide-react"
 import { InstagramCta } from "@/components/instagram-cta"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
+import type { TranslationSchema } from "@/lib/i18n/translations"
+
+export type HeroMatchParticipant = {
+  name: string
+  imageUrl: string | null
+  kind: "player" | "team"
+  score: number | null
+}
+
+export type HeroFeaturedMatch = {
+  id: string
+  label: string
+  status: "upcoming" | "live" | "finished"
+  participants: [HeroMatchParticipant, HeroMatchParticipant]
+}
 
 type HeroSectionProps = {
   tournamentName?: string
   tournamentDate?: string
   registrationStatus?: string
+  featuredMatch?: HeroFeaturedMatch | null
 }
 
 const statusTranslations: Record<string, { uk: string; en: string }> = {
@@ -23,6 +43,7 @@ export function HeroSection({
   tournamentName = "Summer Private Cup",
   tournamentDate = "June 21, 2026",
   registrationStatus = "Registration Open",
+  featuredMatch = null,
 }: HeroSectionProps) {
   const { lang, t } = useLanguage()
 
@@ -100,6 +121,17 @@ export function HeroSection({
         {tournamentName}
       </m.p>
 
+      {featuredMatch ? (
+        <m.div
+          className="relative z-10 mb-8 w-full max-w-3xl px-1"
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.72 }}
+        >
+          <FeaturedMatchCard match={featuredMatch} />
+        </m.div>
+      ) : null}
+
       {/* Date & Status */}
       <m.div
         className="relative z-10 mb-8 flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-sm text-muted-foreground md:text-base"
@@ -128,20 +160,134 @@ export function HeroSection({
         <InstagramCta />
       </m.div>
 
-      {/* Scroll indicator */}
-      <m.div
-        className="absolute bottom-8 z-10 flex flex-col items-center gap-2 text-muted-foreground"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-      >
-        <span className="text-xs tracking-widest uppercase">{t.hero.scroll}</span>
-        <m.div
-          className="h-8 w-px bg-primary/40"
-          animate={{ scaleY: [0.5, 1, 0.5], opacity: [0.3, 0.8, 0.3] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      </m.div>
     </section>
   )
+}
+
+function FeaturedMatchCard({ match }: { match: HeroFeaturedMatch }) {
+  const { t } = useLanguage()
+  const isLive = match.status === "live"
+
+  return (
+    <Link
+      href={`/matches/${match.id}`}
+      className={[
+        "group relative block overflow-hidden rounded-2xl border bg-black/35 px-4 py-4 backdrop-blur-md transition duration-300 md:px-5",
+        isLive
+          ? "border-primary/45 shadow-[0_0_44px_oklch(0.78_0.18_165_/_0.16)]"
+          : "border-primary/20 hover:border-primary/45 hover:bg-black/45",
+      ].join(" ")}
+    >
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165_/_0.10),transparent_42%)] opacity-80" />
+
+      <div className="relative z-10 mb-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.28em] text-primary uppercase">
+          {isLive ? <Radio className="h-3.5 w-3.5" /> : <Swords className="h-3.5 w-3.5" />}
+          {t.hero.featuredMatch}
+        </span>
+        <span className="text-xs text-white/35">/</span>
+        <span className="max-w-full break-words text-xs font-medium text-white/55">
+          {match.label}
+        </span>
+      </div>
+
+      <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 md:gap-5">
+        <MatchParticipant participant={match.participants[0]} side="left" />
+
+        <div className="flex flex-col items-center gap-2">
+          <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 font-mono text-xs font-bold tracking-[0.28em] text-primary md:text-sm">
+            VS
+          </span>
+          <span
+            className={[
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest",
+              isLive ? "bg-primary/15 text-primary" : "bg-white/5 text-white/55",
+            ].join(" ")}
+          >
+            {formatMatchStatus(match.status, t)}
+          </span>
+        </div>
+
+        <MatchParticipant participant={match.participants[1]} side="right" />
+      </div>
+
+      <div className="relative z-10 mt-4 flex justify-center">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary/80 transition group-hover:text-primary">
+          {t.matchPage.matchPage}
+          <ExternalLink className="h-3.5 w-3.5" />
+        </span>
+      </div>
+    </Link>
+  )
+}
+
+function MatchParticipant({
+  participant,
+  side,
+}: {
+  participant: HeroMatchParticipant
+  side: "left" | "right"
+}) {
+  return (
+    <div
+      className={[
+        "flex min-w-0 items-center gap-3",
+        side === "right" ? "flex-row-reverse text-right" : "",
+      ].join(" ")}
+    >
+      <MatchParticipantAvatar participant={participant} />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold text-foreground md:text-lg" title={participant.name}>
+          {participant.name}
+        </p>
+        <p className="mt-1 font-mono text-xs text-white/45">
+          {participant.score === null ? "-" : participant.score}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function MatchParticipantAvatar({ participant }: { participant: HeroMatchParticipant }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const imageUrl = imageFailed ? null : withAvatarCacheBust(participant.imageUrl, null)
+  const initials = getParticipantInitials(participant.name)
+
+  return (
+    <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-black/50 font-mono text-sm font-bold text-primary shadow-[inset_0_0_18px_oklch(0.78_0.18_165_/_0.08)] md:h-16 md:w-16 md:text-base">
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={`${participant.name} ${participant.kind === "team" ? "logo" : "avatar"}`}
+          className={[
+            "h-full w-full",
+            participant.kind === "team" ? "object-contain p-2" : "object-cover",
+          ].join(" ")}
+          loading="eager"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </span>
+  )
+}
+
+function formatMatchStatus(status: HeroFeaturedMatch["status"], t: TranslationSchema) {
+  if (status === "live") return t.schedule.live
+  if (status === "finished") return t.bracket.finished
+  return t.bracket.upcoming
+}
+
+function getParticipantInitials(name: string) {
+  const normalized = name.trim()
+  if (!normalized || normalized.toUpperCase() === "TBD") return "?"
+
+  const parts = normalized.split(/\s+/).filter(Boolean)
+  const initials = parts.length > 1
+    ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
+    : normalized.slice(0, 2)
+
+  return initials.toUpperCase()
 }

@@ -27,6 +27,7 @@ const rawTranslations = {
     },
     hero: {
       nextEvent: "НАСТУПНА ПОДІЯ",
+      featuredMatch: "Головний матч",
       scroll: "Прокрутити",
       ourInstagram: "Наш Instagram",
     },
@@ -1525,6 +1526,7 @@ const rawTranslations = {
     },
     hero: {
       nextEvent: "NEXT EVENT",
+      featuredMatch: "Featured match",
       scroll: "Scroll",
       ourInstagram: "Our Instagram",
     },
