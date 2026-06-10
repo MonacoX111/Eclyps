@@ -46,9 +46,10 @@ export type PublicBracketLabels = {
 
 type PublicBracketProps = {
   bracket?: PublicBracketData | null
+  showMatchPageLink?: boolean
 }
 
-export function PublicBracket({ bracket }: PublicBracketProps) {
+export function PublicBracket({ bracket, showMatchPageLink = true }: PublicBracketProps) {
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export function PublicBracket({ bracket }: PublicBracketProps) {
               match={finalMatch}
               champion={bracket!.champion}
               labels={bracket!.labels}
+              showMatchPageLink={showMatchPageLink}
             />
           ) : (
             <MultiRoundBracket bracket={bracket!} finalMatch={finalMatch} />
@@ -117,10 +119,12 @@ function FinalOnlyBracket({
   match,
   champion,
   labels,
+  showMatchPageLink,
 }: {
   match: PublicBracketMatch
   champion: string | null
   labels: PublicBracketLabels
+  showMatchPageLink: boolean
 }) {
   const { t } = useLanguage()
 
@@ -128,6 +132,7 @@ function FinalOnlyBracket({
     <div className="relative">
       <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)]">
         <m.div
+          className="relative z-10 min-w-0"
           initial={{ opacity: 0, x: -24 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
@@ -137,11 +142,12 @@ function FinalOnlyBracket({
             participant={match.participants[0]}
             matchStatus={match.status}
             label={labels.participantLabel}
+            side="left"
           />
         </m.div>
 
         <m.div
-          className="relative order-first flex justify-center lg:order-none"
+          className="relative z-0 order-first flex min-w-0 justify-center lg:order-none"
           initial={{ opacity: 0, scale: 0.94 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
@@ -153,6 +159,7 @@ function FinalOnlyBracket({
         </m.div>
 
         <m.div
+          className="relative z-10 min-w-0"
           initial={{ opacity: 0, x: 24 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
@@ -162,18 +169,21 @@ function FinalOnlyBracket({
             participant={match.participants[1]}
             matchStatus={match.status}
             label={labels.participantLabel}
+            side="right"
           />
         </m.div>
       </div>
-      <div className="mt-6 flex justify-center">
-        <Link
-          href={`/matches/${match.id}`}
-          className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary/50 hover:bg-primary/15"
-        >
-          {t.matchPage.matchPage}
-          <ExternalLink className="h-4 w-4" />
-        </Link>
-      </div>
+      {showMatchPageLink ? (
+        <div className="mt-6 flex justify-center">
+          <Link
+            href={`/matches/${match.id}`}
+            className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary/50 hover:bg-primary/15"
+          >
+            {t.matchPage.matchPage}
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -293,10 +303,10 @@ function ConnectorLine({
   return (
     <span
       className={[
-        "pointer-events-none absolute top-1/2 hidden h-px w-24 -translate-y-1/2 bg-gradient-to-r lg:block",
+        "pointer-events-none absolute top-1/2 hidden h-px w-24 -translate-y-1/2 bg-primary/45 shadow-[0_0_12px_oklch(0.78_0.18_165_/_0.35)] lg:block",
         direction === "left"
-          ? "right-[calc(50%+70px)] from-transparent to-primary/55"
-          : "left-[calc(50%+70px)] from-primary/55 to-transparent",
+          ? "right-[calc(50%+70px)]"
+          : "left-[calc(50%+70px)]",
         active ? "bracket-line-pulse" : "",
       ].join(" ")}
     />
@@ -307,10 +317,12 @@ function FinalistPanel({
   participant,
   matchStatus,
   label,
+  side,
 }: {
   participant: PublicBracketParticipant
   matchStatus: PublicBracketMatch["status"]
   label: string
+  side: "left" | "right"
 }) {
   const { t } = useLanguage()
   const isLoser = matchStatus === "finished" && participant.id && !participant.isWinner
@@ -327,8 +339,13 @@ function FinalistPanel({
       ].join(" ")}
     >
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
+      <div
+        className={[
+          "flex items-center justify-between gap-4",
+          side === "right" ? "lg:flex-row-reverse" : "",
+        ].join(" ")}
+      >
+        <div className={["min-w-0", side === "right" ? "lg:text-right" : ""].join(" ")}>
           <p className="mb-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
             {label}
           </p>

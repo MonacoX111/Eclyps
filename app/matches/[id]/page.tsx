@@ -131,7 +131,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
         </div>
         </section>
 
-        <PublicBracket bracket={bracket} />
+        <PublicBracket bracket={bracket} showMatchPageLink={false} />
       </MotionProvider>
 
       <Footer />
