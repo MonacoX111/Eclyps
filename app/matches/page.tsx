@@ -110,7 +110,7 @@ function MatchTabs({ activeTab, t }: { activeTab: MatchTab; t: any }) {
   ]
 
   return (
-    <div className="mt-6 overflow-x-auto pb-1">
+    <div className="-mx-4 mt-6 overflow-x-auto px-4 pb-1">
       <div className="flex min-w-max gap-2">
         {tabs.map((tab) => (
           <Link
@@ -148,7 +148,7 @@ function UnifiedMatchCard({
   const hasScore = match.score1 !== null && match.score2 !== null
 
   return (
-    <article className="glass-card grid gap-4 rounded-2xl p-5 transition hover:border-primary/30 md:grid-cols-[minmax(0,1fr)_auto]">
+    <article className="glass-card grid gap-4 rounded-2xl p-4 transition hover:border-primary/30 sm:p-5 md:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {tournamentName ? (
@@ -164,12 +164,12 @@ function UnifiedMatchCard({
           <StatusBadge status={match.status} t={t} />
         </div>
 
-        <h2 className="mt-3 break-words text-xl font-black text-foreground md:text-2xl">
+        <h2 className="mt-3 break-words text-lg font-black leading-tight text-foreground sm:text-xl md:text-2xl">
           {leftName} <span className="text-primary/70">{t.schedule.vs}</span> {rightName}
         </h2>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/55">
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarClock className="h-4 w-4 text-primary" />
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-white/55">
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <CalendarClock className="h-4 w-4 shrink-0 text-primary" />
             {formatMatchScheduleTime({
               scheduledAt: match.scheduled_at,
               timezone: match.timezone,
@@ -186,13 +186,13 @@ function UnifiedMatchCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 md:justify-end">
-        <span className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 font-mono text-xl font-black text-primary">
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center md:w-auto md:justify-end">
+        <span className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-center font-mono text-xl font-black text-primary">
           {hasScore ? `${match.score1}:${match.score2}` : "-:-"}
         </span>
         <Link
           href={`/matches/${match.id}`}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-primary/40 hover:text-primary"
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-primary/40 hover:text-primary"
         >
           {t.matchPage.matchPage}
           <ExternalLink className="h-4 w-4" />

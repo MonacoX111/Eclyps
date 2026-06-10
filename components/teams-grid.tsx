@@ -37,7 +37,7 @@ export function TeamsGrid({
   const sectionId = participantLabel === "Players" ? "players" : "teams"
 
   return (
-    <section className="relative z-10 px-4 py-24" id={sectionId}>
+    <section className="relative z-10 px-4 py-16 sm:py-24" id={sectionId}>
       <div className="mx-auto max-w-6xl">
         <SectionHeading 
           eyebrow={t.teamsGrid.eyebrow} 
@@ -49,11 +49,11 @@ export function TeamsGrid({
             {t.teamsGrid.noRegistered}
           </p>
         ) : (
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {teams.map((team, i) => (
               <m.div
                 key={team.id}
-                className="glass-card group relative flex w-full flex-col items-center gap-4 overflow-hidden rounded-xl p-6 transition-all duration-300 sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-3rem)/4)]"
+                className="glass-card group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-xl p-5 transition-all duration-300 sm:w-[calc((100%-1rem)/2)] sm:gap-4 sm:p-6 lg:w-[calc((100%-3rem)/4)]"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -84,16 +84,16 @@ function TeamCardContent({ team }: { team: TeamCard }) {
 
       <CardAvatar team={team} />
 
-      <div className="text-center">
-        <h3 className="break-words text-lg font-bold text-foreground">
+      <div className="min-w-0 max-w-full text-center">
+        <h3 className="max-w-full break-words text-base font-bold text-foreground sm:text-lg">
           {team.name}
         </h3>
         {team.subtitle && (
-          <p className="mt-1 break-words text-xs text-muted-foreground">
+          <p className="mt-1 max-w-full break-words text-xs text-muted-foreground">
             {team.subtitle}
           </p>
         )}
-        <p className="mb-3 break-all font-mono text-xs text-muted-foreground">
+        <p className="mb-3 max-w-full break-all font-mono text-xs text-muted-foreground">
           [{team.tag}]
         </p>
         <div className="flex items-center justify-center gap-3 text-sm">
@@ -110,7 +110,7 @@ function TeamCardContent({ team }: { team: TeamCard }) {
   return (
     <Link
       href={team.profileHref}
-      className="flex w-full flex-col items-center gap-4"
+      className="flex w-full min-w-0 flex-col items-center gap-3 sm:gap-4"
       aria-label={t.teamsGrid.openProfileLabel.replace("{name}", team.name)}
     >
       {content}

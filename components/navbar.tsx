@@ -67,7 +67,7 @@ export function Navbar({
           borderColor: "oklch(0.78 0.18 165 / 0.1)",
         }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-3 sm:px-4">
           {/* Logo */}
           <a href={homeHref} className="flex items-center gap-2">
             <Image
@@ -77,7 +77,7 @@ export function Navbar({
               height={36}
               loading="lazy"
               sizes="36px"
-              className="h-9 w-9 object-contain"
+              className="h-8 w-8 object-contain sm:h-9 sm:w-9"
             />
             <span className="hidden text-sm font-bold tracking-wider uppercase text-foreground sm:inline">
               Eclyps
@@ -127,12 +127,12 @@ export function Navbar({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-3 md:hidden">
             <LanguageSwitcher />
             {userProfile && <NotificationsBell userProfile={userProfile} />}
             <MobileAuthAvatar userProfile={userProfile} />
             <button
-              className="flex flex-col gap-1.5 p-2 -mr-2 cursor-pointer"
+              className="-mr-2 flex flex-col gap-1.5 p-2 cursor-pointer"
               onClick={() => setOpen(!open)}
               aria-label="Toggle menu"
             >
@@ -175,12 +175,12 @@ export function Navbar({
           animate={{ opacity: 1, height: "auto" }}
           transition={{ duration: 0.2 }}
         >
-          <div className="flex flex-col gap-4 px-4 py-6">
+          <div className="flex max-h-[calc(100svh-4rem)] flex-col gap-3 overflow-y-auto px-4 py-5">
             {mobileNavLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+                className="rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-primary"
                 onClick={() => setOpen(false)}
               >
                 {link.label}
@@ -198,11 +198,11 @@ function LanguageSwitcher() {
   const { lang, setLanguage } = useLanguage()
 
   return (
-    <div className="flex items-center gap-0.5 rounded-full border border-white/10 bg-black/30 p-0.5 shrink-0">
+    <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/10 bg-black/30 p-0.5">
       <button
         type="button"
         onClick={() => setLanguage("uk")}
-        className={`rounded-full px-2 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer ${
+        className={`rounded-full px-1.5 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer sm:px-2 ${
           lang === "uk"
             ? "bg-primary text-black shadow-[0_0_12px_oklch(0.78_0.18_165_/_0.4)] font-extrabold"
             : "text-white/60 hover:text-white"
@@ -213,7 +213,7 @@ function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setLanguage("en")}
-        className={`rounded-full px-2 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer ${
+        className={`rounded-full px-1.5 py-1 text-[10px] font-bold transition-all duration-200 cursor-pointer sm:px-2 ${
           lang === "en"
             ? "bg-primary text-black shadow-[0_0_12px_oklch(0.78_0.18_165_/_0.4)] font-extrabold"
             : "text-white/60 hover:text-white"

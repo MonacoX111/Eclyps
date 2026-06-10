@@ -16,7 +16,7 @@ export function InstagramCta({ className = "" }: InstagramCtaProps) {
       href={instagramUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group relative z-10 inline-flex items-center gap-3 overflow-hidden rounded-lg px-8 py-4 text-base font-semibold text-primary-foreground transition-all duration-300 md:text-lg cursor-pointer ${className}`}
+      className={`group relative z-10 inline-flex items-center gap-2.5 overflow-hidden rounded-lg px-6 py-3 text-sm font-semibold text-primary-foreground transition-all duration-300 sm:gap-3 sm:px-8 sm:py-4 sm:text-base md:text-lg cursor-pointer ${className}`}
       style={{
         background: "oklch(0.78 0.18 165)",
         boxShadow: "var(--glow)",

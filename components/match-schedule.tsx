@@ -87,24 +87,24 @@ export function MatchSchedule({
                     return (
                       <div
                         key={`${round.round}-${mi}`}
-                        className="glass-card flex w-full flex-col items-center gap-3 rounded-xl px-6 py-4 transition-all duration-300 sm:flex-row sm:justify-between"
+                        className="glass-card flex w-full flex-col items-stretch gap-4 rounded-xl px-4 py-4 transition-all duration-300 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                       >
                         {/* Teams */}
-                        <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-3 text-center sm:justify-start sm:text-left">
-                          <span className="min-w-0 break-words font-semibold text-foreground">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_2.25rem_minmax(0,1fr)] items-center gap-2 text-center sm:flex sm:flex-wrap sm:justify-start sm:gap-3 sm:text-left">
+                          <span className="min-w-0 break-words text-sm font-semibold text-foreground sm:text-base">
                             {match.teamA}
                           </span>
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-primary"
+                          <span className="flex h-8 w-8 items-center justify-center justify-self-center rounded-full text-xs font-bold text-primary sm:h-7 sm:w-7"
                                 style={{ background: "oklch(0.78 0.18 165 / 0.1)" }}>
                             {t.schedule.vs}
                           </span>
-                          <span className="min-w-0 break-words font-semibold text-foreground">
+                          <span className="min-w-0 break-words text-sm font-semibold text-foreground sm:text-base">
                             {match.teamB}
                           </span>
                         </div>
 
                         {/* Time & Status */}
-                        <div className="flex max-w-full flex-wrap items-center justify-center gap-4 text-sm sm:justify-end">
+                        <div className="flex max-w-full flex-wrap items-center justify-center gap-2 text-sm sm:justify-end sm:gap-4">
                           {match.time ? (
                             <span className="flex max-w-full items-center gap-1.5 break-words font-mono text-muted-foreground">
                               <Clock className="h-3.5 w-3.5" />
