@@ -9,7 +9,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseMatchFormData, parseRequiredIdFormData } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
 import { createNotification } from "@/lib/notifications/create-notification"
-import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import {
+  formatMatchScheduleTime,
+  parseMatchScheduleInput,
+} from "@/lib/matches/schedule"
 
 type MatchMutationData = {
   tournament_id: string
@@ -185,17 +188,15 @@ async function withMatchParticipantReferences(
       participant_1_id: participant1Id,
       participant_2_id: participant2Id,
       winner_participant_id: winnerResult.winnerParticipantId,
-      scheduled_at: createScheduledAt(scheduleDate, scheduleTime),
+      scheduled_at: parseMatchScheduleInput({
+        scheduleDate,
+        scheduleTime,
+        timezone,
+      }),
       timezone: scheduleDate && scheduleTime ? timezone : null,
       schedule_note: scheduleNote,
     },
   }
-}
-
-function createScheduledAt(scheduleDate: string | null, scheduleTime: string | null) {
-  if (!scheduleDate || !scheduleTime) return null
-
-  return new Date(`${scheduleDate}T${scheduleTime}:00.000Z`).toISOString()
 }
 
 async function sendMatchScheduledNotifications(

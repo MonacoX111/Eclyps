@@ -16,8 +16,8 @@ import {
 import {
   DEFAULT_MATCH_TIMEZONE,
   formatMatchScheduleTime,
-  getScheduleDateInputValue,
-  getScheduleTimeInputValue,
+  getScheduleDateInputValueForTimeZone,
+  getScheduleTimeInputValueForTimeZone,
 } from "@/lib/matches/schedule"
 import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
@@ -669,7 +669,10 @@ function MatchForm({
         <input
           name="schedule_date"
           type="date"
-          defaultValue={getScheduleDateInputValue(match?.scheduled_at)}
+          defaultValue={getScheduleDateInputValueForTimeZone(
+            match?.scheduled_at,
+            match?.timezone,
+          )}
           className={inputClassName}
         />
       </AdminField>
@@ -677,7 +680,10 @@ function MatchForm({
         <input
           name="schedule_time"
           type="time"
-          defaultValue={getScheduleTimeInputValue(match?.scheduled_at)}
+          defaultValue={getScheduleTimeInputValueForTimeZone(
+            match?.scheduled_at,
+            match?.timezone,
+          )}
           className={inputClassName}
         />
       </AdminField>
