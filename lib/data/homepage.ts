@@ -31,6 +31,7 @@ import {
 } from "@/lib/data/participants"
 import { normalizeRows } from "@/lib/data/query"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import { getCanonicalMatches } from "@/lib/matches/deduplicate"
 import {
   getTournamentRegistrationSummary,
   type TournamentRegistrationSummary,
@@ -461,7 +462,8 @@ async function createHomepageData({
     participantType === "player"
       ? getPlayerCards(players, participants)
       : getTeamCards(teams, participants)
-  const { bracketMatches, normalMatches } = splitHomepageMatches(matches)
+  const { bracketMatches } = splitHomepageMatches(matches)
+  const visibleMatches = getCanonicalMatches(matches)
   const tournamentParticipantCount = getTournamentParticipantCount(
     participants,
     participantType,
@@ -484,7 +486,7 @@ async function createHomepageData({
     teams,
     players,
     participants,
-    matches: normalMatches,
+    matches: visibleMatches,
     results,
     participantType,
     participantLabel,
@@ -492,8 +494,8 @@ async function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount, lang)
       : null,
     participantCards,
-    publicBracket: getPublicBracketData(bracketMatches, normalMatches, tournament),
-    matchScheduleItems: getMatchScheduleItems(normalMatches),
+    publicBracket: getPublicBracketData(bracketMatches, tournament),
+    matchScheduleItems: getMatchScheduleItems(visibleMatches),
     resultCards: getResultCards(results, tournament),
     registrationSummary,
   }
@@ -923,11 +925,9 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
 
 function getPublicBracketData(
   bracketMatches: HomepageMatch[],
-  normalMatches: HomepageMatch[],
   tournament: HomepageTournament | null,
 ): PublicBracketData | null {
   const sortedBracketMatches = [...bracketMatches].sort(compareBracketMatches)
-  const sortedNormalMatches = [...normalMatches].sort(compareBracketMatches)
 
   if (sortedBracketMatches.length === 0) return null
 
@@ -939,11 +939,6 @@ function getPublicBracketData(
   )
 
   if (selectedBracketMatches.length === 0) return null
-
-  const displayMatchesByBracketMatchId = getBracketDisplayMatches(
-    selectedBracketMatches,
-    sortedNormalMatches,
-  )
 
   const roundMap = new Map<number, HomepageMatch[]>()
 
@@ -965,44 +960,17 @@ function getPublicBracketData(
       return {
         order,
         label,
-        matches: sortedRoundMatches.map((match) =>
-          getPublicBracketMatch(match, displayMatchesByBracketMatchId.get(match.id)),
-        ),
+        matches: sortedRoundMatches.map((match) => getPublicBracketMatch(match)),
       }
     })
-
-  const displayMatches = selectedBracketMatches.map(
-    (match) => displayMatchesByBracketMatchId.get(match.id) ?? match,
-  )
 
   return {
     id: bracketId,
     status: selectedBracketMatches.find((match) => match.bracket_status)?.bracket_status ?? null,
     labels: getPublicBracketLabels(tournament),
     rounds,
-    champion: getBracketChampion(displayMatches),
+    champion: getBracketChampion(selectedBracketMatches),
   }
-}
-
-function getBracketDisplayMatches(
-  bracketMatches: HomepageMatch[],
-  normalMatches: HomepageMatch[],
-) {
-  const displayMatches = new Map<string, HomepageMatch>()
-
-  if (bracketMatches.length === 1 && normalMatches.length === 1) {
-    displayMatches.set(bracketMatches[0].id, normalMatches[0])
-    return displayMatches
-  }
-
-  if (bracketMatches.length === normalMatches.length) {
-    bracketMatches.forEach((match, index) => {
-      const displayMatch = normalMatches[index]
-      if (displayMatch) displayMatches.set(match.id, displayMatch)
-    })
-  }
-
-  return displayMatches
 }
 
 function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBracketLabels {
@@ -1017,27 +985,24 @@ function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBr
 
 function getPublicBracketMatch(
   match: HomepageMatch,
-  displayMatch: HomepageMatch | undefined,
 ): PublicBracketMatch {
-  const source = displayMatch ?? match
-
   return {
-    id: source.id,
+    id: match.id,
     label: match.bracket_round ?? match.round ?? "Bracket match",
     position: match.bracket_position ?? 0,
-    status: source.status,
+    status: match.status,
     participants: [
       getPublicBracketParticipant({
-        participantId: source.participant_1_id,
-        name: source.team1,
-        score: source.score1,
-        winnerParticipantId: source.winner_participant_id,
+        participantId: match.participant_1_id,
+        name: match.team1,
+        score: match.score1,
+        winnerParticipantId: match.winner_participant_id,
       }),
       getPublicBracketParticipant({
-        participantId: source.participant_2_id,
-        name: source.team2,
-        score: source.score2,
-        winnerParticipantId: source.winner_participant_id,
+        participantId: match.participant_2_id,
+        name: match.team2,
+        score: match.score2,
+        winnerParticipantId: match.winner_participant_id,
       }),
     ],
   }

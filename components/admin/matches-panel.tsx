@@ -10,6 +10,10 @@ import { formatStatus } from "@/lib/admin/formatters"
 import { createTournamentNameMap, getPlayerNames, getTeamNames } from "@/lib/admin/view-helpers"
 import { getWinnerSelectionFromParticipantId } from "@/lib/matches/core"
 import {
+  getCanonicalMatches,
+  getHiddenManualDuplicateMatches,
+} from "@/lib/matches/deduplicate"
+import {
   DEFAULT_MATCH_TIMEZONE,
   formatMatchScheduleTime,
   getScheduleDateInputValue,
@@ -45,6 +49,8 @@ export function MatchesPanel({
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
   const bracketMatches = matches.filter((match) => match.bracket_id)
+  const visibleMatches = getCanonicalMatches(matches)
+  const hiddenManualDuplicates = getHiddenManualDuplicateMatches(matches)
   const isBracketMode = mode === "bracket"
 
   return (
@@ -92,11 +98,16 @@ export function MatchesPanel({
 
         {!isBracketMode && <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.matches.existingMatches}</h3>
-          {matches.length === 0 ? (
+          {hiddenManualDuplicates.length > 0 ? (
+            <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/5 px-3 py-2 text-xs leading-5 text-amber-100/80">
+              {getHiddenDuplicateLabel(hiddenManualDuplicates.length, lang)}
+            </div>
+          ) : null}
+          {visibleMatches.length === 0 ? (
             <AdminEmptyState>{t.admin.matches.noMatchesDb}</AdminEmptyState>
           ) : (
             <div className="mt-4 space-y-4">
-              {matches.map((match) => (
+              {visibleMatches.map((match) => (
                 <MatchRecord
                   key={match.id}
                   match={match}
@@ -116,6 +127,12 @@ export function MatchesPanel({
       </div>
     </AdminSection>
   )
+}
+
+function getHiddenDuplicateLabel(count: number, lang: "uk" | "en") {
+  return lang === "uk"
+    ? `Приховано ручні дублікати: ${count}. Для турнірної сітки основним є bracket-матч.`
+    : `Hidden manual duplicates: ${count}. The bracket match is the canonical match for bracket tournaments.`
 }
 
 function BracketTemplateForm({
