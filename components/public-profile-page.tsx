@@ -40,6 +40,8 @@ export function PublicProfilePage({ data, userProfile = null, children }: Public
   const isTeam = profile.kind === "team"
   const rating = getProfileRating(data)
   const rankPosition = getProfileRankPosition(data)
+  const backHref = isTeam ? "/teams" : "/players"
+  const backLabel = isTeam ? t.profile.backToTeams : t.profile.backToPlayers
   
   const connectionsTitle = isTeam ? t.profile.connectionsTeams : t.profile.connectionsPlayers
   const emptyConnections = isTeam ? t.profile.emptyConnectionsTeams : t.profile.emptyConnectionsPlayers
@@ -52,11 +54,11 @@ export function PublicProfilePage({ data, userProfile = null, children }: Public
         <section className="relative z-10 px-4 pb-16 pt-28 md:pt-36">
           <div className="mx-auto max-w-6xl">
             <Link
-              href="/"
+              href={backHref}
               className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
-              {t.profile.backToEclyps}
+              {backLabel}
             </Link>
 
             <div className="glass-card overflow-hidden rounded-2xl">

@@ -537,7 +537,8 @@ const rawTranslations = {
       notLoggedIn: "Будь ласка, увійдіть в акаунт, щоб переглянути профілі.",
       playerPendingBadge: "Профіль очікує перевірки",
       playerRejectedBadge: "Профіль відхилено",
-      backToEclyps: "Назад до Eclyps",
+      backToPlayers: "Назад до списку гравців",
+      backToTeams: "Назад до списку команд",
       teamProfile: "Профіль Команди",
       playerProfile: "Профіль Гравця",
       tabs: {
@@ -2034,7 +2035,8 @@ const rawTranslations = {
       notLoggedIn: "Please log in to view profiles.",
       playerPendingBadge: "Profile Pending Review",
       playerRejectedBadge: "Profile Rejected",
-      backToEclyps: "Back to Eclyps",
+      backToPlayers: "Back to players",
+      backToTeams: "Back to teams",
       teamProfile: "Team Profile",
       playerProfile: "Player Profile",
       tabs: {
