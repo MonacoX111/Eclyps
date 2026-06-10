@@ -1,6 +1,7 @@
 "use client"
 
 import { m } from "framer-motion"
+import Link from "next/link"
 import { Trophy, Users, Calendar, Swords } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
@@ -80,6 +81,18 @@ export function TournamentInfo({
           ) : null}
         </SectionHeading>
 
+        <div className="mb-10 flex flex-wrap justify-center gap-3">
+          <Link href="/matches" className={quickLinkClassName}>
+            {t.matchPage.openMatches}
+          </Link>
+          <Link href="#bracket" className={quickLinkClassName}>
+            {t.matchPage.openBracket}
+          </Link>
+          <Link href="/tournaments" className={quickLinkClassName}>
+            {t.tournamentArchive.tournamentArchive}
+          </Link>
+        </div>
+
         {/* Stats grid */}
         <div className="mb-16 flex flex-wrap justify-center gap-4">
           {stats.map((stat, i) => (
@@ -133,6 +146,9 @@ export function TournamentInfo({
     </section>
   )
 }
+
+const quickLinkClassName =
+  "inline-flex items-center justify-center rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-primary/40 hover:text-primary"
 
 function readDisplayValue(value?: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null

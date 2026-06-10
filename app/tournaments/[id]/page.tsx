@@ -47,9 +47,17 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
 
         <section className="relative z-10 px-4 py-16 md:py-20">
           <div className="mx-auto max-w-6xl">
-          <Link href="/tournaments" className={secondaryLinkClassName}>
-            {t.tournamentArchive.backToArchive}
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/tournaments" className={secondaryLinkClassName}>
+              {t.tournamentArchive.backToArchive}
+            </Link>
+            <Link href="#bracket" className={secondaryLinkClassName}>
+              {t.matchPage.openBracket}
+            </Link>
+            <Link href="#matches" className={secondaryLinkClassName}>
+              {t.tournamentArchive.matchHistory}
+            </Link>
+          </div>
 
           <article id="overview" className="glass-card mt-6 scroll-mt-28 overflow-hidden rounded-2xl p-5 md:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

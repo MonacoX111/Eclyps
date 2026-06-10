@@ -48,7 +48,12 @@ export default async function MatchPage({ params }: MatchPageProps) {
       : `/tournaments/${match.tournament.id}`
   const backLabel = isActiveTournamentMatch
     ? t.matchPage.backToMatches
-    : t.tournamentArchive.backToArchive
+    : t.tournamentArchive.backToTournament
+  const bracketHref = isActiveTournamentMatch
+    ? "/tournament#bracket"
+    : match.tournament.id
+      ? `/tournaments/${match.tournament.id}#bracket`
+      : null
   const title = `${participantName(match.participants[0], t)} vs ${participantName(match.participants[1], t)}`
   const scheduledTime = formatMatchScheduleTime({
     scheduledAt: match.scheduledAt,
@@ -73,6 +78,11 @@ export default async function MatchPage({ params }: MatchPageProps) {
               <Link href={backHref} className={secondaryLinkClassName}>
                 {backLabel}
               </Link>
+              {bracketHref ? (
+                <Link href={bracketHref} className={secondaryLinkClassName}>
+                  {t.matchPage.openBracket}
+                </Link>
+              ) : null}
             </div>
 
           <article className="glass-card relative overflow-hidden rounded-2xl p-5 md:p-8">
