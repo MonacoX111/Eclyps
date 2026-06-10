@@ -4,7 +4,7 @@ import { m } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { ExternalLink, Radio, Swords } from "lucide-react"
+import { Radio, Swords } from "lucide-react"
 import { InstagramCta } from "@/components/instagram-cta"
 import { useLanguage } from "@/components/language-provider"
 import { withAvatarCacheBust } from "@/lib/avatar"
@@ -113,7 +113,7 @@ export function HeroSection({
 
       {/* Subtitle */}
       <m.p
-        className="relative z-10 mb-8 max-w-full break-words text-center text-lg font-medium tracking-widest uppercase text-primary md:text-xl"
+        className="relative z-10 mb-5 max-w-full break-words text-center text-lg font-medium tracking-widest uppercase text-primary md:mb-6 md:text-xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.6 }}
@@ -121,23 +121,12 @@ export function HeroSection({
         {tournamentName}
       </m.p>
 
-      {featuredMatch ? (
-        <m.div
-          className="relative z-10 mb-8 w-full max-w-3xl px-1"
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.72 }}
-        >
-          <FeaturedMatchCard match={featuredMatch} />
-        </m.div>
-      ) : null}
-
       {/* Date & Status */}
       <m.div
-        className="relative z-10 mb-8 flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-sm text-muted-foreground md:text-base"
+        className="relative z-10 mb-12 flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-sm text-muted-foreground md:mb-14 md:text-base"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.8 }}
+        transition={{ duration: 0.8, delay: 0.68 }}
       >
         <span className="max-w-full break-words font-mono">{tournamentDate}</span>
         {translatedStatus && (
@@ -151,8 +140,20 @@ export function HeroSection({
         )}
       </m.div>
 
+      {featuredMatch ? (
+        <m.div
+          className="relative z-10 mb-12 w-full max-w-4xl px-1 md:mb-14"
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.78 }}
+        >
+          <FeaturedMatchCard match={featuredMatch} />
+        </m.div>
+      ) : null}
+
       {/* CTA Button */}
       <m.div
+        className="relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 1.0 }}
@@ -172,7 +173,7 @@ function FeaturedMatchCard({ match }: { match: HeroFeaturedMatch }) {
     <Link
       href={`/matches/${match.id}`}
       className={[
-        "group relative block overflow-hidden rounded-2xl border bg-black/35 px-4 py-4 backdrop-blur-md transition duration-300 md:px-5",
+        "group relative block overflow-hidden rounded-2xl border bg-black/35 px-5 py-6 backdrop-blur-md transition duration-300 md:px-8 md:py-7",
         isLive
           ? "border-primary/45 shadow-[0_0_44px_oklch(0.78_0.18_165_/_0.16)]"
           : "border-primary/20 hover:border-primary/45 hover:bg-black/45",
@@ -181,21 +182,17 @@ function FeaturedMatchCard({ match }: { match: HeroFeaturedMatch }) {
       <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165_/_0.10),transparent_42%)] opacity-80" />
 
-      <div className="relative z-10 mb-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center">
+      <div className="relative z-10 mb-6 flex items-center justify-center text-center">
         <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.28em] text-primary uppercase">
           {isLive ? <Radio className="h-3.5 w-3.5" /> : <Swords className="h-3.5 w-3.5" />}
           {t.hero.featuredMatch}
         </span>
-        <span className="text-xs text-white/35">/</span>
-        <span className="max-w-full break-words text-xs font-medium text-white/55">
-          {match.label}
-        </span>
       </div>
 
-      <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 md:gap-5">
+      <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 md:gap-10">
         <MatchParticipant participant={match.participants[0]} side="left" />
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex min-w-[4.5rem] flex-col items-center gap-2 md:min-w-[6rem]">
           <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 font-mono text-xs font-bold tracking-[0.28em] text-primary md:text-sm">
             VS
           </span>
@@ -212,12 +209,6 @@ function FeaturedMatchCard({ match }: { match: HeroFeaturedMatch }) {
         <MatchParticipant participant={match.participants[1]} side="right" />
       </div>
 
-      <div className="relative z-10 mt-4 flex justify-center">
-        <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary/80 transition group-hover:text-primary">
-          {t.matchPage.matchPage}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </span>
-      </div>
     </Link>
   )
 }
@@ -232,13 +223,13 @@ function MatchParticipant({
   return (
     <div
       className={[
-        "flex min-w-0 items-center gap-3",
+        "flex min-w-0 items-center gap-4 md:gap-5",
         side === "right" ? "flex-row-reverse text-right" : "",
       ].join(" ")}
     >
       <MatchParticipantAvatar participant={participant} />
       <div className="min-w-0">
-        <p className="truncate text-sm font-bold text-foreground md:text-lg" title={participant.name}>
+        <p className="truncate text-base font-bold text-foreground md:text-lg" title={participant.name}>
           {participant.name}
         </p>
         <p className="mt-1 font-mono text-xs text-white/45">
