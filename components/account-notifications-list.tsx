@@ -11,7 +11,6 @@ type AccountNotificationsListProps = {
 }
 
 export function AccountNotificationsList({ initialNotifications }: AccountNotificationsListProps) {
-  console.log("AccountNotificationsList initialNotifications:", initialNotifications)
   const { t, lang } = useLanguage()
   const [notifications, setNotifications] = useState<NotificationRow[]>(initialNotifications)
   const [showAll, setShowAll] = useState(false)

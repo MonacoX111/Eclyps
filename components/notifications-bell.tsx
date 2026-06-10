@@ -23,7 +23,6 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
   const fetchNotifications = async () => {
     try {
       const data = await getUserNotifications()
-      console.log("NotificationsBell notifications fetched:", data)
       setNotifications(data)
     } catch (err) {
       console.error("Failed to load user notifications:", err)
