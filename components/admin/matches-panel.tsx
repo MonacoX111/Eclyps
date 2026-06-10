@@ -26,21 +26,17 @@ import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton, Tou
 import { useLanguage } from "@/components/language-provider"
 
 export function MatchesPanel({
-  mode = "matches",
   matches,
   tournaments,
   teams,
   players,
-  participants,
   fetchError,
   feedback,
 }: {
-  mode?: "matches" | "bracket"
   matches: AdminMatch[]
   tournaments: AdminTournament[]
   teams: AdminTeam[]
   players: AdminPlayer[]
-  participants: AdminParticipant[]
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
@@ -48,55 +44,31 @@ export function MatchesPanel({
   const tournamentNames = createTournamentNameMap(tournaments)
   const teamNames = getTeamNames(teams)
   const playerNames = getPlayerNames(players)
-  const bracketMatches = matches.filter((match) => match.bracket_id)
   const visibleMatches = getCanonicalMatches(matches)
   const hiddenManualDuplicates = getHiddenManualDuplicateMatches(matches)
-  const isBracketMode = mode === "bracket"
 
   return (
     <AdminSection
-      id={isBracketMode ? "bracket" : "matches"}
-      title={isBracketMode ? t.admin.tabs.bracket : t.admin.matches.title}
-      description={
-        isBracketMode
-          ? t.admin.matches.bracketPanelDescription
-          : t.admin.matches.description
-      }
+      id="matches"
+      title={t.admin.matches.title}
+      description={t.admin.matches.description}
       feedback={feedback}
       fetchError={fetchError}
-      fetchLabel={isBracketMode ? "bracket" : "matches"}
+      fetchLabel="matches"
     >
       <div className={panelGridClassName}>
-        {isBracketMode ? (
-          <>
-            <article className={innerPanelClassName}>
-              <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
-              <BracketTemplateForm tournaments={tournaments} />
-            </article>
+        <article className={innerPanelClassName}>
+          <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
+          <MatchForm
+            action={createMatch}
+            submitLabel={t.admin.matches.createMatch}
+            tournaments={tournaments}
+            teamNames={teamNames}
+            playerNames={playerNames}
+          />
+        </article>
 
-            <article className={innerPanelClassName}>
-              <h3 className="text-lg font-medium">{t.admin.matches.bracketEditor}</h3>
-              <BracketEditor
-                matches={bracketMatches}
-                participants={participants}
-                tournamentNames={tournamentNames}
-              />
-            </article>
-          </>
-        ) : (
-          <article className={innerPanelClassName}>
-            <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
-            <MatchForm
-              action={createMatch}
-              submitLabel={t.admin.matches.createMatch}
-              tournaments={tournaments}
-              teamNames={teamNames}
-              playerNames={playerNames}
-            />
-          </article>
-        )}
-
-        {!isBracketMode && <article className={innerPanelClassName}>
+        <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.matches.existingMatches}</h3>
           {hiddenManualDuplicates.length > 0 ? (
             <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/5 px-3 py-2 text-xs leading-5 text-amber-100/80">
@@ -123,7 +95,52 @@ export function MatchesPanel({
               ))}
             </div>
           )}
-        </article>}
+        </article>
+      </div>
+    </AdminSection>
+  )
+}
+
+export function BracketPanel({
+  matches,
+  tournaments,
+  participants,
+  fetchError,
+  feedback,
+}: {
+  matches: AdminMatch[]
+  tournaments: AdminTournament[]
+  participants: AdminParticipant[]
+  fetchError: string | null
+  feedback: AdminFeedback | null
+}) {
+  const { t } = useLanguage()
+  const tournamentNames = createTournamentNameMap(tournaments)
+  const bracketMatches = matches.filter((match) => match.bracket_id)
+
+  return (
+    <AdminSection
+      id="bracket"
+      title={t.admin.tabs.bracket}
+      description={t.admin.matches.bracketPanelDescription}
+      feedback={feedback}
+      fetchError={fetchError}
+      fetchLabel="bracket"
+    >
+      <div className={panelGridClassName}>
+        <article className={innerPanelClassName}>
+          <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
+          <BracketTemplateForm tournaments={tournaments} />
+        </article>
+
+        <article className={innerPanelClassName}>
+          <h3 className="text-lg font-medium">{t.admin.matches.bracketEditor}</h3>
+          <BracketEditor
+            matches={bracketMatches}
+            participants={participants}
+            tournamentNames={tournamentNames}
+          />
+        </article>
       </div>
     </AdminSection>
   )
@@ -140,7 +157,7 @@ function BracketTemplateForm({
 }: {
   tournaments: AdminTournament[]
 }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   return (
     <form action={generateBracketTemplate} className="mt-4 grid gap-3 sm:grid-cols-2">
       <TournamentSelect tournaments={tournaments} />
@@ -176,7 +193,7 @@ function BracketEditor({
   participants: AdminParticipant[]
   tournamentNames: Map<string, string>
 }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const bracketMatches = matches.filter((match) => match.bracket_id)
 
   if (bracketMatches.length === 0) {
@@ -854,8 +871,4 @@ function normalizeBracketStatus(status: string | null): BracketLifecycleStatus {
   }
 
   return "template"
-}
-
-function formatBracketStatus(status: BracketLifecycleStatus) {
-  return status.charAt(0).toUpperCase() + status.slice(1)
 }

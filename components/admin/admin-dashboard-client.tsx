@@ -33,7 +33,7 @@ import { ParticipantsPanel } from "@/components/admin/participants-panel"
 import { PlayerApplicationsPanel } from "@/components/admin/player-applications-panel"
 import { RegistrationsPanel } from "@/components/admin/registrations-panel"
 import { DisputesPanel } from "@/components/admin/disputes-panel"
-import { MatchesPanel } from "@/components/admin/matches-panel"
+import { BracketPanel, MatchesPanel } from "@/components/admin/matches-panel"
 import { ResultsPanel } from "@/components/admin/results-panel"
 import { ActiveTournamentPanel } from "@/components/admin/active-tournament-panel"
 import { NewsPanel } from "@/components/admin/news-panel"
@@ -681,12 +681,10 @@ export function AdminDashboardClient({
               {/* Tab 7: Matches */}
               {activeTab === "matches" && (
                 <MatchesPanel
-                  mode="matches"
                   matches={matches}
                   tournaments={tournaments}
                   teams={teams}
                   players={players}
-                  participants={participants}
                   fetchError={fetchError(matches, feedbacks.match)}
                   feedback={feedbacks.match}
                 />
@@ -694,12 +692,9 @@ export function AdminDashboardClient({
 
               {/* Tab 8: Bracket lifecycle controls */}
               {activeTab === "bracket" && (
-                <MatchesPanel
-                  mode="bracket"
+                <BracketPanel
                   matches={matches}
                   tournaments={tournaments}
-                  teams={teams}
-                  players={players}
                   participants={participants}
                   fetchError={fetchError(matches, feedbacks.match)}
                   feedback={feedbacks.match}
