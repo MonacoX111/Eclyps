@@ -80,6 +80,8 @@ export type ArchiveMatch = {
   participantType: "team" | "player"
   participant1Id: string | null
   participant2Id: string | null
+  participant1ImageUrl: string | null
+  participant2ImageUrl: string | null
   winnerParticipantId: string | null
   bracketId: string | null
   bracketStatus: string | null
@@ -112,7 +114,7 @@ const PARTICIPANT_SELECT =
   "id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id"
 
 const MATCH_SELECT =
-  "id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type), winner_participant_id, bracket_id, bracket_status, round_order, bracket_round, bracket_position, scheduled_at, timezone, schedule_note"
+  "id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type, logo_url, avatar_url), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type, logo_url, avatar_url), winner_participant_id, bracket_id, bracket_status, round_order, bracket_round, bracket_position, scheduled_at, timezone, schedule_note"
 
 const RESULT_SELECT =
   "id, tournament_id, team, placement, label, mvp, scoreline, participant_type, participant_id"
@@ -406,6 +408,8 @@ function normalizeMatch(row: Record<string, unknown>) {
     participantType,
     participant1Id: readStringId(row.participant_1_id),
     participant2Id: readStringId(row.participant_2_id),
+    participant1ImageUrl: readParticipantImageUrl(participant1, participantType),
+    participant2ImageUrl: readParticipantImageUrl(participant2, participantType),
     winnerParticipantId: readStringId(row.winner_participant_id),
     bracketId: readStringId(row.bracket_id),
     bracketStatus: readNullableString(row.bracket_status),
@@ -464,12 +468,16 @@ function toPublicBracketMatch(match: ArchiveMatch): PublicBracketMatch {
         name: match.team1,
         score: match.score1,
         winnerParticipantId: match.winnerParticipantId,
+        imageUrl: match.participant1ImageUrl,
+        kind: match.participantType,
       }),
       toPublicBracketParticipant({
         id: match.participant2Id,
         name: match.team2,
         score: match.score2,
         winnerParticipantId: match.winnerParticipantId,
+        imageUrl: match.participant2ImageUrl,
+        kind: match.participantType,
       }),
     ],
   }
@@ -480,18 +488,35 @@ function toPublicBracketParticipant({
   name,
   score,
   winnerParticipantId,
+  imageUrl,
+  kind,
 }: {
   id: string | null
   name: string | null
   score: number | null
   winnerParticipantId: string | null
+  imageUrl: string | null
+  kind: "team" | "player"
 }): PublicBracketParticipant {
   return {
     id,
     name: name ?? "TBD",
     score,
     isWinner: Boolean(id && id === winnerParticipantId),
+    imageUrl,
+    kind,
   }
+}
+
+function readParticipantImageUrl(
+  participant: Record<string, unknown> | null,
+  participantType: "team" | "player",
+) {
+  if (participantType === "team") {
+    return readNullableString(participant?.logo_url) ?? readNullableString(participant?.avatar_url)
+  }
+
+  return readNullableString(participant?.avatar_url) ?? readNullableString(participant?.logo_url)
 }
 
 function getPublicBracketLabels(

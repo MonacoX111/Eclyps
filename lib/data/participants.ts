@@ -4,6 +4,8 @@ export type ParticipantReference = {
   id: string | null
   display_name: string | null
   participant_type: ParticipantType
+  avatar_url: string | null
+  logo_url: string | null
 }
 
 export function readParticipantReference(
@@ -31,6 +33,8 @@ export function readParticipantReference(
     id,
     display_name: displayName,
     participant_type: record.participant_type === "player" ? "player" : fallbackType,
+    avatar_url: typeof record.avatar_url === "string" ? record.avatar_url : null,
+    logo_url: typeof record.logo_url === "string" ? record.logo_url : null,
   }
 }
 

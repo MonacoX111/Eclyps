@@ -377,7 +377,7 @@ async function fetchHomepageMatches(tournamentId: string): Promise<HomepageMatch
   try {
     const orderedResult = await supabase
       .from("matches")
-      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type), winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note")
+      .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, participant_1:participants!matches_participant_1_id_fkey(id, display_name, participant_type, logo_url, avatar_url), participant_2:participants!matches_participant_2_id_fkey(id, display_name, participant_type, logo_url, avatar_url), winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, scheduled_at, timezone, schedule_note")
       .eq("tournament_id", tournamentId)
       .order("scheduled_at", { ascending: true, nullsFirst: false })
       .order("round_order", { ascending: true, nullsFirst: false })
@@ -997,12 +997,16 @@ function getPublicBracketMatch(
         name: match.team1,
         score: match.score1,
         winnerParticipantId: match.winner_participant_id,
+        participant: match.participant_1,
+        fallbackType: match.participant_type,
       }),
       getPublicBracketParticipant({
         participantId: match.participant_2_id,
         name: match.team2,
         score: match.score2,
         winnerParticipantId: match.winner_participant_id,
+        participant: match.participant_2,
+        fallbackType: match.participant_type,
       }),
     ],
   }
@@ -1013,17 +1017,27 @@ function getPublicBracketParticipant({
   name,
   score,
   winnerParticipantId,
+  participant,
+  fallbackType,
 }: {
   participantId: string | null
   name: string | null
   score: number | null
   winnerParticipantId: string | null
+  participant: ParticipantReference | null
+  fallbackType: "team" | "player"
 }): PublicBracketParticipant {
+  const kind = participant?.participant_type ?? fallbackType
+
   return {
     id: participantId,
     name: name ?? "TBD",
     score,
     isWinner: Boolean(participantId && participantId === winnerParticipantId),
+    kind,
+    imageUrl: kind === "team"
+      ? participant?.logo_url ?? participant?.avatar_url ?? null
+      : participant?.avatar_url ?? participant?.logo_url ?? null,
   }
 }
 

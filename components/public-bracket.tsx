@@ -1,17 +1,20 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { m } from "framer-motion"
 import { ExternalLink, Radio, Trophy } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 export type PublicBracketParticipant = {
   id: string | null
   name: string
   score: number | null
   isWinner: boolean
+  imageUrl: string | null
+  kind: "player" | "team"
 }
 
 export type PublicBracketMatch = {
@@ -345,13 +348,21 @@ function FinalistPanel({
           side === "right" ? "lg:flex-row-reverse" : "",
         ].join(" ")}
       >
-        <div className={["min-w-0", side === "right" ? "lg:text-right" : ""].join(" ")}>
-          <p className="mb-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
-            {label}
-          </p>
-          <h3 className="break-words text-2xl font-bold text-foreground">
-            {participant.name}
-          </h3>
+        <div
+          className={[
+            "flex min-w-0 items-center gap-3",
+            side === "right" ? "lg:flex-row-reverse lg:text-right" : "",
+          ].join(" ")}
+        >
+          <ParticipantAvatar participant={participant} size="final" />
+          <div className="min-w-0">
+            <p className="mb-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
+              {label}
+            </p>
+            <h3 className="break-words text-2xl font-bold text-foreground">
+              {participant.name}
+            </h3>
+          </div>
         </div>
         <ScoreBox score={participant.score} />
       </div>
@@ -443,12 +454,66 @@ function ParticipantRow({
         isTbd ? "border-dashed text-muted-foreground" : "",
       ].join(" ")}
     >
-      <span className="min-w-0 break-words text-sm font-semibold">
-        {participant.name}
+      <span className="flex min-w-0 items-center gap-2.5">
+        <ParticipantAvatar participant={participant} size="compact" />
+        <span className="min-w-0 truncate text-sm font-semibold" title={participant.name}>
+          {participant.name}
+        </span>
       </span>
       <ScoreBox score={participant.score} compact />
     </div>
   )
+}
+
+function ParticipantAvatar({
+  participant,
+  size,
+}: {
+  participant: PublicBracketParticipant
+  size: "final" | "compact"
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const imageUrl = imageFailed ? null : withAvatarCacheBust(participant.imageUrl, null)
+  const initials = getParticipantInitials(participant.name)
+
+  return (
+    <span
+      className={[
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-primary/20 bg-black/40 font-mono font-bold text-primary shadow-[inset_0_0_18px_oklch(0.78_0.18_165_/_0.08)]",
+        size === "final"
+          ? "h-14 w-14 text-base md:h-16 md:w-16"
+          : "h-8 w-8 text-[11px] md:h-9 md:w-9",
+      ].join(" ")}
+      aria-hidden={!imageUrl}
+    >
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={`${participant.name} ${participant.kind === "team" ? "logo" : "avatar"}`}
+          className={[
+            "h-full w-full",
+            participant.kind === "team" ? "object-contain p-1.5" : "object-cover",
+          ].join(" ")}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </span>
+  )
+}
+
+function getParticipantInitials(name: string) {
+  const normalized = name.trim()
+  if (!normalized || normalized.toUpperCase() === "TBD") return "?"
+
+  const parts = normalized.split(/\s+/).filter(Boolean)
+  const initials = parts.length > 1
+    ? `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`
+    : normalized.slice(0, 2)
+
+  return initials.toUpperCase()
 }
 
 function ScoreBox({ score, compact = false }: { score: number | null; compact?: boolean }) {
