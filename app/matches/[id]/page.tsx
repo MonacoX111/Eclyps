@@ -17,6 +17,7 @@ import { PublicBracket } from "@/components/public-bracket"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getPublicMatchDetail, type MatchDetail } from "@/lib/data/match-detail"
+import { getTournamentArchiveDetail } from "@/lib/data/tournament-archive"
 import { getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 
@@ -40,7 +41,7 @@ export default async function MatchPage({ params }: MatchPageProps) {
   const bracket =
     homepageData.tournament?.id === match.tournament.id
       ? homepageData.publicBracket
-      : null
+      : await getArchivedTournamentBracket(match.tournament.id)
   const title = `${participantName(match.participants[0], t)} vs ${participantName(match.participants[1], t)}`
   const scheduledTime = formatMatchScheduleTime({
     scheduledAt: match.scheduledAt,
@@ -137,6 +138,13 @@ export default async function MatchPage({ params }: MatchPageProps) {
       <Footer />
     </main>
   )
+}
+
+async function getArchivedTournamentBracket(tournamentId: string | null) {
+  if (!tournamentId) return null
+
+  const archiveDetail = await getTournamentArchiveDetail(tournamentId)
+  return archiveDetail?.bracket ?? null
 }
 
 function ParticipantCard({
