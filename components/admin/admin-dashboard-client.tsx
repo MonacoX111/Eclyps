@@ -76,6 +76,22 @@ type RecentEvent = {
   timestamp: string
 }
 
+type AdminMenuItem = {
+  id: string
+  label: string
+  group: "work" | "content" | "system"
+  icon: React.ComponentType<{ className?: string }>
+  badge?: number
+}
+
+type AdminIssueItem = {
+  id: string
+  title: string
+  description: string
+  tab: string
+  tone: "error" | "warning"
+}
+
 type AdminDashboardClientProps = {
   tournaments: AdminTournament[]
   teams: AdminTeam[]
@@ -156,6 +172,17 @@ export function AdminDashboardClient({
   const pendingRegistrationsCount = registrations.filter((r) => r.status === "pending").length
   const openDisputesCount = disputes.filter((d) => d.status === "open" || d.status === "under_review").length
   const upcomingMatchesCount = matches.filter((m) => !m.bracket_id && m.status === "upcoming").length
+  const activeTournaments = tournaments.filter((tournament) => tournament.is_active)
+  const adminIssues = buildAdminIssues({
+    activeTournament,
+    activeTournaments,
+    tournaments,
+    matches,
+    registrations,
+    lang,
+  })
+  const urgentActionsCount = pendingPlayersCount + pendingTeamsCount + pendingRegistrationsCount + openDisputesCount
+  const adminErrorCount = adminIssues.filter((issue) => issue.tone === "error").length
 
   // Construct dynamic unified Recent Activity Feed (Limit to 5 items)
   const recentEvents: RecentEvent[] = []
@@ -215,20 +242,55 @@ export function AdminDashboardClient({
     .slice(0, 5)
 
   // Navigation Links
-  const menuItems = [
-    { id: "overview", label: t.admin.tabs.overview, icon: LayoutDashboard },
-    { id: "tournaments", label: t.admin.tabs.tournaments, icon: Trophy },
-    { id: "applications", label: t.admin.tabs.applications, icon: UserPlus },
-    { id: "players", label: t.admin.tabs.players, icon: Users },
-    { id: "teams", label: t.admin.tabs.teams, icon: Shield },
-    { id: "participants", label: t.admin.tabs.participants, icon: UserPlus },
-    { id: "matches", label: t.admin.tabs.matches, icon: Calendar },
-    { id: "bracket", label: t.admin.tabs.bracket, icon: GitMerge },
-    { id: "results", label: t.admin.tabs.results, icon: Award },
-    { id: "disputes", label: t.admin.tabs.disputes, icon: AlertTriangle },
-    { id: "news", label: t.admin.tabs.news, icon: Newspaper },
-    { id: "settings", label: t.admin.tabs.settings, icon: Settings },
+  const menuItems: AdminMenuItem[] = [
+    { id: "overview", label: t.admin.tabs.overview, group: "work", icon: LayoutDashboard, badge: adminErrorCount || urgentActionsCount },
+    { id: "applications", label: t.admin.tabs.applications, group: "work", icon: UserPlus, badge: pendingPlayersCount + pendingRegistrationsCount },
+    { id: "teams", label: t.admin.tabs.teams, group: "work", icon: Shield, badge: pendingTeamsCount },
+    { id: "disputes", label: t.admin.tabs.disputes, group: "work", icon: AlertTriangle, badge: openDisputesCount },
+    { id: "tournaments", label: t.admin.tabs.tournaments, group: "content", icon: Trophy },
+    { id: "participants", label: t.admin.tabs.participants, group: "content", icon: UserPlus },
+    { id: "players", label: t.admin.tabs.players, group: "content", icon: Users },
+    { id: "matches", label: t.admin.tabs.matches, group: "content", icon: Calendar, badge: upcomingMatchesCount },
+    { id: "bracket", label: t.admin.tabs.bracket, group: "content", icon: GitMerge },
+    { id: "results", label: t.admin.tabs.results, group: "content", icon: Award },
+    { id: "news", label: t.admin.tabs.news, group: "content", icon: Newspaper },
+    { id: "settings", label: t.admin.tabs.settings, group: "system", icon: Settings },
   ]
+  const menuGroupLabels = {
+    work: lang === "uk" ? "Головне" : "Main",
+    content: lang === "uk" ? "Керування" : "Manage",
+    system: lang === "uk" ? "Система" : "System",
+  }
+  const pendingActionItems = [
+    {
+      id: "pending-players",
+      title: t.admin.overview.pendingPlayers,
+      description: lang === "uk" ? "Є заявки гравців, які очікують рішення." : "Player applications are waiting for a decision.",
+      count: pendingPlayersCount,
+      tab: "applications",
+    },
+    {
+      id: "pending-teams",
+      title: t.admin.overview.pendingTeams,
+      description: lang === "uk" ? "Є команди, які ще не підтверджені." : "Some teams are still waiting for approval.",
+      count: pendingTeamsCount,
+      tab: "teams",
+    },
+    {
+      id: "pending-registrations",
+      title: t.admin.overview.pendingRegistrations,
+      description: lang === "uk" ? "Є реєстрації на турніри, які треба обробити." : "Tournament registrations need processing.",
+      count: pendingRegistrationsCount,
+      tab: "applications",
+    },
+    {
+      id: "open-disputes",
+      title: t.admin.overview.openDisputes,
+      description: lang === "uk" ? "Є відкриті спори або спори на розгляді." : "Some disputes are open or under review.",
+      count: openDisputesCount,
+      tab: "disputes",
+    },
+  ].filter((item) => item.count > 0)
 
   const statusBadgeColor = (status: string | null | undefined) => {
     switch (status) {
@@ -280,25 +342,41 @@ export function AdminDashboardClient({
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto scrollbar-thin">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeTab === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer ${
-                  isActive
-                    ? "bg-emerald-400 text-black shadow-[0_0_12px_rgba(52,211,153,0.2)] font-bold scale-[1.02]"
-                    : "text-white/60 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-black" : "text-emerald-400/80"}`} />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
+        <nav className="flex-1 px-4 py-6 space-y-5 overflow-y-auto scrollbar-thin">
+          {(["work", "content", "system"] as const).map((group) => (
+            <div key={group} className="space-y-1.5">
+              <p className="px-4 text-[9px] font-bold uppercase tracking-[0.22em] text-white/25">
+                {menuGroupLabels[group]}
+              </p>
+              {menuItems
+                .filter((item) => item.group === group)
+                .map((item) => {
+                  const Icon = item.icon
+                  const isActive = activeTab === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange(item.id)}
+                      className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? "bg-emerald-400 text-black shadow-[0_0_12px_rgba(52,211,153,0.2)] font-bold scale-[1.02]"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-black" : "text-emerald-400/80"}`} />
+                      <span className="min-w-0 flex-1 text-left">{item.label}</span>
+                      {item.badge ? (
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                          isActive ? "bg-black text-white" : "bg-emerald-400/15 text-emerald-300"
+                        }`}>
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </button>
+                  )
+                })}
+            </div>
+          ))}
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-2">
@@ -381,23 +459,39 @@ export function AdminDashboardClient({
                 </div>
               </div>
 
-              <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-                {menuItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = activeTab === item.id
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleTabChange(item.id)}
-                      className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
-                        isActive ? "bg-emerald-400 text-black font-bold" : "text-white/60 hover:text-white hover:bg-white/5"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
-                  )
-                })}
+              <nav className="flex-1 px-3 py-5 space-y-5 overflow-y-auto">
+                {(["work", "content", "system"] as const).map((group) => (
+                  <div key={group} className="space-y-1">
+                    <p className="px-4 text-[9px] font-bold uppercase tracking-[0.22em] text-white/25">
+                      {menuGroupLabels[group]}
+                    </p>
+                    {menuItems
+                      .filter((item) => item.group === group)
+                      .map((item) => {
+                        const Icon = item.icon
+                        const isActive = activeTab === item.id
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => handleTabChange(item.id)}
+                            className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-xs font-semibold transition ${
+                              isActive ? "bg-emerald-400 text-black font-bold" : "text-white/60 hover:text-white hover:bg-white/5"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <span className="min-w-0 flex-1 text-left">{item.label}</span>
+                            {item.badge ? (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                isActive ? "bg-black text-white" : "bg-emerald-400/15 text-emerald-300"
+                              }`}>
+                                {item.badge}
+                              </span>
+                            ) : null}
+                          </button>
+                        )
+                      })}
+                  </div>
+                ))}
               </nav>
 
               <div className="p-4 border-t border-white/5 space-y-2">
@@ -534,6 +628,77 @@ export function AdminDashboardClient({
                       <span className="block text-2xl font-extrabold text-white mt-1 group-hover:text-emerald-400 transition">{upcomingMatchesCount}</span>
                       <span className="block text-[10px] text-white/30 mt-1">{t.admin.overview.viewDetails} →</span>
                     </button>
+                  </div>
+
+                  <div className="glass-card rounded-2xl border border-white/5 p-6">
+                    <div className="flex flex-col gap-2 border-b border-white/5 pb-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-emerald-400" />
+                        {lang === "uk" ? "Термінові дії" : "Urgent actions"}
+                      </h3>
+                      <span className={`w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                        adminErrorCount > 0
+                          ? "bg-red-500/10 text-red-300 border border-red-500/20"
+                          : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                      }`}>
+                        {adminErrorCount > 0
+                          ? lang === "uk" ? `${adminErrorCount} помилок стану` : `${adminErrorCount} state errors`
+                          : lang === "uk" ? "Критичних помилок немає" : "No critical errors"}
+                      </span>
+                    </div>
+
+                    {adminIssues.length === 0 && pendingActionItems.length === 0 ? (
+                      <div className="flex items-start gap-3 rounded-xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>
+                          {lang === "uk"
+                            ? "Все виглядає логічно: активний турнір, матчі та реєстрації не мають очевидних проблем."
+                            : "Everything looks consistent: active tournament, matches, and registrations have no obvious issues."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {adminIssues.map((issue) => (
+                          <button
+                            key={issue.id}
+                            onClick={() => handleTabChange(issue.tab)}
+                            className={`rounded-xl border px-4 py-3 text-left transition hover:bg-white/[0.03] ${
+                              issue.tone === "error"
+                                ? "border-red-300/20 bg-red-300/10"
+                                : "border-amber-300/20 bg-amber-300/10"
+                            }`}
+                          >
+                            <span className={`flex items-center gap-2 text-sm font-bold ${
+                              issue.tone === "error" ? "text-red-100" : "text-amber-100"
+                            }`}>
+                              <AlertTriangle className="h-4 w-4 shrink-0" />
+                              {issue.title}
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-white/55">
+                              {issue.description}
+                            </span>
+                          </button>
+                        ))}
+
+                        {pendingActionItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleTabChange(item.tab)}
+                            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-left transition hover:border-emerald-300/30 hover:bg-white/[0.03]"
+                          >
+                            <span className="flex items-center justify-between gap-3 text-sm font-bold text-white">
+                              <span>{item.title}</span>
+                              <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-[10px] font-black text-black">
+                                {item.count}
+                              </span>
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-white/55">
+                              {item.description}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Core Layout Grid: Active Tournament & Recent Timeline */}
@@ -834,4 +999,160 @@ function fetchError<T>(_list: T[], feedback: AdminFeedback | null) {
     return feedback.message
   }
   return null
+}
+
+function buildAdminIssues({
+  activeTournament,
+  activeTournaments,
+  tournaments,
+  matches,
+  registrations,
+  lang,
+}: {
+  activeTournament: AdminTournament | undefined
+  activeTournaments: AdminTournament[]
+  tournaments: AdminTournament[]
+  matches: AdminMatch[]
+  registrations: AdminRegistration[]
+  lang: string
+}): AdminIssueItem[] {
+  const issues: AdminIssueItem[] = []
+  const tournamentIds = new Set(tournaments.map((tournament) => tournament.id))
+  const isUk = lang === "uk"
+
+  if (activeTournaments.length === 0) {
+    issues.push({
+      id: "no-active-tournament",
+      title: isUk ? "Немає активного турніру" : "No active tournament",
+      description: isUk
+        ? "На сайті може не показуватись головний турнір. Обери активний турнір у вкладці Турніри."
+        : "The site may not show the main tournament. Pick an active tournament in Tournaments.",
+      tab: "tournaments",
+      tone: "error",
+    })
+  }
+
+  if (activeTournaments.length > 1) {
+    issues.push({
+      id: "multiple-active-tournaments",
+      title: isUk ? "Активних турнірів більше одного" : "More than one active tournament",
+      description: isUk
+        ? "Сайт може вибрати не той турнір для головних блоків. Залиши активним тільки один."
+        : "The site can pick the wrong tournament for main sections. Keep only one active.",
+      tab: "tournaments",
+      tone: "error",
+    })
+  }
+
+  if (activeTournament && !activeTournament.event_date) {
+    issues.push({
+      id: "active-tournament-no-date",
+      title: isUk ? "Активний турнір без дати" : "Active tournament has no date",
+      description: isUk
+        ? "Дата потрібна для коректного відображення турніру та розкладу."
+        : "The date is needed for correct tournament and schedule display.",
+      tab: "tournaments",
+      tone: "warning",
+    })
+  }
+
+  if (activeTournament && (!activeTournament.team_count || activeTournament.team_count <= 0)) {
+    issues.push({
+      id: "active-tournament-no-slots",
+      title: isUk ? "Активний турнір без кількості слотів" : "Active tournament has no slot count",
+      description: isUk
+        ? "Кількість слотів потрібна для сітки, учасників і реєстрації."
+        : "Slot count is needed for bracket, participants, and registration.",
+      tab: "tournaments",
+      tone: "warning",
+    })
+  }
+
+  if (
+    activeTournament?.check_in_opens_at &&
+    activeTournament.check_in_closes_at &&
+    new Date(activeTournament.check_in_opens_at).getTime() > new Date(activeTournament.check_in_closes_at).getTime()
+  ) {
+    issues.push({
+      id: "check-in-window-invalid",
+      title: isUk ? "Check-in закривається раніше, ніж відкривається" : "Check-in closes before it opens",
+      description: isUk
+        ? "Перевір час відкриття і закриття check-in для активного турніру."
+        : "Check the active tournament check-in open and close times.",
+      tab: "tournaments",
+      tone: "error",
+    })
+  }
+
+  const orphanMatchesCount = matches.filter(
+    (match) => !match.tournament_id || !tournamentIds.has(match.tournament_id),
+  ).length
+
+  if (orphanMatchesCount > 0) {
+    issues.push({
+      id: "matches-without-tournament",
+      title: isUk ? "Є матчі без турніру" : "Some matches have no tournament",
+      description: isUk
+        ? `${orphanMatchesCount} матч(ів) не прив'язані до існуючого турніру.`
+        : `${orphanMatchesCount} match(es) are not linked to an existing tournament.`,
+      tab: "matches",
+      tone: "error",
+    })
+  }
+
+  const incompleteUpcomingMatchesCount = matches.filter((match) => {
+    const firstParticipantMissing = !match.team1 && !match.participant_1_id
+    const secondParticipantMissing = !match.team2 && !match.participant_2_id
+    return match.status === "upcoming" && (firstParticipantMissing || secondParticipantMissing)
+  }).length
+
+  if (incompleteUpcomingMatchesCount > 0) {
+    issues.push({
+      id: "upcoming-matches-without-participants",
+      title: isUk ? "Майбутні матчі без учасників" : "Upcoming matches missing participants",
+      description: isUk
+        ? `${incompleteUpcomingMatchesCount} майбутній матч(і) мають порожнього учасника.`
+        : `${incompleteUpcomingMatchesCount} upcoming match(es) have an empty participant slot.`,
+      tab: "matches",
+      tone: "warning",
+    })
+  }
+
+  const finishedWithoutScoreCount = matches.filter(
+    (match) => isFinishedMatchStatus(match.status) && (match.score1 === null || match.score2 === null),
+  ).length
+
+  if (finishedWithoutScoreCount > 0) {
+    issues.push({
+      id: "finished-matches-without-score",
+      title: isUk ? "Завершені матчі без рахунку" : "Finished matches missing scores",
+      description: isUk
+        ? `${finishedWithoutScoreCount} завершений матч(і) не мають повного рахунку.`
+        : `${finishedWithoutScoreCount} finished match(es) do not have a complete score.`,
+      tab: "results",
+      tone: "error",
+    })
+  }
+
+  const orphanRegistrationsCount = registrations.filter(
+    (registration) => !tournamentIds.has(registration.tournament_id),
+  ).length
+
+  if (orphanRegistrationsCount > 0) {
+    issues.push({
+      id: "registrations-without-tournament",
+      title: isUk ? "Є реєстрації на неіснуючий турнір" : "Registrations point to missing tournaments",
+      description: isUk
+        ? `${orphanRegistrationsCount} реєстрація(ї) прив'язані до турніру, якого немає в списку.`
+        : `${orphanRegistrationsCount} registration(s) point to a tournament that is not loaded.`,
+      tab: "applications",
+      tone: "error",
+    })
+  }
+
+  return issues
+}
+
+function isFinishedMatchStatus(status: string | null) {
+  return status === "finished" || status === "completed" || status === "final"
 }
