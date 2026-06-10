@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
+    "qa:smoke": "node scripts/qa-smoke.mjs",
     "lint": "eslint ."
   },
   "dependencies": {

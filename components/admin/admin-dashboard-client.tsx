@@ -40,33 +40,55 @@ import { NewsPanel } from "@/components/admin/news-panel"
 
 import { logoutAdmin } from "@/app/admin/actions"
 import { formatDisplayDate, formatStatus } from "@/lib/admin/formatters"
+import { createTournamentNameMap } from "@/lib/admin/view-helpers"
 import { AdminEmptyState } from "@/components/admin/admin-section"
+import type { AdminDispute } from "@/lib/admin/disputes"
+import type { AdminMatch } from "@/lib/admin/matches"
+import type { AdminNewsPost } from "@/lib/admin/news"
+import type { AdminParticipant } from "@/lib/admin/participants"
+import type { AdminPlayerApplication } from "@/lib/admin/player-applications"
+import type { AdminPlayer } from "@/lib/admin/players"
+import type { AdminRegistration } from "@/lib/admin/registrations"
+import type { AdminResult } from "@/lib/admin/results"
+import type { AdminTeam } from "@/lib/admin/teams"
+import type { AdminTournament } from "@/lib/admin/tournaments"
+import type { AdminFeedback, AdminSearchParams } from "@/lib/admin/types"
+
+type AdminDashboardFeedbacks = {
+  tournament: AdminFeedback | null
+  team: AdminFeedback | null
+  player: AdminFeedback | null
+  participant: AdminFeedback | null
+  playerApplication: AdminFeedback | null
+  registration: AdminFeedback | null
+  dispute: AdminFeedback | null
+  match: AdminFeedback | null
+  result: AdminFeedback | null
+  activeTournament: AdminFeedback | null
+  news: AdminFeedback | null
+}
+
+type RecentEvent = {
+  id: string
+  type: "player" | "team" | "registration" | "dispute"
+  title: string
+  name: string
+  timestamp: string
+}
 
 type AdminDashboardClientProps = {
-  tournaments: any[]
-  teams: any[]
-  players: any[]
-  applications: any[]
-  participants: any[]
-  registrations: any[]
-  disputes: any[]
-  matches: any[]
-  results: any[]
-  newsPosts: any[]
-  searchParams?: any
-  feedbacks: {
-    tournament: any
-    team: any
-    player: any
-    participant: any
-    playerApplication: any
-    registration: any
-    dispute: any
-    match: any
-    result: any
-    activeTournament: any
-    news: any
-  }
+  tournaments: AdminTournament[]
+  teams: AdminTeam[]
+  players: AdminPlayer[]
+  applications: AdminPlayerApplication[]
+  participants: AdminParticipant[]
+  registrations: AdminRegistration[]
+  disputes: AdminDispute[]
+  matches: AdminMatch[]
+  results: AdminResult[]
+  newsPosts: AdminNewsPost[]
+  searchParams?: AdminSearchParams
+  feedbacks: AdminDashboardFeedbacks
 }
 
 export function AdminDashboardClient({
@@ -132,11 +154,12 @@ export function AdminDashboardClient({
   const pendingPlayersCount = applications.filter((a) => a.status === "pending").length
   const pendingTeamsCount = teams.filter((t) => t.status === "pending").length
   const pendingRegistrationsCount = registrations.filter((r) => r.status === "pending").length
-  const openDisputesCount = disputes.filter((d) => d.status === "pending" || d.status === "open").length
+  const openDisputesCount = disputes.filter((d) => d.status === "open" || d.status === "under_review").length
   const upcomingMatchesCount = matches.filter((m) => !m.bracket_id && m.status === "upcoming").length
 
   // Construct dynamic unified Recent Activity Feed (Limit to 5 items)
-  const recentEvents: any[] = []
+  const recentEvents: RecentEvent[] = []
+  const tournamentNames = createTournamentNameMap(tournaments)
 
   // Approved players
   players
@@ -159,8 +182,8 @@ export function AdminDashboardClient({
         id: `team-${team.id}`,
         type: "team",
         title: t.admin.overview.lastApprovedTeam,
-        name: team.name,
-        timestamp: team.created_at || new Date().toISOString(),
+        name: team.name || "Team",
+        timestamp: new Date().toISOString(),
       })
     })
 
@@ -170,7 +193,7 @@ export function AdminDashboardClient({
       id: `reg-${r.id}`,
       type: "registration",
       title: t.admin.overview.lastRegistration,
-      name: `${r.tournaments?.name || "Tournament"} (${r.registration_type === "team" ? t.profile.meta.team : t.profile.meta.player})`,
+      name: `${tournamentNames.get(r.tournament_id) ?? "Tournament"} (${r.registration_type === "team" ? t.profile.meta.team : t.profile.meta.player})`,
       timestamp: r.created_at || new Date().toISOString(),
     })
   })
@@ -207,7 +230,7 @@ export function AdminDashboardClient({
     { id: "settings", label: t.admin.tabs.settings, icon: Settings },
   ]
 
-  const statusBadgeColor = (status: string) => {
+  const statusBadgeColor = (status: string | null | undefined) => {
     switch (status) {
       case "approved":
       case "active":
@@ -806,7 +829,7 @@ export function AdminDashboardClient({
   )
 }
 
-function fetchError(list: any[], feedback: any) {
+function fetchError<T>(_list: T[], feedback: AdminFeedback | null) {
   if (feedback && feedback.tone === "error") {
     return feedback.message
   }
