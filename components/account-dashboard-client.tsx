@@ -198,7 +198,7 @@ export function AccountDashboardClient({
   const rating = player.rating ?? 1000
   const displayName = player.nickname || player.display_name || player.name
   const accountAvatarUrl = withAvatarCacheBust(
-    player.avatar_url || userProfile.avatar_url,
+    userProfile.avatar_url || player.avatar_url,
     getAvatarVersion(userProfile.updated_at),
   )
   const seedLabel = player.seed !== null && player.seed !== undefined ? `#${player.seed}` : t.account.notSpecified

@@ -49,6 +49,21 @@ export async function upsertUserProfileFromAuthUser(user: User, providerToken?: 
   if (!supabaseAdmin) return { profile: null, refreshedFromDiscord: false }
 
   const now = new Date().toISOString()
+  const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
+    .from("user_profiles")
+    .select("avatar_url")
+    .eq("auth_user_id", user.id)
+    .maybeSingle()
+
+  if (existingProfileError) {
+    logSupabaseError("Failed to fetch existing user profile before sync:", existingProfileError)
+  }
+
+  const avatarUrl =
+    profileInput.refreshedFromDiscord || !readString(existingProfile?.avatar_url)
+      ? profileInput.avatarUrl
+      : readString(existingProfile?.avatar_url)
+
   const { data, error } = await supabaseAdmin
     .from("user_profiles")
     .upsert(
@@ -57,7 +72,7 @@ export async function upsertUserProfileFromAuthUser(user: User, providerToken?: 
         discord_id: profileInput.discordId,
         discord_username: profileInput.discordUsername,
         display_name: profileInput.displayName,
-        avatar_url: profileInput.avatarUrl,
+        avatar_url: avatarUrl,
         updated_at: now,
       },
       { onConflict: "auth_user_id" },
@@ -88,7 +103,7 @@ export async function upsertUserProfileFromAuthUser(user: User, providerToken?: 
       const { error: playerUpdateError } = await supabaseAdmin
         .from("players")
         .update({
-          avatar_url: profileInput.avatarUrl,
+          avatar_url: avatarUrl,
           user_id: user.id,
           owner_user_id: userProfileId,
         })
@@ -97,9 +112,18 @@ export async function upsertUserProfileFromAuthUser(user: User, providerToken?: 
       if (playerUpdateError) {
         logSupabaseError("Failed to update existing player profile during auth sync:", playerUpdateError)
       }
+
+      const { error: participantUpdateError } = await supabaseAdmin
+        .from("participants")
+        .update({ avatar_url: avatarUrl })
+        .eq("source_player_id", existingPlayer.id)
+
+      if (participantUpdateError) {
+        logSupabaseError("Failed to update participant avatar during auth sync:", participantUpdateError)
+      }
     } else {
       // Create new pending player profile
-      const { error: playerInsertError } = await supabaseAdmin
+      const { data: insertedPlayer, error: playerInsertError } = await supabaseAdmin
         .from("players")
         .insert({
           user_id: user.id,
@@ -107,15 +131,26 @@ export async function upsertUserProfileFromAuthUser(user: User, providerToken?: 
           name: profileInput.displayName,
           nickname: profileInput.displayName,
           display_name: profileInput.displayName,
-          avatar_url: profileInput.avatarUrl,
+          avatar_url: avatarUrl,
           status: "pending",
           tournament_id: null,
           wins: 0,
           losses: 0,
         })
+        .select("id")
+        .maybeSingle()
 
       if (playerInsertError) {
         logSupabaseError("Failed to insert pending player profile during auth sync:", playerInsertError)
+      } else if (insertedPlayer?.id) {
+        const { error: participantUpdateError } = await supabaseAdmin
+          .from("participants")
+          .update({ avatar_url: avatarUrl })
+          .eq("source_player_id", insertedPlayer.id)
+
+        if (participantUpdateError) {
+          logSupabaseError("Failed to update participant avatar after player insert:", participantUpdateError)
+        }
       }
     }
   } catch (err) {

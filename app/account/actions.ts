@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { getCurrentUserProfile, upsertUserProfileFromAuthUser } from "@/lib/auth/user-profile"
+import { headers } from "next/headers"
+import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getPublicEnv } from "@/lib/env/public"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
@@ -93,27 +95,35 @@ export async function updateOwnPlayerProfile(formData: FormData): Promise<Action
 
 export async function refreshDiscordProfile() {
   const supabase = await createSupabaseServerClient()
-  const [{ data, error }, sessionResult] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.auth.getSession(),
-  ])
+  const origin = await getSiteOrigin()
+  const callbackUrl = new URL("/auth/callback", origin)
+  callbackUrl.searchParams.set("next", "/account?discordRefresh=updated")
 
-  if (error || !data.user) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "discord",
+    options: {
+      redirectTo: callbackUrl.toString(),
+      scopes: "identify email",
+      queryParams: {
+        prompt: "consent",
+      },
+    },
+  })
+
+  if (error || !data.url) {
     redirect("/account?discordRefresh=error")
   }
 
-  const { profile: userProfile, refreshedFromDiscord } = await upsertUserProfileFromAuthUser(
-    data.user,
-    sessionResult.data.session?.provider_token,
-  )
-  if (!userProfile) {
-    redirect("/account?discordRefresh=error")
-  }
+  redirect(data.url)
+}
 
-  revalidatePath("/account")
-  revalidatePath("/players")
-  revalidatePath(`/players/${userProfile.id}`)
-  revalidatePath("/")
+async function getSiteOrigin() {
+  const publicEnv = getPublicEnv()
+  if (publicEnv.siteUrl) return publicEnv.siteUrl
 
-  redirect(`/account?discordRefresh=${refreshedFromDiscord ? "updated" : "stale"}`)
+  const headerStore = await headers()
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host")
+  const protocol = headerStore.get("x-forwarded-proto") ?? "http"
+
+  return host ? `${protocol}://${host}` : "http://localhost:3000"
 }

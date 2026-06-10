@@ -12,10 +12,6 @@ export function withAvatarCacheBust(
   if (!trimmedVersion) return trimmedUrl
 
   try {
-    if (isDiscordAvatarCdnUrl(trimmedUrl)) {
-      return trimmedUrl
-    }
-
     if (SAFE_LOCAL_AVATAR_PATH.test(trimmedUrl)) {
       const url = new URL(trimmedUrl, "https://eclyps.local")
       url.searchParams.set("v", trimmedVersion)
@@ -67,18 +63,4 @@ export function buildDiscordAvatarUrl(
 
   const extension = hash.startsWith("a_") ? "gif" : "webp"
   return `https://cdn.discordapp.com/avatars/${encodeURIComponent(id)}/${encodeURIComponent(hash)}.${extension}`
-}
-
-function isDiscordAvatarCdnUrl(avatarUrl: string) {
-  try {
-    const url = new URL(avatarUrl)
-    const hostname = url.hostname.toLowerCase()
-
-    return (
-      (hostname === "cdn.discordapp.com" || hostname === "media.discordapp.net") &&
-      url.pathname.startsWith("/avatars/")
-    )
-  } catch {
-    return false
-  }
 }
