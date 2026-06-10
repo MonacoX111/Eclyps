@@ -13,7 +13,9 @@ import { Footer } from "@/components/footer"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
+import { PublicBracket } from "@/components/public-bracket"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getHomepageData } from "@/lib/data/homepage"
 import { getPublicMatchDetail, type MatchDetail } from "@/lib/data/match-detail"
 import { getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
@@ -26,14 +28,19 @@ type MatchPageProps = {
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const { id } = await params
-  const [match, userProfile, t] = await Promise.all([
+  const [match, homepageData, userProfile, t] = await Promise.all([
     getPublicMatchDetail(id),
+    getHomepageData(),
     getCurrentUserProfile(),
     getTranslations(),
   ])
 
   if (!match) notFound()
 
+  const bracket =
+    homepageData.tournament?.id === match.tournament.id
+      ? homepageData.publicBracket
+      : null
   const title = `${participantName(match.participants[0], t)} vs ${participantName(match.participants[1], t)}`
   const scheduledTime = formatMatchScheduleTime({
     scheduledAt: match.scheduledAt,
@@ -57,9 +64,6 @@ export default async function MatchPage({ params }: MatchPageProps) {
             <div className="mb-6 flex flex-wrap gap-3">
               <Link href="/matches" className={secondaryLinkClassName}>
                 {t.matchPage.backToMatches}
-              </Link>
-              <Link href="/tournament#bracket" className={secondaryLinkClassName}>
-                {t.matchPage.backToBracket}
               </Link>
             </div>
 
@@ -98,13 +102,13 @@ export default async function MatchPage({ params }: MatchPageProps) {
               <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_170px_minmax(0,1fr)]">
                 <ParticipantCard
                   participant={match.participants[0]}
-                  isWinner={match.winnerParticipantId === match.participants[0].id}
+                  isWinner={isWinnerParticipant(match, match.participants[0])}
                   t={t}
                 />
                 <ScorePanel match={match} winnerName={winner?.name ?? null} t={t} />
                 <ParticipantCard
                   participant={match.participants[1]}
-                  isWinner={match.winnerParticipantId === match.participants[1].id}
+                  isWinner={isWinnerParticipant(match, match.participants[1])}
                   t={t}
                 />
               </div>
@@ -126,6 +130,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
           </div>
         </div>
         </section>
+
+        <PublicBracket bracket={bracket} />
       </MotionProvider>
 
       <Footer />
@@ -276,16 +282,6 @@ function DetailsSection({
           </div>
         ))}
       </div>
-      <div className="mt-5 flex flex-wrap gap-3">
-        <Link href="/tournament#bracket" className={secondaryLinkClassName}>
-          {t.matchPage.openBracket}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-        <Link href="/matches" className={secondaryLinkClassName}>
-          {t.matchPage.openMatches}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-      </div>
     </section>
   )
 }
@@ -385,7 +381,18 @@ function StatusBadge({ status, t }: { status: MatchDetail["status"]; t: any }) {
 
 function getWinner(match: MatchDetail) {
   return match.participants.find(
-    (participant) => participant.id && participant.id === match.winnerParticipantId,
+    (participant) => isWinnerParticipant(match, participant),
+  )
+}
+
+function isWinnerParticipant(
+  match: MatchDetail,
+  participant: MatchDetail["participants"][number],
+) {
+  return Boolean(
+    match.winnerParticipantId &&
+      participant.id &&
+      participant.id === match.winnerParticipantId,
   )
 }
 

@@ -484,7 +484,7 @@ async function createHomepageData({
     teams,
     players,
     participants,
-    matches,
+    matches: normalMatches,
     results,
     participantType,
     participantLabel,
@@ -492,8 +492,8 @@ async function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount, lang)
       : null,
     participantCards,
-    publicBracket: getPublicBracketData(bracketMatches, tournament),
-    matchScheduleItems: getMatchScheduleItems(matches),
+    publicBracket: getPublicBracketData(bracketMatches, normalMatches, tournament),
+    matchScheduleItems: getMatchScheduleItems(normalMatches),
     resultCards: getResultCards(results, tournament),
     registrationSummary,
   }
@@ -923,9 +923,11 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
 
 function getPublicBracketData(
   bracketMatches: HomepageMatch[],
+  normalMatches: HomepageMatch[],
   tournament: HomepageTournament | null,
 ): PublicBracketData | null {
   const sortedBracketMatches = [...bracketMatches].sort(compareBracketMatches)
+  const sortedNormalMatches = [...normalMatches].sort(compareBracketMatches)
 
   if (sortedBracketMatches.length === 0) return null
 
@@ -937,6 +939,11 @@ function getPublicBracketData(
   )
 
   if (selectedBracketMatches.length === 0) return null
+
+  const displayMatchesByBracketMatchId = getBracketDisplayMatches(
+    selectedBracketMatches,
+    sortedNormalMatches,
+  )
 
   const roundMap = new Map<number, HomepageMatch[]>()
 
@@ -958,17 +965,44 @@ function getPublicBracketData(
       return {
         order,
         label,
-        matches: sortedRoundMatches.map(getPublicBracketMatch),
+        matches: sortedRoundMatches.map((match) =>
+          getPublicBracketMatch(match, displayMatchesByBracketMatchId.get(match.id)),
+        ),
       }
     })
+
+  const displayMatches = selectedBracketMatches.map(
+    (match) => displayMatchesByBracketMatchId.get(match.id) ?? match,
+  )
 
   return {
     id: bracketId,
     status: selectedBracketMatches.find((match) => match.bracket_status)?.bracket_status ?? null,
     labels: getPublicBracketLabels(tournament),
     rounds,
-    champion: getBracketChampion(selectedBracketMatches),
+    champion: getBracketChampion(displayMatches),
   }
+}
+
+function getBracketDisplayMatches(
+  bracketMatches: HomepageMatch[],
+  normalMatches: HomepageMatch[],
+) {
+  const displayMatches = new Map<string, HomepageMatch>()
+
+  if (bracketMatches.length === 1 && normalMatches.length === 1) {
+    displayMatches.set(bracketMatches[0].id, normalMatches[0])
+    return displayMatches
+  }
+
+  if (bracketMatches.length === normalMatches.length) {
+    bracketMatches.forEach((match, index) => {
+      const displayMatch = normalMatches[index]
+      if (displayMatch) displayMatches.set(match.id, displayMatch)
+    })
+  }
+
+  return displayMatches
 }
 
 function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBracketLabels {
@@ -981,24 +1015,29 @@ function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBr
   }
 }
 
-function getPublicBracketMatch(match: HomepageMatch): PublicBracketMatch {
+function getPublicBracketMatch(
+  match: HomepageMatch,
+  displayMatch: HomepageMatch | undefined,
+): PublicBracketMatch {
+  const source = displayMatch ?? match
+
   return {
-    id: match.id,
+    id: source.id,
     label: match.bracket_round ?? match.round ?? "Bracket match",
     position: match.bracket_position ?? 0,
-    status: match.status,
+    status: source.status,
     participants: [
       getPublicBracketParticipant({
-        participantId: match.participant_1_id,
-        name: match.team1,
-        score: match.score1,
-        winnerParticipantId: match.winner_participant_id,
+        participantId: source.participant_1_id,
+        name: source.team1,
+        score: source.score1,
+        winnerParticipantId: source.winner_participant_id,
       }),
       getPublicBracketParticipant({
-        participantId: match.participant_2_id,
-        name: match.team2,
-        score: match.score2,
-        winnerParticipantId: match.winner_participant_id,
+        participantId: source.participant_2_id,
+        name: source.team2,
+        score: source.score2,
+        winnerParticipantId: source.winner_participant_id,
       }),
     ],
   }

@@ -146,6 +146,8 @@ function normalizeMatchRow(row: MatchRow): MatchDetail | null {
   if (!id) return null
 
   const tournament = readJoinedObject(row.tournament)
+  if (!tournament) return null
+
   const participantType =
     readParticipantType(row.participant_type ?? tournament?.participant_type)
   const participant1 = normalizeParticipant({
