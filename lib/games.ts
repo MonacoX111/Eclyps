@@ -25,7 +25,7 @@ export const GAME_CONFIGS: Record<SupportedGame, GameConfig> = {
     fullName: "Counter-Strike 2",
     scoreFormat: "rounds",
     mapPool: ["Mirage", "Inferno", "Nuke", "Anubis", "Ancient", "Overpass", "Vertigo"],
-    defaultModeId: "5v5",
+    defaultModeId: "1v1",
     modes: [
       {
         modeId: "1v1",

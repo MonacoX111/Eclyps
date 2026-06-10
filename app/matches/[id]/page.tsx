@@ -248,6 +248,10 @@ function DetailsSection({
   winnerName: string | null
   t: any
 }) {
+  const nextMatchLabel =
+    match.nextMatchLabel ??
+    (match.bracketId && !match.nextMatchId ? t.matchPage.noNextMatchFinal : null)
+
   const items = [
     [t.matchPage.tournament, match.tournament.name],
     [t.matchPage.game, match.tournament.game],
@@ -264,7 +268,7 @@ function DetailsSection({
     ],
     [t.matchPage.status, formatStatus(match.status, t)],
     [t.matchPage.winner, winnerName],
-    [t.matchPage.nextMatch, match.nextMatchLabel],
+    [t.matchPage.nextMatch, nextMatchLabel],
   ]
 
   return (

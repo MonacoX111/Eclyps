@@ -51,7 +51,7 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
             {t.tournamentArchive.backToArchive}
           </Link>
 
-          <article className="glass-card mt-6 overflow-hidden rounded-2xl p-5 md:p-8">
+          <article id="overview" className="glass-card mt-6 scroll-mt-28 overflow-hidden rounded-2xl p-5 md:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
@@ -82,6 +82,8 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
             </div>
           </article>
 
+          <TournamentHubNav t={t} />
+
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             <StandingsSection results={data.results} t={t} />
             <ParticipantsSection participants={data.participants} t={t} />
@@ -98,6 +100,30 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
 
       <Footer />
     </main>
+  )
+}
+
+function TournamentHubNav({ t }: { t: any }) {
+  const items = [
+    { href: "#overview", label: t.tournamentArchive.overview },
+    { href: "#participants", label: t.tournamentArchive.participants },
+    { href: "#bracket", label: t.tournamentArchive.bracket },
+    { href: "#matches", label: t.tournamentArchive.matchHistory },
+    { href: "#results", label: t.tournamentArchive.results },
+  ]
+
+  return (
+    <nav className="bracket-scroll mt-5 flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-black/25 p-2">
+      {items.map((item) => (
+        <a
+          key={item.href}
+          href={item.href}
+          className="shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold text-white/65 transition hover:bg-primary/10 hover:text-primary"
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
   )
 }
 
@@ -125,7 +151,7 @@ function HeroStat({
 
 function StandingsSection({ results, t }: { results: ArchiveResult[]; t: any }) {
   return (
-    <section className="glass-card rounded-2xl p-5 md:p-6">
+    <section id="results" className="glass-card scroll-mt-28 rounded-2xl p-5 md:p-6">
       <h2 className="text-xl font-bold text-foreground">{t.tournamentArchive.finalStandings}</h2>
       {results.length === 0 ? (
         <p className="mt-4 text-sm text-white/60">{t.tournamentArchive.finalStandingsUnavailable}</p>
@@ -165,7 +191,7 @@ function ParticipantsSection({
   t: any
 }) {
   return (
-    <section className="glass-card rounded-2xl p-5 md:p-6">
+    <section id="participants" className="glass-card scroll-mt-28 rounded-2xl p-5 md:p-6">
       <h2 className="text-xl font-bold text-foreground">{t.tournamentArchive.participants}</h2>
       {participants.length === 0 ? (
         <p className="mt-4 text-sm text-white/60">{t.tournamentArchive.tbd}</p>
@@ -213,7 +239,7 @@ function MatchHistorySection({ matches, t }: { matches: ArchiveMatch[]; t: any }
   const visibleMatches = matches.filter((match) => match.status === "finished")
 
   return (
-    <section className="glass-card mt-6 rounded-2xl p-5 md:p-6">
+    <section id="matches" className="glass-card mt-6 scroll-mt-28 rounded-2xl p-5 md:p-6">
       <h2 className="text-xl font-bold text-foreground">{t.tournamentArchive.matchHistory}</h2>
       {visibleMatches.length === 0 ? (
         <p className="mt-4 text-sm text-white/60">{t.tournamentArchive.noMatchesFound}</p>

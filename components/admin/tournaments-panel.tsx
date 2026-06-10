@@ -152,7 +152,7 @@ function TournamentForm({
   const initialMode = tournament?.game_mode ?? (
     tournament?.game && normalizeGame(tournament.game) === "CS 2"
       ? (tournament.participant_type === "player" ? "1v1" : "5v5")
-      : (tournament?.game ? getGameConfig(tournament.game).defaultModeId : "5v5")
+      : getGameConfig(tournament?.game ?? normalizedGame).defaultModeId
   )
   const [selectedMode, setSelectedMode] = useState<string>(initialMode)
 
