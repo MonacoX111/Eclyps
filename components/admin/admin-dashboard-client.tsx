@@ -177,6 +177,7 @@ export function AdminDashboardClient({
     activeTournament,
     activeTournaments,
     tournaments,
+    participants,
     matches,
     registrations,
     lang,
@@ -1005,6 +1006,7 @@ function buildAdminIssues({
   activeTournament,
   activeTournaments,
   tournaments,
+  participants,
   matches,
   registrations,
   lang,
@@ -1012,6 +1014,7 @@ function buildAdminIssues({
   activeTournament: AdminTournament | undefined
   activeTournaments: AdminTournament[]
   tournaments: AdminTournament[]
+  participants: AdminParticipant[]
   matches: AdminMatch[]
   registrations: AdminRegistration[]
   lang: string
@@ -1103,7 +1106,7 @@ function buildAdminIssues({
   const incompleteUpcomingMatchesCount = matches.filter((match) => {
     const firstParticipantMissing = !match.team1 && !match.participant_1_id
     const secondParticipantMissing = !match.team2 && !match.participant_2_id
-    return match.status === "upcoming" && (firstParticipantMissing || secondParticipantMissing)
+    return !match.bracket_id && match.status === "upcoming" && (firstParticipantMissing || secondParticipantMissing)
   }).length
 
   if (incompleteUpcomingMatchesCount > 0) {
@@ -1119,7 +1122,7 @@ function buildAdminIssues({
   }
 
   const finishedWithoutScoreCount = matches.filter(
-    (match) => isFinishedMatchStatus(match.status) && (match.score1 === null || match.score2 === null),
+    (match) => !match.bracket_id && isFinishedMatchStatus(match.status) && (match.score1 === null || match.score2 === null),
   ).length
 
   if (finishedWithoutScoreCount > 0) {
@@ -1131,6 +1134,84 @@ function buildAdminIssues({
         : `${finishedWithoutScoreCount} finished match(es) do not have a complete score.`,
       tab: "results",
       tone: "error",
+    })
+  }
+
+  const finishedWithoutWinnerCount = matches.filter(
+    (match) => match.bracket_id && isFinishedMatchStatus(match.status) && !match.winner_participant_id,
+  ).length
+
+  if (finishedWithoutWinnerCount > 0) {
+    issues.push({
+      id: "finished-bracket-matches-without-winner",
+      title: isUk ? "У сітці є завершені матчі без переможця" : "Finished bracket matches are missing winners",
+      description: isUk
+        ? `${finishedWithoutWinnerCount} bracket-матч(ів) завершені, але переможець не визначений.`
+        : `${finishedWithoutWinnerCount} bracket match(es) are finished, but the winner is not set.`,
+      tab: "bracket",
+      tone: "error",
+    })
+  }
+
+  const scoreWithoutFinishedStatusCount = matches.filter(
+    (match) =>
+      match.bracket_id &&
+      !isFinishedMatchStatus(match.status) &&
+      match.score1 !== null &&
+      match.score2 !== null,
+  ).length
+
+  if (scoreWithoutFinishedStatusCount > 0) {
+    issues.push({
+      id: "bracket-score-without-finished-status",
+      title: isUk ? "У сітці є рахунок без статусу finished" : "Bracket scores are set without finished status",
+      description: isUk
+        ? `${scoreWithoutFinishedStatusCount} bracket-матч(ів) мають рахунок, але статус ще не finished.`
+        : `${scoreWithoutFinishedStatusCount} bracket match(es) have a score, but the status is not finished.`,
+      tab: "bracket",
+      tone: "warning",
+    })
+  }
+
+  const winnerMismatchCount = matches.filter(
+    (match) => match.bracket_id && hasWinnerScoreMismatch(match),
+  ).length
+
+  if (winnerMismatchCount > 0) {
+    issues.push({
+      id: "bracket-winner-score-mismatch",
+      title: isUk ? "Переможець у сітці не відповідає рахунку" : "Bracket winner does not match the score",
+      description: isUk
+        ? `${winnerMismatchCount} bracket-матч(ів) мають переможця, який не збігається з рахунком.`
+        : `${winnerMismatchCount} bracket match(es) have a winner that does not match the score.`,
+      tab: "bracket",
+      tone: "error",
+    })
+  }
+
+  const bracketParticipantIssues = countBracketParticipantIssues(matches, participants)
+
+  if (bracketParticipantIssues.notEnoughParticipants > 0) {
+    issues.push({
+      id: "bracket-not-enough-participants",
+      title: isUk ? "У сітці не вистачає учасників" : "Bracket does not have enough participants",
+      description: isUk
+        ? `${bracketParticipantIssues.notEnoughParticipants} сітка(и) мають більше стартових слотів, ніж учасників турніру.`
+        : `${bracketParticipantIssues.notEnoughParticipants} bracket(s) have more first-round slots than tournament participants.`,
+      tab: "bracket",
+      tone: "warning",
+    })
+  }
+
+  if (bracketParticipantIssues.unassignedInitialSlots > 0) {
+    issues.push({
+      id: "bracket-unassigned-initial-slots",
+      title: isUk ? "У стартовому раунді сітки є порожні місця" : "Bracket first round has unassigned slots",
+      description: isUk
+        ? `${bracketParticipantIssues.unassignedInitialSlots} сітка(и) мають нерозставлених учасників у стартовому раунді.`
+        : `${bracketParticipantIssues.unassignedInitialSlots} bracket(s) have unassigned first-round participants.`,
+      tab: "bracket",
+      tone: "warning",
     })
   }
 
@@ -1155,4 +1236,82 @@ function buildAdminIssues({
 
 function isFinishedMatchStatus(status: string | null) {
   return status === "finished" || status === "completed" || status === "final"
+}
+
+function hasWinnerScoreMismatch(match: AdminMatch) {
+  if (
+    !match.winner_participant_id ||
+    !match.participant_1_id ||
+    !match.participant_2_id ||
+    match.score1 === null ||
+    match.score2 === null ||
+    match.score1 === match.score2
+  ) {
+    return false
+  }
+
+  const expectedWinnerId =
+    match.score1 > match.score2 ? match.participant_1_id : match.participant_2_id
+
+  return match.winner_participant_id !== expectedWinnerId
+}
+
+function countBracketParticipantIssues(matches: AdminMatch[], participants: AdminParticipant[]) {
+  const bracketGroups = new Map<string, AdminMatch[]>()
+  const participantCountByTournament = new Map<string, number>()
+
+  participants.forEach((participant) => {
+    participantCountByTournament.set(
+      participant.tournament_id,
+      (participantCountByTournament.get(participant.tournament_id) ?? 0) + 1,
+    )
+  })
+
+  matches.forEach((match) => {
+    if (!match.bracket_id || !match.tournament_id) return
+
+    const key = `${match.tournament_id}:${match.bracket_id}`
+    bracketGroups.set(key, [...(bracketGroups.get(key) ?? []), match])
+  })
+
+  let notEnoughParticipants = 0
+  let unassignedInitialSlots = 0
+
+  bracketGroups.forEach((bracketMatches) => {
+    const initialMatches = getInitialRoundMatches(bracketMatches)
+    const tournamentId = bracketMatches[0]?.tournament_id
+    const participantCount = tournamentId ? participantCountByTournament.get(tournamentId) ?? 0 : 0
+    const initialSlotCount = initialMatches.length * 2
+    const assignedInitialSlotCount = initialMatches.reduce((count, match) => {
+      return count + (match.participant_1_id ? 1 : 0) + (match.participant_2_id ? 1 : 0)
+    }, 0)
+
+    if (initialSlotCount > 0 && participantCount < initialSlotCount) {
+      notEnoughParticipants += 1
+    }
+
+    if (
+      initialSlotCount > 0 &&
+      assignedInitialSlotCount < Math.min(participantCount, initialSlotCount)
+    ) {
+      unassignedInitialSlots += 1
+    }
+  })
+
+  return {
+    notEnoughParticipants,
+    unassignedInitialSlots,
+  }
+}
+
+function getInitialRoundMatches(matches: AdminMatch[]) {
+  const roundOrder = Math.min(
+    ...matches.map((match) => match.round_order ?? Number.MAX_SAFE_INTEGER),
+  )
+
+  if (!Number.isFinite(roundOrder)) {
+    return []
+  }
+
+  return matches.filter((match) => (match.round_order ?? Number.MAX_SAFE_INTEGER) === roundOrder)
 }

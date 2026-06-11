@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import type { AdminMatch } from "@/lib/admin/matches"
 import type { AdminParticipant } from "@/lib/admin/participants"
 import type { AdminPlayer } from "@/lib/admin/players"
@@ -22,8 +23,19 @@ import {
 import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
-import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
+import {
+  AdminField,
+  DeleteForm,
+  inputClassName,
+  StatusSelect,
+  SubmitButton,
+  TournamentSelect,
+} from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+
+const adminFormGridClassName =
+  "mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))]"
+const adminWideFieldClassName = "[grid-column:1/-1]"
 
 export function MatchesPanel({
   matches,
@@ -114,7 +126,7 @@ export function BracketPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const tournamentNames = createTournamentNameMap(tournaments)
   const bracketMatches = matches.filter((match) => match.bracket_id)
 
@@ -130,7 +142,7 @@ export function BracketPanel({
       <div className={panelGridClassName}>
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.matches.bracketTemplate}</h3>
-          <BracketTemplateForm tournaments={tournaments} />
+          <BracketTemplateForm tournaments={tournaments} matches={bracketMatches} />
         </article>
 
         <article className={innerPanelClassName}>
@@ -154,13 +166,43 @@ function getHiddenDuplicateLabel(count: number, lang: "uk" | "en") {
 
 function BracketTemplateForm({
   tournaments,
+  matches,
 }: {
   tournaments: AdminTournament[]
+  matches: AdminMatch[]
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const [selectedTournamentId, setSelectedTournamentId] = useState("")
+  const selectedBracketMatches = selectedTournamentId
+    ? matches.filter((match) => match.tournament_id === selectedTournamentId)
+    : []
+  const selectedBracketStatus = resolveBracketStatus(selectedBracketMatches)
+  const hasExistingBracket = selectedBracketMatches.length > 0
+  const blocksRegeneration =
+    hasExistingBracket &&
+    (isLockedBracketStatus(selectedBracketStatus) ||
+      selectedBracketMatches.some((match) => match.status === "live" || match.status === "finished"))
+
   return (
-    <form action={generateBracketTemplate} className="mt-4 grid gap-3 sm:grid-cols-2">
-      <TournamentSelect tournaments={tournaments} />
+    <form action={generateBracketTemplate} className={adminFormGridClassName}>
+      <AdminField label={t.admin.extra.tournamentLabel}>
+        <select
+          name="tournament_id"
+          value={selectedTournamentId}
+          onChange={(event) => setSelectedTournamentId(event.target.value)}
+          required
+          className={inputClassName}
+        >
+          <option value="" disabled>
+            {t.admin.extra.selectTournament}
+          </option>
+          {tournaments.map((tournament) => (
+            <option key={tournament.id} value={tournament.id}>
+              {tournament.name ?? t.admin.extra.untitledTournament}
+            </option>
+          ))}
+        </select>
+      </AdminField>
       <AdminField label={t.admin.matches.bracketSizeField}>
         <select name="bracket_size" defaultValue="8" className={inputClassName}>
           <option value="2">{t.admin.extra.participantsSelect.participants2}</option>
@@ -169,17 +211,32 @@ function BracketTemplateForm({
           <option value="16">{t.admin.extra.participantsSelect.participants16}</option>
         </select>
       </AdminField>
-      <label className="flex gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/65 sm:col-span-2">
+      <label className={`${adminWideFieldClassName} flex gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/65`}>
         <input
           name="confirm_regenerate"
           type="checkbox"
+          disabled={blocksRegeneration}
           className="mt-1 h-4 w-4 accent-emerald-300 animate-none shrink-0"
         />
         <span>
           {t.admin.matches.regenerateDesc}
         </span>
       </label>
-      <SubmitButton label={t.admin.matches.generateBracket} disabled={tournaments.length === 0} />
+      {hasExistingBracket ? (
+        <div className={`${adminWideFieldClassName} rounded-xl border px-4 py-3 text-sm leading-6 ${
+          blocksRegeneration
+            ? "border-red-300/20 bg-red-300/10 text-red-100"
+            : "border-amber-300/20 bg-amber-300/10 text-amber-100"
+        }`}>
+          {blocksRegeneration
+            ? getBracketRegenerationBlockedLabel(lang)
+            : getBracketRegenerationWarningLabel(lang)}
+        </div>
+      ) : null}
+      <SubmitButton
+        label={t.admin.matches.generateBracket}
+        disabled={tournaments.length === 0 || blocksRegeneration}
+      />
     </form>
   )
 }
@@ -193,7 +250,7 @@ function BracketEditor({
   participants: AdminParticipant[]
   tournamentNames: Map<string, string>
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const bracketMatches = matches.filter((match) => match.bracket_id)
 
   if (bracketMatches.length === 0) {
@@ -217,6 +274,7 @@ function BracketEditor({
           (participant) => participant.tournament_id === bracket.tournamentId,
         )
         const assignedIds = getAssignedParticipantIds(bracket.matches)
+        const bracketIssues = getBracketIssues(bracket.matches, bracketParticipants, lang)
 
         return (
           <div key={bracket.bracketId} className="rounded-xl border border-white/10 bg-black/20 p-4">
@@ -234,6 +292,28 @@ function BracketEditor({
                 <span className={pillClassName}>{bracket.matches.length}{t.admin.matches.matchesCount}</span>
               </div>
             </div>
+
+            {bracketIssues.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                {bracketIssues.map((issue) => (
+                  <div
+                    key={issue.id}
+                    className={`rounded-xl border px-3 py-2 text-xs leading-5 ${
+                      issue.tone === "error"
+                        ? "border-red-300/20 bg-red-300/10 text-red-100"
+                        : "border-amber-300/20 bg-amber-300/10 text-amber-100"
+                    }`}
+                  >
+                    <span className="font-bold">{issue.title}</span>
+                    <span className="block text-white/60">{issue.description}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/10 px-3 py-2 text-xs leading-5 text-emerald-100">
+                {getBracketLooksOkLabel(lang)}
+              </div>
+            )}
 
             <BracketStatusControls
               bracketId={bracket.bracketId}
@@ -626,7 +706,7 @@ function MatchForm({
   const isBracket = mode === "bracket"
 
   return (
-    <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
+    <form action={action} className={adminFormGridClassName}>
       {match && <input type="hidden" name="id" value={match.id} />}
       {isBracket ? (
         <>
@@ -636,7 +716,7 @@ function MatchForm({
           <input type="hidden" name="team2" value={match?.team2 ?? "TBD"} />
           <input type="hidden" name="round" value={match?.round ?? match?.bracket_round ?? ""} />
 
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:col-span-2 text-sm space-y-2">
+          <div className={`${adminWideFieldClassName} rounded-xl border border-white/5 bg-white/[0.02] p-3 text-sm space-y-2`}>
             <div>
               <span className="text-white/45 font-medium">{t.admin.matches.tournamentField}: </span>
               <span className="text-white/80">{
@@ -785,6 +865,13 @@ function WinnerSelect({ match, disabled = false }: { match?: AdminMatch; disable
 
 type BracketLifecycleStatus = "template" | "locked" | "active" | "finished"
 
+type BracketIssue = {
+  id: string
+  title: string
+  description: string
+  tone: "error" | "warning"
+}
+
 function groupBracketMatches(matches: AdminMatch[]) {
   const bracketMap = new Map<string, AdminMatch[]>()
 
@@ -871,4 +958,172 @@ function normalizeBracketStatus(status: string | null): BracketLifecycleStatus {
   }
 
   return "template"
+}
+
+function getBracketIssues(
+  matches: AdminMatch[],
+  participants: AdminParticipant[],
+  lang: "uk" | "en",
+): BracketIssue[] {
+  const issues: BracketIssue[] = []
+  const isUk = lang === "uk"
+  const initialMatches = getInitialRoundMatches(matches)
+  const initialSlotCount = initialMatches.length * 2
+  const assignedInitialSlotCount = initialMatches.reduce((count, match) => {
+    return count + (match.participant_1_id ? 1 : 0) + (match.participant_2_id ? 1 : 0)
+  }, 0)
+
+  if (initialSlotCount > 0 && participants.length < initialSlotCount) {
+    issues.push({
+      id: "not-enough-participants",
+      title: isUk ? "Недостатньо учасників для сітки" : "Not enough participants for this bracket",
+      description: isUk
+        ? `У турнірі є ${participants.length} учасник(ів), а стартова сітка має ${initialSlotCount} слот(ів).`
+        : `The tournament has ${participants.length} participant(s), but the first round has ${initialSlotCount} slot(s).`,
+      tone: "warning",
+    })
+  }
+
+  if (initialSlotCount > 0 && assignedInitialSlotCount < Math.min(participants.length, initialSlotCount)) {
+    issues.push({
+      id: "unassigned-initial-slots",
+      title: isUk ? "Не всі учасники розставлені в сітці" : "Not all participants are assigned",
+      description: isUk
+        ? `У стартовому раунді заповнено ${assignedInitialSlotCount} з ${Math.min(participants.length, initialSlotCount)} доступних місць.`
+        : `The first round has ${assignedInitialSlotCount} of ${Math.min(participants.length, initialSlotCount)} available slots filled.`,
+      tone: "warning",
+    })
+  }
+
+  const activeIncompleteMatches = matches.filter(
+    (match) =>
+      (match.status === "live" || isFinishedMatchStatus(match.status)) &&
+      (!match.participant_1_id || !match.participant_2_id),
+  )
+
+  if (activeIncompleteMatches.length > 0) {
+    issues.push({
+      id: "active-incomplete-matches",
+      title: isUk ? "Активний/завершений матч без учасника" : "Active or finished match missing a participant",
+      description: isUk
+        ? `${activeIncompleteMatches.length} матч(ів) вже мають статус live/finished, але слот учасника порожній.`
+        : `${activeIncompleteMatches.length} match(es) are live/finished but still have an empty participant slot.`,
+      tone: "error",
+    })
+  }
+
+  const finishedWithoutWinnerCount = matches.filter(
+    (match) => isFinishedMatchStatus(match.status) && !match.winner_participant_id,
+  ).length
+
+  if (finishedWithoutWinnerCount > 0) {
+    issues.push({
+      id: "finished-without-winner",
+      title: isUk ? "Завершений матч без переможця" : "Finished match missing winner",
+      description: isUk
+        ? `${finishedWithoutWinnerCount} завершений матч(і) не мають переможця.`
+        : `${finishedWithoutWinnerCount} finished match(es) do not have a winner.`,
+      tone: "error",
+    })
+  }
+
+  const finishedWithoutScoreCount = matches.filter(
+    (match) => isFinishedMatchStatus(match.status) && (match.score1 === null || match.score2 === null),
+  ).length
+
+  if (finishedWithoutScoreCount > 0) {
+    issues.push({
+      id: "finished-without-score",
+      title: isUk ? "Завершений матч без повного рахунку" : "Finished match missing score",
+      description: isUk
+        ? `${finishedWithoutScoreCount} завершений матч(і) не мають повного рахунку.`
+        : `${finishedWithoutScoreCount} finished match(es) do not have a complete score.`,
+      tone: "error",
+    })
+  }
+
+  const scoreWithoutFinishedStatusCount = matches.filter(
+    (match) =>
+      !isFinishedMatchStatus(match.status) &&
+      match.score1 !== null &&
+      match.score2 !== null,
+  ).length
+
+  if (scoreWithoutFinishedStatusCount > 0) {
+    issues.push({
+      id: "score-without-finished-status",
+      title: isUk ? "Є рахунок, але матч не завершений" : "Score is set but match is not finished",
+      description: isUk
+        ? `${scoreWithoutFinishedStatusCount} матч(ів) мають рахунок, але статус ще не finished.`
+        : `${scoreWithoutFinishedStatusCount} match(es) have a score, but the status is not finished.`,
+      tone: "warning",
+    })
+  }
+
+  const winnerMismatchCount = matches.filter(hasWinnerScoreMismatch).length
+
+  if (winnerMismatchCount > 0) {
+    issues.push({
+      id: "winner-score-mismatch",
+      title: isUk ? "Переможець не відповідає рахунку" : "Winner does not match the score",
+      description: isUk
+        ? `${winnerMismatchCount} матч(ів) мають переможця, який не збігається з рахунком.`
+        : `${winnerMismatchCount} match(es) have a winner that does not match the score.`,
+      tone: "error",
+    })
+  }
+
+  return issues
+}
+
+function getInitialRoundMatches(matches: AdminMatch[]) {
+  const roundOrder = Math.min(
+    ...matches.map((match) => match.round_order ?? Number.MAX_SAFE_INTEGER),
+  )
+
+  if (!Number.isFinite(roundOrder)) {
+    return []
+  }
+
+  return matches.filter((match) => (match.round_order ?? Number.MAX_SAFE_INTEGER) === roundOrder)
+}
+
+function hasWinnerScoreMismatch(match: AdminMatch) {
+  if (
+    !match.winner_participant_id ||
+    !match.participant_1_id ||
+    !match.participant_2_id ||
+    match.score1 === null ||
+    match.score2 === null ||
+    match.score1 === match.score2
+  ) {
+    return false
+  }
+
+  const expectedWinnerId =
+    match.score1 > match.score2 ? match.participant_1_id : match.participant_2_id
+
+  return match.winner_participant_id !== expectedWinnerId
+}
+
+function isFinishedMatchStatus(status: string | null) {
+  return status === "finished" || status === "completed" || status === "final"
+}
+
+function getBracketRegenerationWarningLabel(lang: "uk" | "en") {
+  return lang === "uk"
+    ? "У цього турніру вже є сітка. Перегенерація видалить поточні bracket-матчі, тому підтвердження нижче обов'язкове."
+    : "This tournament already has a bracket. Regeneration deletes current bracket matches, so the confirmation below is required."
+}
+
+function getBracketRegenerationBlockedLabel(lang: "uk" | "en") {
+  return lang === "uk"
+    ? "Цю сітку не можна перегенерувати: вона locked, active або вже має live/finished матчі."
+    : "This bracket cannot be regenerated: it is locked, active, or already has live/finished matches."
+}
+
+function getBracketLooksOkLabel(lang: "uk" | "en") {
+  return lang === "uk"
+    ? "Очевидних проблем у цій сітці не знайдено."
+    : "No obvious issues were found in this bracket."
 }
