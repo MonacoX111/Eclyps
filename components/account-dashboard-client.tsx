@@ -308,6 +308,14 @@ export function AccountDashboardClient({
               variant="modal"
               buttonClassName="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.25)] cursor-pointer"
             />
+            <form action={refreshDiscordProfile}>
+              <button
+                type="submit"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200 transition hover:border-emerald-300/40 hover:text-emerald-100"
+              >
+                {t.account.refreshDiscordProfile}
+              </button>
+            </form>
             <Link
               href={`/players/${player.id}`}
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
@@ -357,6 +365,14 @@ export function AccountDashboardClient({
               variant="modal"
               buttonClassName="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black transition hover:bg-emerald-300 shadow-[0_0_18px_rgba(52,211,153,0.25)] cursor-pointer"
             />
+            <form action={refreshDiscordProfile}>
+              <button
+                type="submit"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-300/40 hover:text-emerald-100"
+              >
+                {t.account.refreshDiscordProfile}
+              </button>
+            </form>
             <Link
               href={`/players/${player.id}`}
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
