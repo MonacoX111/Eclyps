@@ -1,13 +1,16 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import {
+  AlertTriangle,
   CalendarClock,
+  CheckCircle2,
   ExternalLink,
   Flag,
   Radio,
   Swords,
   Trophy,
 } from "lucide-react"
+import { submitMatchDispute } from "@/app/actions/disputes"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
 import { MotionProvider } from "@/components/motion-provider"
@@ -18,7 +21,7 @@ import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getPublicMatchDetail, type MatchDetail } from "@/lib/data/match-detail"
 import { getTournamentArchiveDetail } from "@/lib/data/tournament-archive"
-import { getTranslations } from "@/lib/i18n/server"
+import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 
 export const dynamic = "force-dynamic"
@@ -29,11 +32,12 @@ type MatchPageProps = {
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const { id } = await params
-  const [match, homepageData, userProfile, t] = await Promise.all([
+  const [match, homepageData, userProfile, t, lang] = await Promise.all([
     getPublicMatchDetail(id),
     getHomepageData(),
     getCurrentUserProfile(),
     getTranslations(),
+    getLanguage(),
   ])
 
   if (!match) notFound()
@@ -139,11 +143,13 @@ export default async function MatchPage({ params }: MatchPageProps) {
             </div>
           ) : null}
 
+          <MatchRoomGuide match={match} lang={lang} t={t} />
+
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
             <DetailsSection match={match} winnerName={winner?.name ?? null} t={t} />
             <div className="space-y-6">
               <WatchSection match={match} t={t} />
-              <DisputeSection match={match} t={t} />
+              <DisputeSection match={match} lang={lang} t={t} />
             </div>
           </div>
         </div>
@@ -264,6 +270,106 @@ function ScorePanel({
   )
 }
 
+
+function MatchRoomGuide({
+  match,
+  lang,
+  t,
+}: {
+  match: MatchDetail
+  lang: "uk" | "en"
+  t: any
+}) {
+  const isUk = lang === "uk"
+  const steps = buildMatchRoomSteps({ match, isUk, t })
+
+  return (
+    <section className="mt-6 rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(0,200,150,0.10),transparent_36%),rgba(255,255,255,0.025)] p-5 shadow-[0_0_46px_rgba(0,200,150,0.08)] md:p-6">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary/75">
+            {isUk ? "Match room" : "Match room"}
+          </p>
+          <h2 className="mt-2 text-xl font-black text-white">
+            {isUk ? "Що робити перед і після матчу" : "What to do before and after the match"}
+          </h2>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-white/55">
+          {formatStatus(match.status, t)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {steps.map((step) => (
+          <div
+            key={step.id}
+            className={`rounded-xl border p-4 ${step.isActive ? "border-primary/30 bg-primary/10" : "border-white/10 bg-black/20"}`}
+          >
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary/75">
+              {step.isDone ? <CheckCircle2 className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-primary/70" />}
+              {step.label}
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-white">{step.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-white/58">{step.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function buildMatchRoomSteps({
+  match,
+  isUk,
+  t,
+}: {
+  match: MatchDetail
+  isUk: boolean
+  t: any
+}) {
+  const hasChannel = Boolean(match.broadcast?.url)
+  const isFinished = match.status === "finished"
+  const isLive = match.status === "live"
+  const hasDispute = match.disputeStatus !== "none"
+
+  return [
+    {
+      id: "prepare",
+      label: isUk ? "Підготовка" : "Prepare",
+      title: isUk ? "Перевір час і суперника" : "Check time and opponent",
+      body: isUk
+        ? "Перед стартом звір розклад, раунд і учасників. Якщо дані неповні — орієнтуйся на оновлення адміна."
+        : "Before start, confirm schedule, round, and participants. If data is incomplete, wait for admin updates.",
+      isActive: match.status === "upcoming",
+      isDone: isLive || isFinished,
+    },
+    {
+      id: "play",
+      label: isUk ? "Матч" : "Match",
+      title: hasChannel
+        ? (isUk ? "Зайди в канал матчу" : "Join the match channel")
+        : (isUk ? "Чекай канал або стрім" : "Wait for channel or stream"),
+      body: hasChannel
+        ? (isUk ? "Канал уже доданий у блок нижче — відкрий його перед стартом або під час live." : "The channel is available below — open it before start or while live.")
+        : (isUk ? "Якщо канал ще не доданий, перевір Discord/анонси або дочекайся оновлення від адміна." : "If no channel is set yet, check Discord/announcements or wait for admin update."),
+      isActive: isLive,
+      isDone: isFinished,
+    },
+    {
+      id: "resolve",
+      label: isUk ? "Після гри" : "After match",
+      title: hasDispute
+        ? (isUk ? "Спір уже зафіксовано" : "Dispute is recorded")
+        : (isUk ? "Перевір результат" : "Verify the result"),
+      body: hasDispute
+        ? `${isUk ? "Поточний статус" : "Current status"}: ${formatDisputeStatus(match.disputeStatus, t)}.`
+        : (isUk ? "Якщо результат неправильний або була проблема — створи dispute у блоці праворуч." : "If the result is wrong or there was an issue, submit a dispute in the panel on the right."),
+      isActive: isFinished && !hasDispute,
+      isDone: hasDispute,
+    },
+  ]
+}
+
 function DetailsSection({
   match,
   winnerName,
@@ -380,7 +486,18 @@ function getChannelButtonLabel(type: NonNullable<MatchDetail["broadcast"]>["type
   return t.matchPage.openStream
 }
 
-function DisputeSection({ match, t }: { match: MatchDetail; t: any }) {
+function DisputeSection({
+  match,
+  lang,
+  t,
+}: {
+  match: MatchDetail
+  lang: "uk" | "en"
+  t: any
+}) {
+  const isUk = lang === "uk"
+  const hasActiveDispute = match.disputeStatus === "open" || match.disputeStatus === "under_review"
+
   return (
     <section className="glass-card rounded-2xl p-5 md:p-6">
       <h2 className="text-xl font-bold text-foreground">{t.matchPage.disputeStatus}</h2>
@@ -388,6 +505,61 @@ function DisputeSection({ match, t }: { match: MatchDetail; t: any }) {
         <Flag className="h-4 w-4 text-primary" />
         {formatDisputeStatus(match.disputeStatus, t)}
       </div>
+
+      {hasActiveDispute ? (
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm leading-6 text-primary">
+          {t.schedule.disputePrefix} {formatDisputeStatus(match.disputeStatus, t)}.
+        </div>
+      ) : (
+        <details className="mt-4 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm text-white/75">
+            <span className="inline-flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-primary" />
+              {t.schedule.reportDispute}
+            </span>
+            <span className="text-xs uppercase tracking-[0.18em] text-primary/70">
+              {t.schedule.matchIssue}
+            </span>
+          </summary>
+          <p className="mt-3 text-xs leading-5 text-white/48">
+            {isUk
+              ? "Цю форму можуть відправити тільки підтверджені учасники матчу. Адмін побачить матч, репортера, причину та evidence link."
+              : "Only confirmed participants can submit this form. Admins will see the match, reporter, reason, and evidence link."}
+          </p>
+          <form action={submitMatchDispute} className="mt-4 grid gap-3">
+            <input type="hidden" name="match_id" value={match.id} />
+            <label className="grid gap-2 text-sm text-white/70">
+              <span>{t.schedule.type}</span>
+              <select name="dispute_type" className={disputeInputClassName} defaultValue="wrong_result">
+                <option value="no_show">{t.schedule.types.no_show}</option>
+                <option value="wrong_result">{t.schedule.types.wrong_result}</option>
+                <option value="cheating">{t.schedule.types.cheating}</option>
+                <option value="connection_issue">{t.schedule.types.connection_issue}</option>
+                <option value="rule_violation">{t.schedule.types.rule_violation}</option>
+                <option value="other">{t.schedule.types.other}</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm text-white/70">
+              <span>{t.schedule.disputeTitle}</span>
+              <input name="title" required className={disputeInputClassName} placeholder={t.schedule.titlePlaceholder} />
+            </label>
+            <label className="grid gap-2 text-sm text-white/70">
+              <span>{t.schedule.description}</span>
+              <textarea name="description" required rows={3} className={disputeInputClassName} placeholder={t.schedule.descriptionPlaceholder} />
+            </label>
+            <label className="grid gap-2 text-sm text-white/70">
+              <span>{t.schedule.evidenceLink}</span>
+              <input name="evidence_url" type="url" className={disputeInputClassName} placeholder="https://..." />
+            </label>
+            <button
+              type="submit"
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-primary/90 cursor-pointer"
+            >
+              {t.schedule.submitDispute}
+            </button>
+          </form>
+        </details>
+      )}
     </section>
   )
 }
@@ -450,3 +622,6 @@ const primaryLinkClassName =
 
 const secondaryLinkClassName =
   "inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-primary/40 hover:text-primary"
+
+const disputeInputClassName =
+  "w-full min-w-0 rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-white outline-none transition focus:border-primary/60"
