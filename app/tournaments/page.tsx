@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Archive, CalendarDays, Search, SlidersHorizontal, Trophy, Users } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
+import { ListEmptyState } from "@/components/list-empty-state"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
@@ -75,12 +76,7 @@ export default async function TournamentsPage({ searchParams }: TournamentsPageP
           />
 
           {archive.tournaments.length === 0 ? (
-            <div className="glass-card mx-auto mt-10 max-w-xl rounded-2xl px-6 py-10 text-center">
-              <Archive className="mx-auto h-9 w-9 text-primary" />
-              <p className="mt-4 text-sm font-semibold text-white/70">
-                {t.tournamentArchive.empty}
-              </p>
-            </div>
+            <ListEmptyState variant="tournaments" className="mt-10" />
           ) : (
             <div className="mt-10 grid gap-5 md:grid-cols-2">
               {archive.tournaments.map((tournament) => (

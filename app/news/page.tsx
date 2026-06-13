@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
+import { ListEmptyState } from "@/components/list-empty-state"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
@@ -68,12 +69,7 @@ async function NewsIndex() {
         </div>
 
         {posts.length === 0 ? (
-          <div className="glass-card rounded-2xl p-10 text-center">
-            <p className="text-lg font-semibold text-white">{t.news.noPosts}</p>
-            <p className="mt-2 text-sm text-white/55">
-              {t.news.noPostsDesc}
-            </p>
-          </div>
+          <ListEmptyState variant="news" />
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {posts.map((post) => (

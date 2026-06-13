@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { CalendarClock, ExternalLink, Radio, Swords, Trophy } from "lucide-react"
+import { CalendarClock, ExternalLink, Radio, Trophy } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
+import { ListEmptyState } from "@/components/list-empty-state"
 import { MotionProvider } from "@/components/motion-provider"
 import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
@@ -74,12 +75,7 @@ export default async function MatchesPage({ searchParams }: MatchesPageProps) {
             ) : null}
 
             {matches.length === 0 ? (
-              <div className="glass-card mx-auto mt-8 max-w-xl rounded-2xl px-6 py-10 text-center">
-                <Swords className="mx-auto h-9 w-9 text-primary" />
-                <p className="mt-4 text-sm font-semibold text-white/70">
-                  {getEmptyLabel(activeTab, t)}
-                </p>
-              </div>
+              <ListEmptyState variant={getMatchEmptyVariant(activeTab)} />
             ) : (
               <div className="mt-8 grid gap-4">
                 {matches.map((match) => (
@@ -233,11 +229,11 @@ function getWinnerName(match: HomepageMatch) {
   return null
 }
 
-function getEmptyLabel(tab: MatchTab, t: any) {
-  if (tab === "upcoming") return t.matchesPage.emptyUpcoming
-  if (tab === "live") return t.matchesPage.emptyLive
-  if (tab === "finished") return t.matchesPage.emptyFinished
-  return t.matchesPage.emptyAll
+function getMatchEmptyVariant(tab: MatchTab) {
+  if (tab === "upcoming") return "matches-upcoming" as const
+  if (tab === "live") return "matches-live" as const
+  if (tab === "finished") return "matches-finished" as const
+  return "matches-all" as const
 }
 
 function getDisputeFeedback(searchParams?: {

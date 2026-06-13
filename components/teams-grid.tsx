@@ -5,6 +5,7 @@ import { m } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { Shield } from "lucide-react"
+import { ListEmptyState } from "@/components/list-empty-state"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
 import { withAvatarCacheBust } from "@/lib/avatar"
@@ -45,9 +46,7 @@ export function TeamsGrid({
         />
 
         {teams.length === 0 ? (
-          <p className="glass-card mx-auto mt-12 max-w-xl rounded-xl p-6 text-center text-sm text-muted-foreground">
-            {t.teamsGrid.noRegistered}
-          </p>
+          <ListEmptyState variant={participantLabel === "Players" ? "players" : "teams"} />
         ) : (
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {teams.map((team, i) => (
