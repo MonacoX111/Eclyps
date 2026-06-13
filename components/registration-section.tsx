@@ -42,7 +42,7 @@ export function RegistrationSection({
   checkInFeedback,
   platformState,
 }: RegistrationSectionProps) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
 
   if (!summary) return null
 
@@ -104,6 +104,16 @@ export function RegistrationSection({
     (summary.participantType !== "team" || (approvedTeams.length > 0 && !isTeamAlreadyRegistered && isTeamEligible))
 
   const applicationStatus = playerApplication?.status ?? null
+  const flowItems = buildRegistrationFlowItems({
+    lang,
+    hasUser: Boolean(userProfile),
+    hasApprovedPlayer: Boolean(approvedPlayer),
+    playerApplicationStatus: applicationStatus,
+    registrationStatus: tournamentRegistration?.status ?? null,
+    checkInTone: checkInState.tone,
+    checkInCanSubmit: checkInState.canCheckIn,
+    participantType: summary.participantType,
+  })
 
   return (
     <section className="relative z-10 px-4 py-24" id="registration">
@@ -114,7 +124,9 @@ export function RegistrationSection({
           </span>
         </SectionHeading>
 
-        <div className="glass-card mx-auto grid gap-6 rounded-2xl p-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:p-8">
+        <RegistrationFlowGuide items={flowItems} lang={lang} />
+
+        <div className="glass-card mx-auto mt-6 grid gap-6 rounded-2xl p-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:p-8">
           <div className="flex flex-col justify-between gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
@@ -403,6 +415,130 @@ export function RegistrationSection({
       />
     </section>
   )
+}
+
+
+type RegistrationFlowItem = {
+  id: string
+  title: string
+  body: string
+  state: "done" | "current" | "locked"
+}
+
+function RegistrationFlowGuide({ items, lang }: { items: RegistrationFlowItem[]; lang: string }) {
+  const isUk = lang === "uk"
+  const completed = items.filter((item) => item.state === "done").length
+
+  return (
+    <div className="mx-auto mt-8 max-w-4xl rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_right,rgba(0,200,150,0.10),transparent_32%),rgba(255,255,255,0.025)] p-4 shadow-[0_0_46px_rgba(0,200,150,0.08)] sm:p-5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary/75">
+            {isUk ? "Турнірний флоу" : "Tournament flow"}
+          </p>
+          <h3 className="mt-2 text-lg font-black text-white">
+            {isUk ? "Куди рухатись далі" : "What to do next"}
+          </h3>
+        </div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/45">
+          {completed}/{items.length} {isUk ? "готово" : "done"}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        {items.map((item, index) => (
+          <div
+            key={item.id}
+            className={`rounded-xl border p-3 ${getRegistrationFlowItemClassName(item.state)}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
+                {isUk ? "Крок" : "Step"} {index + 1}
+              </span>
+              <span className="text-lg leading-none">
+                {item.state === "done" ? "✓" : item.state === "current" ? "→" : "•"}
+              </span>
+            </div>
+            <h4 className="mt-2 text-sm font-bold text-white">{item.title}</h4>
+            <p className="mt-1 text-xs leading-5 text-white/55">{item.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function getRegistrationFlowItemClassName(state: RegistrationFlowItem["state"]) {
+  if (state === "done") return "border-primary/25 bg-primary/10 text-primary"
+  if (state === "current") return "border-amber-300/25 bg-amber-300/10 text-amber-100"
+  return "border-white/10 bg-black/20 text-white/45"
+}
+
+function buildRegistrationFlowItems({
+  lang,
+  hasUser,
+  hasApprovedPlayer,
+  playerApplicationStatus,
+  registrationStatus,
+  checkInTone,
+  checkInCanSubmit,
+  participantType,
+}: {
+  lang: string
+  hasUser: boolean
+  hasApprovedPlayer: boolean
+  playerApplicationStatus: "pending" | "approved" | "rejected" | null
+  registrationStatus: string | null
+  checkInTone: CheckInState["tone"]
+  checkInCanSubmit: boolean
+  participantType: "player" | "team"
+}): RegistrationFlowItem[] {
+  const isUk = lang === "uk"
+  const isTeam = participantType === "team"
+  const hasRegistration = Boolean(registrationStatus)
+  const registrationApproved = registrationStatus === "approved"
+  const checkedIn = checkInTone === "success"
+
+  return [
+    {
+      id: "discord",
+      title: isUk ? "Discord" : "Discord",
+      body: hasUser
+        ? (isUk ? "Акаунт підключено, заявки будуть привʼязані до Discord." : "Account connected; entries are tied to Discord.")
+        : (isUk ? "Увійди через Discord, щоб створити заявку." : "Sign in with Discord to create an entry."),
+      state: hasUser ? "done" : "current",
+    },
+    {
+      id: "player",
+      title: isUk ? "Профіль гравця" : "Player profile",
+      body: hasApprovedPlayer
+        ? (isUk ? "Профіль підтверджено адміністрацією." : "Profile is approved by admins.")
+        : playerApplicationStatus === "pending"
+          ? (isUk ? "Заявка на профіль очікує перевірки." : "Profile application is waiting for review.")
+          : (isUk ? "Створи або онови профіль гравця." : "Create or update your player profile."),
+      state: hasApprovedPlayer ? "done" : hasUser ? "current" : "locked",
+    },
+    {
+      id: "registration",
+      title: isTeam ? (isUk ? "Заявка команди" : "Team entry") : (isUk ? "Заявка гравця" : "Player entry"),
+      body: registrationApproved
+        ? (isUk ? "Участь підтверджена, дочекайся check-in." : "Entry approved; wait for check-in.")
+        : hasRegistration
+          ? (isUk ? "Заявка створена і очікує рішення." : "Entry submitted and waiting for decision.")
+          : (isUk ? "Заповни форму реєстрації на активний турнір." : "Fill out the active tournament registration form."),
+      state: registrationApproved ? "done" : hasRegistration ? "current" : hasApprovedPlayer ? "current" : "locked",
+    },
+    {
+      id: "check-in",
+      title: isUk ? "Check-in" : "Check-in",
+      body: checkedIn
+        ? (isUk ? "Участь підтверджена перед стартом." : "Participation is confirmed before the start.")
+        : checkInCanSubmit
+          ? (isUk ? "Check-in відкритий — підтвердь участь зараз." : "Check-in is open — confirm now.")
+          : (isUk ? "Стане доступним після підтвердження заявки та відкриття вікна." : "Available after approval and when the window opens."),
+      state: checkedIn ? "done" : checkInCanSubmit ? "current" : registrationApproved ? "current" : "locked",
+    },
+  ]
 }
 
 type CheckInState = {
