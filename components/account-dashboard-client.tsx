@@ -16,6 +16,9 @@ import {
   Flame,
   Users,
   Bell,
+  CheckCircle2,
+  Clock,
+  Circle,
   ExternalLink,
   Settings,
   Inbox,
@@ -226,6 +229,17 @@ export function AccountDashboardClient({
     { label: t.account.stats.currentStreak, value: t.account.stats.notEnoughData, icon: Flame, tone: "text-orange-300" },
   ]
 
+  const onboardingItems = buildOnboardingItems({
+    lang,
+    playerId: player.id,
+    playerStatus: player.status,
+    registrations,
+    teamsList,
+    invitesList,
+    joinRequestsList,
+  })
+  const onboardingProgress = onboardingItems.filter((item) => item.status === "done").length
+
   const activityItems = [
     ...teamsList.map((team) => ({
       id: `team-${team.id}`,
@@ -388,6 +402,13 @@ export function AccountDashboardClient({
 
       {activeTab === "overview" && (
       <>
+      <AccountOnboardingPanel
+        items={onboardingItems}
+        completed={onboardingProgress}
+        total={onboardingItems.length}
+        lang={lang}
+      />
+
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         {statCards.map((stat) => (
           <div key={stat.label} className="glass-card rounded-2xl p-4">
@@ -759,6 +780,189 @@ export function AccountDashboardClient({
       </div>
     </section>
   )
+}
+
+
+type OnboardingItem = {
+  id: string
+  title: string
+  body: string
+  status: "done" | "current" | "locked"
+  href?: string
+  cta?: string
+}
+
+function AccountOnboardingPanel({
+  items,
+  completed,
+  total,
+  lang,
+}: {
+  items: OnboardingItem[]
+  completed: number
+  total: number
+  lang: string
+}) {
+  const isUk = lang === "uk"
+  const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  return (
+    <div className="mt-6 overflow-hidden rounded-2xl border border-emerald-400/20 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.12),transparent_32%),rgba(255,255,255,0.025)] p-5 sm:p-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-emerald-300">
+            {isUk ? "Прогрес онбордингу" : "Onboarding progress"}
+          </p>
+          <h2 className="mt-2 text-xl font-black text-white">
+            {isUk ? "Що зробити далі в акаунті" : "What to do next in your account"}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+            {isUk
+              ? "Короткий чекліст показує, де користувач зараз у флоу: Discord, профіль гравця, реєстрація, команда та check-in."
+              : "A short checklist shows where the user is in the flow: Discord, player profile, registration, team, and check-in."}
+          </p>
+        </div>
+        <div className="min-w-[180px] rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-center justify-between text-xs font-semibold text-white/55">
+            <span>{isUk ? "Прогрес" : "Progress"}</span>
+            <span className="text-emerald-300">{completed}/{total}</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-emerald-400 transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-5">
+        {items.map((item, index) => (
+          <OnboardingStepCard key={item.id} item={item} index={index + 1} lang={lang} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OnboardingStepCard({ item, index, lang }: { item: OnboardingItem; index: number; lang: string }) {
+  const stepLabel = lang === "uk" ? "Крок" : "Step"
+  const Icon = item.status === "done" ? CheckCircle2 : item.status === "current" ? Clock : Circle
+  const tone =
+    item.status === "done"
+      ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+      : item.status === "current"
+        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+        : "border-white/10 bg-white/[0.025] text-white/45"
+
+  const content = (
+    <div className={`flex h-full flex-col rounded-2xl border p-4 transition ${tone}`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
+          {stepLabel} {index}
+        </span>
+        <Icon className="h-4 w-4 shrink-0" />
+      </div>
+      <h3 className="mt-3 text-sm font-bold text-white">{item.title}</h3>
+      <p className="mt-2 flex-1 text-xs leading-5 text-white/55">{item.body}</p>
+      {item.cta ? (
+        <span className="mt-4 text-xs font-bold text-emerald-300">{item.cta}</span>
+      ) : null}
+    </div>
+  )
+
+  if (!item.href || item.status === "locked") return content
+
+  return (
+    <Link href={item.href} className="block h-full hover:opacity-95">
+      {content}
+    </Link>
+  )
+}
+
+function buildOnboardingItems({
+  lang,
+  playerId,
+  playerStatus,
+  registrations,
+  teamsList,
+  invitesList,
+  joinRequestsList,
+}: {
+  lang: string
+  playerId: string
+  playerStatus: string | null | undefined
+  registrations: any[]
+  teamsList: TeamInfo[]
+  invitesList: any[]
+  joinRequestsList: any[]
+}): OnboardingItem[] {
+  const isUk = lang === "uk"
+  const hasRegistration = registrations.length > 0
+  const hasApprovedRegistration = registrations.some((registration) => registration.status === "approved")
+  const hasCheckedIn = registrations.some((registration) => registration.check_in_status === "checked_in")
+  const hasTeam = teamsList.length > 0
+  const hasPendingTeamAction = invitesList.length > 0 || joinRequestsList.some((request) => request.status === "pending")
+  const playerApproved = playerStatus === "approved"
+  const playerRejected = playerStatus === "rejected"
+
+  return [
+    {
+      id: "discord",
+      title: isUk ? "Discord підключено" : "Discord connected",
+      body: isUk ? "Акаунт синхронізований із Discord профілем." : "The account is synced with a Discord profile.",
+      status: "done",
+      href: "/account",
+    },
+    {
+      id: "player",
+      title: isUk ? "Профіль гравця" : "Player profile",
+      body: playerApproved
+        ? (isUk ? "Профіль підтверджено і готовий до участі." : "The profile is approved and ready to compete.")
+        : playerRejected
+          ? (isUk ? "Профіль потребує оновлення перед участю." : "The profile needs an update before competing.")
+          : (isUk ? "Очікує підтвердження адміністратора." : "Waiting for admin approval."),
+      status: playerApproved ? "done" : "current",
+      href: playerApproved ? `/players/${playerId}` : "/registration",
+      cta: playerApproved ? undefined : (isUk ? "Перевірити реєстрацію" : "Check registration"),
+    },
+    {
+      id: "registration",
+      title: isUk ? "Реєстрація на турнір" : "Tournament registration",
+      body: hasApprovedRegistration
+        ? (isUk ? "Є підтверджена участь у турнірі." : "There is an approved tournament entry.")
+        : hasRegistration
+          ? (isUk ? "Заявка створена, очікує рішення." : "Entry created and waiting for review.")
+          : (isUk ? "Подай заявку на активний турнір." : "Submit an entry for the active tournament."),
+      status: hasApprovedRegistration ? "done" : hasRegistration ? "current" : playerApproved ? "current" : "locked",
+      href: playerApproved ? "/registration" : undefined,
+      cta: !hasApprovedRegistration && playerApproved ? (isUk ? "До реєстрації" : "Go to registration") : undefined,
+    },
+    {
+      id: "team",
+      title: isUk ? "Команда / інвайти" : "Team / invites",
+      body: hasTeam
+        ? (isUk ? "Ти вже привʼязаний до команди." : "You are already linked to a team.")
+        : hasPendingTeamAction
+          ? (isUk ? "Є командні інвайти або pending-запити." : "There are team invites or pending requests.")
+          : (isUk ? "Створи команду або приєднайся до існуючої." : "Create a team or join an existing one."),
+      status: hasTeam ? "done" : hasPendingTeamAction ? "current" : playerApproved ? "current" : "locked",
+      href: hasPendingTeamAction ? "/account?tab=invites" : playerApproved ? "/teams" : undefined,
+      cta: !hasTeam && playerApproved ? (isUk ? "Відкрити команди" : "Open teams") : undefined,
+    },
+    {
+      id: "check-in",
+      title: isUk ? "Check-in" : "Check-in",
+      body: hasCheckedIn
+        ? (isUk ? "Check-in підтверджено." : "Check-in is confirmed.")
+        : hasApprovedRegistration
+          ? (isUk ? "Коли check-in відкриється, підтвердь участь." : "When check-in opens, confirm participation.")
+          : (isUk ? "Стане актуальним після підтвердження реєстрації." : "This becomes relevant after registration approval."),
+      status: hasCheckedIn ? "done" : hasApprovedRegistration ? "current" : "locked",
+      href: hasApprovedRegistration ? "/registration" : undefined,
+      cta: hasApprovedRegistration && !hasCheckedIn ? (isUk ? "Перевірити check-in" : "Check status") : undefined,
+    },
+  ]
 }
 
 type AccountTab = "overview" | "teams" | "registrations" | "invites" | "notifications" | "settings"

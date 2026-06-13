@@ -1,4 +1,5 @@
-import { Suspense, type ReactNode } from "react"
+import { Suspense } from "react"
+import Link from "next/link"
 import { redirect } from "next/navigation"
 import { AccountDashboardClient } from "@/components/account-dashboard-client"
 import { getCurrentUserProfile, type UserProfile } from "@/lib/auth/user-profile"
@@ -121,12 +122,28 @@ async function AccountDashboard({
     if (playerError) {
       console.error(`Error fetching players: [${playerError.code || "No code"}] ${playerError.message || "No message"}. Details: ${playerError.details || "No details"}. Hint: ${playerError.hint || "No hint"}`)
     }
+    const isUk = lang === "uk"
+
     return (
-      <div className="mx-auto max-w-lg mt-20 p-6 glass-card rounded-2xl text-center border border-white/5 shadow-2xl">
+      <div className="mx-auto mt-20 max-w-lg rounded-2xl border border-white/5 p-6 text-center shadow-2xl glass-card">
         <h2 className="text-xl font-bold text-white">{t.account.profileMissing}</h2>
-        <p className="text-sm text-white/60 mt-2">
+        <p className="mt-2 text-sm leading-6 text-white/60">
           {t.account.profileMissingDesc}
         </p>
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link
+            href="/registration"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-black transition hover:bg-emerald-300"
+          >
+            {isUk ? "Перейти до реєстрації" : "Go to registration"}
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/75 transition hover:border-white/20 hover:text-white"
+          >
+            {isUk ? "На головну" : "Go home"}
+          </Link>
+        </div>
       </div>
     )
   }
