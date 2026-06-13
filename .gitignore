@@ -9,7 +9,9 @@ __v0_jsx-dev-runtime.ts
 .vercel/
 
 # Environment variables
-.env*.local
+.env
+.env.*
+!.env.example
 
 # Dependencies
 node_modules/
@@ -17,6 +19,9 @@ node_modules/
 # Next.js
 .next/
 out/
+
+# TypeScript
+*.tsbuildinfo
 
 # OS files
 .DS_Store

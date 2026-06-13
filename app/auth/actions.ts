@@ -1,13 +1,48 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { getCurrentUserProfile, syncCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getPublicEnv } from "@/lib/env/public"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export type ActionResponse = {
   ok: boolean
   error?: string
+}
+
+export async function loginWithDiscord() {
+  const supabase = await createSupabaseServerClient()
+  const origin = await getSiteOrigin()
+  const callbackUrl = new URL("/auth/callback", origin)
+  callbackUrl.searchParams.set("next", "/registration#registration")
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "discord",
+    options: {
+      redirectTo: callbackUrl.toString(),
+      scopes: "identify email",
+    },
+  })
+
+  if (error || !data.url) {
+    redirect("/registration?registrationError=discord-login-failed#registration")
+  }
+
+  redirect(data.url)
+}
+
+export async function logoutDiscord() {
+  const supabase = await createSupabaseServerClient()
+  await supabase.auth.signOut()
+
+  revalidatePath("/")
+  revalidatePath("/account")
+  revalidatePath("/registration")
+
+  redirect("/")
 }
 
 /**
@@ -101,4 +136,15 @@ export async function refreshDiscordProfile() {
   revalidatePath("/")
 
   redirect(result.refreshedFromDiscord ? "/account?discordRefresh=updated" : "/account?discordRefresh=stale")
+}
+
+async function getSiteOrigin() {
+  const publicEnv = getPublicEnv()
+  if (publicEnv.siteUrl) return publicEnv.siteUrl
+
+  const headerStore = await headers()
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host")
+  const protocol = headerStore.get("x-forwarded-proto") ?? "http"
+
+  return host ? `${protocol}://${host}` : "http://localhost:3000"
 }
