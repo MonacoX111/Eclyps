@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { reviewRegistration } from "@/app/admin/actions"
 import Image from "next/image"
 import type { AdminRegistration } from "@/lib/admin/registrations"
@@ -30,10 +31,37 @@ export function RegistrationsPanel({
 }) {
   const { t, lang } = useLanguage()
   const tournamentNames = createTournamentNameMap(tournaments)
-  const activeFilter = normalizeRegistrationFilter(filter)
+  const [activeFilter, setActiveFilter] = useState<RegistrationFilter>(
+    normalizeRegistrationFilter(filter),
+  )
+
+  useEffect(() => {
+    setActiveFilter(normalizeRegistrationFilter(filter))
+  }, [filter])
+
+  const handleFilterChange = (nextFilter: RegistrationFilter) => {
+    setActiveFilter(nextFilter)
+
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      url.searchParams.set("tab", "applications")
+      url.searchParams.set("registrationFilter", nextFilter)
+      window.history.replaceState(null, "", url.toString())
+    }
+  }
+
   const filteredRegistrations = filterRegistrations(registrations, activeFilter)
   const pendingRegistrations = filteredRegistrations.filter(
     (registration) => registration.status === "pending",
+  )
+  const approvedRegistrations = registrations.filter(
+    (registration) => registration.status === "approved",
+  )
+  const missingCheckIns = approvedRegistrations.filter(
+    (registration) => registration.check_in_status !== "checked_in",
+  )
+  const checkedInRegistrations = approvedRegistrations.filter(
+    (registration) => registration.check_in_status === "checked_in",
   )
   const reviewedRegistrations = filteredRegistrations
     .filter((registration) => registration.status !== "pending")
@@ -48,6 +76,17 @@ export function RegistrationsPanel({
       fetchError={fetchError}
       fetchLabel="registrations"
     >
+      <RegistrationQueueSummary
+        lang={lang}
+        total={registrations.length}
+        visible={filteredRegistrations.length}
+        pending={pendingRegistrations.length}
+        approved={approvedRegistrations.length}
+        checkedIn={checkedInRegistrations.length}
+        missingCheckIns={missingCheckIns.length}
+        onFilterChange={handleFilterChange}
+      />
+
       <div className="mt-5 flex flex-wrap gap-2 text-xs">
         {registrationFilters.map((item) => {
           const label =
@@ -61,17 +100,18 @@ export function RegistrationsPanel({
               ? t.admin.extra.checkedIn
               : t.admin.extra.notCheckedIn
           return (
-            <a
+            <button
               key={item.value}
-              href={`/admin?registrationFilter=${item.value}#registrations`}
-              className={`rounded-full border px-3 py-1.5 transition ${
+              type="button"
+              onClick={() => handleFilterChange(item.value)}
+              className={`rounded-full border px-3 py-1.5 transition cursor-pointer ${
                 item.value === activeFilter
                   ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-100"
                   : "border-white/10 text-white/60 hover:border-white/25 hover:text-white"
               }`}
             >
               {label}
-            </a>
+            </button>
           )
         })}
       </div>
@@ -118,6 +158,100 @@ export function RegistrationsPanel({
         </article>
       </div>
     </AdminSection>
+  )
+}
+
+function RegistrationQueueSummary({
+  lang,
+  total,
+  visible,
+  pending,
+  approved,
+  checkedIn,
+  missingCheckIns,
+  onFilterChange,
+}: {
+  lang: string
+  total: number
+  visible: number
+  pending: number
+  approved: number
+  checkedIn: number
+  missingCheckIns: number
+  onFilterChange: (filter: RegistrationFilter) => void
+}) {
+  const isUk = lang === "uk"
+  const checkInRate = approved > 0 ? Math.round((checkedIn / approved) * 100) : 0
+  const cards = [
+    {
+      id: "pending",
+      label: isUk ? "Очікують рішення" : "Awaiting decision",
+      value: pending,
+      filter: "pending" as const,
+      tone: pending > 0 ? "warning" : "neutral",
+    },
+    {
+      id: "missing-check-in",
+      label: isUk ? "Approved без check-in" : "Approved without check-in",
+      value: missingCheckIns,
+      filter: "not-checked-in" as const,
+      tone: missingCheckIns > 0 ? "warning" : "neutral",
+    },
+    {
+      id: "checked-in",
+      label: isUk ? "Check-in rate" : "Check-in rate",
+      value: `${checkInRate}%`,
+      filter: "checked-in" as const,
+      tone: checkInRate >= 80 ? "success" : "neutral",
+    },
+  ] as const
+
+  return (
+    <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300/75">
+            {isUk ? "Черга реєстрацій" : "Registration queue"}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-white">
+            {pending > 0
+              ? isUk ? "Почни з pending заявок" : "Start with pending entries"
+              : missingCheckIns > 0
+                ? isUk ? "Контролюй check-in перед стартом" : "Monitor check-in before start"
+                : isUk ? "Черга виглядає чисто" : "Queue looks clean"}
+          </h3>
+          <p className="mt-1 text-sm text-white/55">
+            {isUk
+              ? `Показано ${visible} із ${total} реєстрацій. Карти нижче ведуть до потрібного фільтра.`
+              : `Showing ${visible} of ${total} registrations. Cards below jump to the right filter.`}
+          </p>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/55">
+          {approved} {isUk ? "підтверджено" : "approved"}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {cards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onFilterChange(card.filter)}
+            className={`rounded-xl border px-4 py-3 text-left transition hover:bg-white/[0.03] cursor-pointer ${
+              card.tone === "success"
+                ? "border-emerald-300/25 bg-emerald-300/10"
+                : card.tone === "warning"
+                  ? "border-amber-300/25 bg-amber-300/10"
+                  : "border-white/10 bg-black/20"
+            }`}
+          >
+            <span className="block text-2xl font-black text-white">{card.value}</span>
+            <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
+              {card.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -215,11 +349,21 @@ function RegistrationRecord({
             id={registration.id}
             status="approved"
             label={t.admin.registrations.approve}
+            confirmMessage={
+              lang === "uk"
+                ? `Підтвердити реєстрацію "${registration.display_name}"?`
+                : `Approve registration "${registration.display_name}"?`
+            }
           />
           <RegistrationDecisionForm
             id={registration.id}
             status="rejected"
             label={t.admin.registrations.reject}
+            confirmMessage={
+              lang === "uk"
+                ? `Відхилити реєстрацію "${registration.display_name}"?`
+                : `Reject registration "${registration.display_name}"?`
+            }
             danger
           />
         </div>
@@ -289,11 +433,13 @@ function RegistrationDecisionForm({
   id,
   status,
   label,
+  confirmMessage,
   danger = false,
 }: {
   id: string
   status: "approved" | "rejected"
   label: string
+  confirmMessage: string
   danger?: boolean
 }) {
   return (
@@ -302,6 +448,9 @@ function RegistrationDecisionForm({
       <input type="hidden" name="status" value={status} />
       <button
         type="submit"
+        onClick={(event) => {
+          if (!window.confirm(confirmMessage)) event.preventDefault()
+        }}
         className={
           danger
             ? "w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10"

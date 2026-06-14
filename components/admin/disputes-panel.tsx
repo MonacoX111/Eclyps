@@ -24,10 +24,13 @@ export function DisputesPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const activeDisputes = disputes.filter(
     (dispute) => dispute.status === "open" || dispute.status === "under_review",
   )
+  const openDisputes = disputes.filter((dispute) => dispute.status === "open")
+  const underReviewDisputes = disputes.filter((dispute) => dispute.status === "under_review")
+  const evidenceDisputes = activeDisputes.filter((dispute) => Boolean(dispute.evidence_url))
   const resolvedDisputes = disputes
     .filter((dispute) => dispute.status === "resolved" || dispute.status === "rejected")
     .slice(0, 8)
@@ -41,6 +44,15 @@ export function DisputesPanel({
       fetchError={fetchError}
       fetchLabel="disputes"
     >
+      <DisputeQueueSummary
+        lang={lang}
+        total={disputes.length}
+        active={activeDisputes.length}
+        open={openDisputes.length}
+        underReview={underReviewDisputes.length}
+        withEvidence={evidenceDisputes.length}
+      />
+
       <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.disputes.openDisputes}</h3>
@@ -72,6 +84,73 @@ export function DisputesPanel({
   )
 }
 
+function DisputeQueueSummary({
+  lang,
+  total,
+  active,
+  open,
+  underReview,
+  withEvidence,
+}: {
+  lang: string
+  total: number
+  active: number
+  open: number
+  underReview: number
+  withEvidence: number
+}) {
+  const isUk = lang === "uk"
+  const cards = [
+    { id: "open", label: isUk ? "Нові" : "Open", value: open, tone: open > 0 ? "warning" : "neutral" },
+    { id: "review", label: isUk ? "На розгляді" : "Under review", value: underReview, tone: underReview > 0 ? "warning" : "neutral" },
+    { id: "evidence", label: isUk ? "З доказами" : "With evidence", value: withEvidence, tone: withEvidence > 0 ? "success" : "neutral" },
+  ] as const
+
+  return (
+    <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300/75">
+            {isUk ? "Черга disputes" : "Dispute queue"}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-white">
+            {active > 0
+              ? isUk ? "Розбери активні спори перед оновленням результатів" : "Review active disputes before updating results"
+              : isUk ? "Активних спорів немає" : "No active disputes"}
+          </h3>
+          <p className="mt-1 text-sm text-white/55">
+            {isUk
+              ? `${active} активних із ${total} загалом. Спочатку перевір evidence link, потім став статус.`
+              : `${active} active out of ${total} total. Check evidence first, then set status.`}
+          </p>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/55">
+          {isUk ? "ручна модерація" : "manual review"}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {cards.map((card) => (
+          <div
+            key={card.id}
+            className={`rounded-xl border px-4 py-3 ${
+              card.tone === "success"
+                ? "border-emerald-300/25 bg-emerald-300/10"
+                : card.tone === "warning"
+                  ? "border-amber-300/25 bg-amber-300/10"
+                  : "border-white/10 bg-black/20"
+            }`}
+          >
+            <span className="block text-2xl font-black text-white">{card.value}</span>
+            <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
+              {card.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function DisputeRecord({
   dispute,
   showActions = false,
@@ -79,7 +158,7 @@ function DisputeRecord({
   dispute: AdminDispute
   showActions?: boolean
 }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
 
   const getDisplayStatus = (status: string) => {
     switch (status) {
@@ -165,8 +244,19 @@ function DisputeRecord({
 
 function DisputeReviewForm({ dispute }: { dispute: AdminDispute }) {
   const { t, lang } = useLanguage()
+  const confirmMessage =
+    lang === "uk"
+      ? `Зберегти рішення по dispute "${dispute.title}"?`
+      : `Save review decision for dispute "${dispute.title}"?`
+
   return (
-    <form action={reviewDispute} className="mt-4 grid gap-3 border-t border-white/10 pt-4">
+    <form
+      action={reviewDispute}
+      onSubmit={(event) => {
+        if (!window.confirm(confirmMessage)) event.preventDefault()
+      }}
+      className="mt-4 grid gap-3 border-t border-white/10 pt-4"
+    >
       <input type="hidden" name="id" value={dispute.id} />
       <label className="grid gap-2 text-sm text-white/70">
         <span>{t.admin.disputes.statusField}</span>
