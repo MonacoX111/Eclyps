@@ -506,7 +506,7 @@ async function buildAdminContext(
     supabaseAdmin
       .from("match_disputes")
       .select("id", { count: "exact", head: true })
-      .in("status", ["pending", "open"]),
+      .in("status", ["open", "under_review"]),
     supabaseAdmin
       .from("matches")
       .select("id", { count: "exact", head: true })

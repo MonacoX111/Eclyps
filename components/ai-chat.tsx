@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, type FormEvent } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MessageSquare, X, Send, Bot, Sparkles } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
@@ -12,6 +12,8 @@ type Message = {
   text: string
 }
 
+const MAX_INPUT_LENGTH = 800
+
 export function AiChat() {
   const { t, lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
@@ -20,6 +22,14 @@ export function AiChat() {
 
   const [messages, setMessages] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const hasUserMessages = messages.some((message) => message.sender === "user")
+  const charactersRemaining = MAX_INPUT_LENGTH - input.length
+  const quickPrompts = [
+    t.aiChat.quickPromptRegistration,
+    t.aiChat.quickPromptCheckIn,
+    t.aiChat.quickPromptMatches,
+    t.aiChat.quickPromptAccount,
+  ]
 
   // Initialize with welcome message on mount
   useEffect(() => {
@@ -37,11 +47,11 @@ export function AiChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isThinking])
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = async (e: FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isThinking) return
 
-    const userText = input.trim()
+    const userText = input.trim().slice(0, MAX_INPUT_LENGTH)
     setInput("")
 
     // Add user message to thread
@@ -59,11 +69,19 @@ export function AiChat() {
         body: JSON.stringify({ message: userText, lang }),
       })
 
-      if (!response.ok) {
-        throw new Error("API call failed")
-      }
+      const data = await response.json().catch(() => ({}))
 
-      const data = await response.json()
+      if (!response.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Math.random().toString(),
+            sender: "system",
+            text: data.error || t.aiChat.error,
+          },
+        ])
+        return
+      }
       
       setMessages((prev) => [
         ...prev,
@@ -195,27 +213,56 @@ export function AiChat() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Quick prompts */}
+            {!hasUserMessages && (
+              <div className="border-t border-primary/10 bg-black/30 px-3 py-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
+                  {t.aiChat.suggestionsLabel}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      onClick={() => setInput(prompt)}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] text-white/65 transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary cursor-pointer"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Input Footer */}
             <form
               onSubmit={handleSend}
-              className="flex items-center gap-2 border-t border-primary/10 bg-black/40 p-3"
+              className="border-t border-primary/10 bg-black/40 p-3"
             >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t.aiChat.placeholder}
-                disabled={isThinking}
-                className="flex-1 rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-xs text-white placeholder-white/30 outline-none transition focus:border-primary/50 disabled:opacity-50"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isThinking}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-background transition hover:bg-emerald-300 hover:shadow-[0_0_10px_oklch(0.78_0.18_165/0.4)] disabled:bg-white/[0.05] disabled:text-white/20 disabled:shadow-none cursor-pointer"
-                aria-label={t.aiChat.sendMessage}
-              >
-                <Send className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value.slice(0, MAX_INPUT_LENGTH))}
+                  maxLength={MAX_INPUT_LENGTH}
+                  placeholder={t.aiChat.placeholder}
+                  disabled={isThinking}
+                  className="flex-1 rounded-xl border border-white/10 bg-black/60 px-3.5 py-2 text-xs text-white placeholder-white/30 outline-none transition focus:border-primary/50 disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isThinking}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-background transition hover:bg-emerald-300 hover:shadow-[0_0_10px_oklch(0.78_0.18_165/0.4)] disabled:bg-white/[0.05] disabled:text-white/20 disabled:shadow-none cursor-pointer"
+                  aria-label={t.aiChat.sendMessage}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+              {charactersRemaining <= 160 ? (
+                <p className="mt-2 text-right text-[10px] text-white/35">
+                  {charactersRemaining} {t.aiChat.charactersRemaining}
+                </p>
+              ) : null}
             </form>
           </motion.div>
         )}
