@@ -1,4 +1,4 @@
-import { Suspense } from "react"
+import { Suspense, cache } from "react"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
 import { Footer } from "@/components/footer"
@@ -15,6 +15,8 @@ import type { HeroFeaturedMatch } from "@/components/hero-section"
 
 export const dynamic = "force-dynamic"
 
+const getCurrentUserProfileForHome = cache(getCurrentUserProfile)
+
 export default async function Page() {
   return (
     <main className="relative min-h-screen overflow-x-hidden">
@@ -24,10 +26,12 @@ export default async function Page() {
         <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
-        
-        <Suspense fallback={<HeroSectionLoading />}>
-          <ActiveHero />
-        </Suspense>
+
+        <div id="main-content">
+          <Suspense fallback={<HeroSectionLoading />}>
+            <ActiveHero />
+          </Suspense>
+        </div>
 
         <RoleOnboarding />
 
@@ -52,11 +56,12 @@ export default async function Page() {
 async function ActiveNavbar() {
   const [homepageData, userProfile] = await Promise.all([
     getHomepageData(),
-    getCurrentUserProfile(),
+    getCurrentUserProfileForHome(),
   ])
 
   return (
     <Navbar
+      autoShowGuide={!userProfile}
       participantLabel={homepageData.participantLabel}
       userProfile={userProfile}
     />

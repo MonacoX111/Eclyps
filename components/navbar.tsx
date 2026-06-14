@@ -3,19 +3,22 @@
 import { useState, useEffect } from "react"
 import { m } from "framer-motion"
 import Image from "next/image"
-import { ChevronDown } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { ChevronDown, CircleHelp } from "lucide-react"
 import { logoutDiscord } from "@/app/auth/actions"
 import { DiscordLoginOnboarding } from "@/components/discord-login-onboarding"
 import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { withAvatarCacheBust } from "@/lib/avatar"
 import { NotificationsBell } from "@/components/notifications-bell"
+import { FirstVisitGuide, FIRST_VISIT_GUIDE_OPEN_EVENT } from "@/components/first-visit-guide"
 
 type NavbarProps = {
   participantLabel?: "Teams" | "Players"
   homeHref?: string
   navHrefPrefix?: string
   userProfile?: UserProfile | null
+  autoShowGuide?: boolean
 }
 
 export function Navbar({
@@ -23,10 +26,13 @@ export function Navbar({
   homeHref = "/",
   navHrefPrefix = "",
   userProfile = null,
+  autoShowGuide,
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const { t } = useLanguage()
+  const pathname = usePathname()
+  const shouldAutoShowGuide = autoShowGuide ?? (pathname === "/" && !userProfile)
 
   useEffect(() => {
     if (open) {
@@ -53,7 +59,9 @@ export function Navbar({
   const mobileNavLinks = [...primaryNavLinks, ...secondaryNavLinks]
 
   return (
-    <m.nav
+    <>
+      <FirstVisitGuide autoOpen={shouldAutoShowGuide} />
+      <m.nav
       className="fixed left-0 right-0 top-0 z-50"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -121,6 +129,7 @@ export function Navbar({
               ) : null}
             </div>
             <div className="flex items-center gap-4">
+              <GuideButton />
               <LanguageSwitcher />
               {userProfile && <NotificationsBell userProfile={userProfile} />}
               <AuthControl userProfile={userProfile} />
@@ -186,11 +195,35 @@ export function Navbar({
                 {link.label}
               </a>
             ))}
+            <GuideButton mobile onClick={() => setOpen(false)} />
             <AuthControl userProfile={userProfile} mobile />
           </div>
         </m.div>
       )}
-    </m.nav>
+      </m.nav>
+    </>
+  )
+}
+
+function GuideButton({ mobile = false, onClick }: { mobile?: boolean; onClick?: () => void }) {
+  const { t } = useLanguage()
+
+  const openGuide = () => {
+    window.dispatchEvent(new CustomEvent(FIRST_VISIT_GUIDE_OPEN_EVENT))
+    onClick?.()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={openGuide}
+      className={`inline-flex items-center justify-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary/55 hover:bg-primary/15 ${
+        mobile ? "w-full" : ""
+      }`}
+    >
+      <CircleHelp className="h-4 w-4" />
+      {t.navbar.guide}
+    </button>
   )
 }
 

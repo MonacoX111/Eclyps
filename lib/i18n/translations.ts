@@ -19,6 +19,7 @@ const rawTranslations = {
       archive: "Архів",
       news: "Новини",
       more: "Ще",
+      guide: "Гайд",
       loginDiscord: "Зареєструватися / Увійти",
       logout: "Вийти",
     },
@@ -30,6 +31,53 @@ const rawTranslations = {
       featuredMatch: "Головний матч",
       scroll: "Прокрутити",
       ourInstagram: "Наш Instagram",
+    },
+    firstVisitGuide: {
+      eyebrow: "Перший запуск",
+      title: "Почніть з правильного маршруту",
+      description: "Короткий стартовий екран для нових гостей: зрозумійте, що вже можна дивитися без Discord, коли потрібно авторизуватись і який шлях обрати для участі в турнірі.",
+      primaryCta: "Підключити Discord",
+      secondaryCta: "Перейти на сайт",
+      dismiss: "Не показувати знову",
+      choiceEyebrow: "Оберіть свій сценарій",
+      choiceTitle: "Що ви хочете зробити на Eclyps?",
+      signals: {
+        discord: "Discord потрібен для заявок, чек-іну та диспутів",
+        schedule: "Розклад, сітка та результати відкриті для перегляду",
+        progress: "Після матчів профілі та статистика оновлюються автоматично",
+      },
+      paths: {
+        watch: {
+          title: "Я хочу дивитися",
+          body: "Ідеально, якщо ви просто знайомитесь із платформою або стежите за турніром без участі.",
+          cta: "Відкрити турнір",
+          steps: [
+            "Перегляньте формат, правила та призовий фонд",
+            "Слідкуйте за сіткою, матчами та результатами",
+            "Відкривайте профілі гравців і команд без авторизації",
+          ],
+        },
+        compete: {
+          title: "Я хочу грати",
+          body: "Шлях для гравця: Discord, заявка профілю, схвалення, реєстрація на турнір і чек-ін.",
+          cta: "Почати реєстрацію",
+          steps: [
+            "Увійдіть через Discord, щоб створити профіль",
+            "Подайте заявку гравця й дочекайтесь схвалення",
+            "Зареєструйтесь на турнір та пройдіть чек-ін",
+          ],
+        },
+        captain: {
+          title: "Я капітан команди",
+          body: "Шлях для капітана: підтверджений профіль, заявка команди, склад, схвалення та чек-ін команди.",
+          cta: "Подати команду",
+          steps: [
+            "Спочатку отримайте схвалений профіль гравця",
+            "Заповніть назву, контакти, основний склад і заміни",
+            "Після схвалення підтвердіть участь команди",
+          ],
+        },
+      },
     },
     navigationHub: {
       eyebrow: "Дослідити Платформу",
@@ -66,7 +114,7 @@ const rawTranslations = {
     roleOnboarding: {
       eyebrow: "Почніть тут",
       title: "Як ви хочете використовувати Eclyps?",
-      description: "Оберіть роль та отримайте короткий план дій перед тим, как переглядати інформацію, реєструватися або очолювати команду.",
+      description: "Оберіть роль та отримайте короткий план дій перед тим, як переглядати інформацію, реєструватися або очолювати команду.",
       openGuide: "Відкрити гайд",
       closeGuide: "Закрити гайд",
       routeLabel: "Шлях",
@@ -1505,6 +1553,7 @@ const rawTranslations = {
       archive: "Archive",
       news: "News",
       more: "More",
+      guide: "Guide",
       loginDiscord: "Sign up / Log in",
       logout: "Logout",
     },
@@ -1516,6 +1565,53 @@ const rawTranslations = {
       featuredMatch: "Featured match",
       scroll: "Scroll",
       ourInstagram: "Our Instagram",
+    },
+    firstVisitGuide: {
+      eyebrow: "First launch",
+      title: "Start with the right route",
+      description: "A short launch screen for new guests: understand what you can browse without Discord, when you need to sign in, and which path fits your tournament goal.",
+      primaryCta: "Connect Discord",
+      secondaryCta: "Enter site",
+      dismiss: "Do not show again",
+      choiceEyebrow: "Choose your scenario",
+      choiceTitle: "What do you want to do on Eclyps?",
+      signals: {
+        discord: "Discord is required for applications, check-in, and disputes",
+        schedule: "Schedule, bracket, and results are open for browsing",
+        progress: "Profiles and statistics update automatically after matches",
+      },
+      paths: {
+        watch: {
+          title: "I want to watch",
+          body: "Best if you are exploring the platform or following the tournament without competing.",
+          cta: "Open tournament",
+          steps: [
+            "Review the format, rules, and prize pool",
+            "Follow the bracket, matches, and results",
+            "Open player and team profiles without signing in",
+          ],
+        },
+        compete: {
+          title: "I want to compete",
+          body: "The player route: Discord, player application, approval, tournament registration, and check-in.",
+          cta: "Start registration",
+          steps: [
+            "Sign in with Discord to create your profile",
+            "Submit a player application and wait for approval",
+            "Register for the tournament and complete check-in",
+          ],
+        },
+        captain: {
+          title: "I am a team captain",
+          body: "The captain route: approved player profile, team application, roster, approval, and team check-in.",
+          cta: "Submit team",
+          steps: [
+            "Get an approved player profile first",
+            "Fill in the name, contacts, main roster, and substitutes",
+            "After approval, confirm the team's participation",
+          ],
+        },
+      },
     },
     navigationHub: {
       eyebrow: "Explore Platform",
