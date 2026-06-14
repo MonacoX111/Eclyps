@@ -57,11 +57,6 @@ NEXT_PUBLIC_INSTAGRAM_URL=
 
 Optional:
 
-```txt
-GEMINI_API_KEY=
-```
-
-`GEMINI_API_KEY` is only needed for the AI assistant. The rest of the site can run without it.
 
 ## Scripts
 

@@ -4,7 +4,6 @@ import { getPublicEnv } from '@/lib/env/public'
 import { getLanguage } from '@/lib/i18n/server'
 import { translations } from '@/lib/i18n/translations'
 import { LanguageProvider } from '@/components/language-provider'
-import { AiChat } from '@/components/ai-chat'
 import './globals.css'
 
 const publicEnv = getPublicEnv()
@@ -85,7 +84,6 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <LanguageProvider initialLang={lang}>
           {children}
-          <AiChat />
         </LanguageProvider>
         {publicEnv.isProduction && <Analytics />}
       </body>
