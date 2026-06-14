@@ -10,7 +10,6 @@ Eclyps is a competitive esports tournament platform built with Next.js, TypeScri
 - Supabase Postgres, Auth, RLS
 - Tailwind CSS
 - Vercel Analytics
-- Google Gemini API for the optional AI assistant
 
 ## Getting Started
 
@@ -38,7 +37,9 @@ Open the local URL shown in the terminal.
 
 ## Environment Variables
 
-Required:
+Copy `.env.example` to `.env.local` for local development and add the same production values in Vercel.
+
+Required in production:
 
 ```txt
 NEXT_PUBLIC_SUPABASE_URL=
@@ -48,15 +49,20 @@ ADMIN_PASSWORD_HASH=
 ADMIN_SESSION_SECRET=
 ```
 
-Recommended:
+Recommended in production:
 
 ```txt
 NEXT_PUBLIC_SITE_URL=
 NEXT_PUBLIC_INSTAGRAM_URL=
 ```
 
-Optional:
+Notes:
 
+- `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PASSWORD_HASH`, and `ADMIN_SESSION_SECRET` are server-only secrets. Never expose them in client code.
+- `ADMIN_PASSWORD_HASH` must use the `pbkdf2_sha256$iterations$salt$base64url-hash` format.
+- `ADMIN_SESSION_SECRET` must be at least 32 characters.
+- `ADMIN_PASSWORD` may be used only for local development and must not be set in production.
+- No AI-related environment variables are required.
 
 ## Scripts
 
@@ -154,9 +160,13 @@ The project is intended for Vercel deployment.
 Before deploying:
 
 1. Add all required environment variables in Vercel.
-2. Apply Supabase migrations.
-3. Run `npm run qa:smoke`.
-4. Run `npm run build`.
+2. Confirm Supabase Auth redirect URLs include your production domain and `/auth/callback`.
+3. Apply Supabase migrations.
+4. Run `npm run qa:smoke`.
+5. Run `npm run build`.
+6. Smoke-test Discord login, account dashboard, admin login, tournament registration, check-in, match detail, and news pages.
+
+See `docs/deployment-checklist.md` for the full pre-launch checklist.
 
 ## Notes
 
