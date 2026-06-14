@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, Newspaper, Swords, Trophy } from "lucide-react"
+import { Home, Loader2, Newspaper, Swords, Trophy } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
 import { MotionProvider } from "@/components/motion-provider"
@@ -8,7 +8,7 @@ import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { useLanguage } from "@/components/language-provider"
 
-type RouteLoadingSubject = "match" | "news" | "tournament"
+type RouteLoadingSubject = "page" | "match" | "news" | "tournament"
 
 type RouteLoadingPageProps = {
   subject: RouteLoadingSubject
@@ -79,6 +79,8 @@ function SkeletonLine({ className }: { className: string }) {
 
 function getLoadingIcon(subject: RouteLoadingSubject) {
   switch (subject) {
+    case "page":
+      return Home
     case "match":
       return Swords
     case "news":
@@ -92,6 +94,14 @@ function getLoadingCopy(lang: "uk" | "en", subject: RouteLoadingSubject) {
   const isUk = lang === "uk"
 
   switch (subject) {
+    case "page":
+      return {
+        eyebrow: isUk ? "Завантаження Eclyps" : "Loading Eclyps",
+        title: isUk ? "Готуємо сторінку" : "Preparing the page",
+        body: isUk
+          ? "Підтягуємо актуальні турніри, матчі, команди та інтерфейс платформи."
+          : "Loading current tournaments, matches, teams, and the platform interface.",
+      }
     case "match":
       return {
         eyebrow: isUk ? "Завантаження матчу" : "Loading match",
