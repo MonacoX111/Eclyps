@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { m } from "framer-motion"
 import { loginWithDiscord } from "@/app/auth/actions"
 import { useLanguage } from "@/components/language-provider"
+import { markDiscordAuthInProgress } from "@/lib/auth/discord-auth-client"
 
 type DiscordLoginOnboardingProps = {
   className?: string
@@ -62,7 +63,7 @@ export function DiscordLoginOnboarding({
                 </p>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <form action={loginWithDiscord}>
+                  <form action={loginWithDiscord} onSubmit={markDiscordAuthInProgress}>
                     <button
                       type="submit"
                       className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-black transition hover:bg-primary/90 cursor-pointer"

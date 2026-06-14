@@ -1,7 +1,8 @@
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { upsertUserProfileFromAuthUser } from "@/lib/auth/user-profile"
+import { getPublicEnv } from "@/lib/env/public"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/registration?registrationError=discord-login-failed#registration", requestUrl.origin))
   }
 
-  const supabase = await createSupabaseServerClient()
+  const { supabase, cookiesToSet } = createCallbackSupabaseClient(request)
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
@@ -30,10 +31,39 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.redirect(new URL(next, requestUrl.origin))
+  const response = NextResponse.redirect(getSafeRedirectUrl(next, requestUrl.origin))
+  cookiesToSet.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
   response.cookies.delete("eclyps_player_application_intent")
 
   return response
+}
+
+function createCallbackSupabaseClient(request: NextRequest) {
+  const publicEnv = getPublicEnv()
+  const cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }> = []
+
+  const supabase = createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(newCookies) {
+        cookiesToSet.push(...newCookies)
+      },
+    },
+  })
+
+  return { supabase, cookiesToSet }
+}
+
+function getSafeRedirectUrl(next: string, origin: string) {
+  if (!next.startsWith("/") || next.startsWith("//")) {
+    return new URL("/registration#registration", origin)
+  }
+
+  return new URL(next, origin)
 }
 
 async function createPlayerApplicationFromIntent(userProfile: {

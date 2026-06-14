@@ -1,11 +1,10 @@
-import { Suspense, cache } from "react"
+import { Suspense } from "react"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
 import { MotionProvider } from "@/components/motion-provider"
 import { AdminShortcut } from "@/components/admin-shortcut"
-import { RoleOnboarding } from "@/components/role-onboarding"
 import { NavigationHub } from "@/components/navigation-hub"
 import { getHomepageData, type HomepageData, type HomepageMatch } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
@@ -14,8 +13,6 @@ import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 import type { HeroFeaturedMatch } from "@/components/hero-section"
 
 export const dynamic = "force-dynamic"
-
-const getCurrentUserProfileForHome = cache(getCurrentUserProfile)
 
 export default async function Page() {
   return (
@@ -26,14 +23,10 @@ export default async function Page() {
         <Suspense fallback={null}>
           <ActiveNavbar />
         </Suspense>
-
-        <div id="main-content">
-          <Suspense fallback={<HeroSectionLoading />}>
-            <ActiveHero />
-          </Suspense>
-        </div>
-
-        <RoleOnboarding />
+        
+        <Suspense fallback={<HeroSectionLoading />}>
+          <ActiveHero />
+        </Suspense>
 
         <div
           className="mx-auto h-px max-w-xl"
@@ -56,12 +49,11 @@ export default async function Page() {
 async function ActiveNavbar() {
   const [homepageData, userProfile] = await Promise.all([
     getHomepageData(),
-    getCurrentUserProfileForHome(),
+    getCurrentUserProfile(),
   ])
 
   return (
     <Navbar
-      autoShowGuide={!userProfile}
       participantLabel={homepageData.participantLabel}
       userProfile={userProfile}
     />

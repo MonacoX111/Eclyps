@@ -33,80 +33,44 @@ const rawTranslations = {
       ourInstagram: "Наш Instagram",
     },
     firstVisitGuide: {
+      intro: {
+        eyebrow: "Ласкаво просимо",
+        title: "Eclyps стартує тут",
+        description: "Один короткий крок перед платформою: натисніть кнопку, щоб відкрити гайд і швидко зрозуміти, як дивитися турнір або взяти участь.",
+        startCta: "Розпочати",
+      },
       eyebrow: "Перший запуск",
-      title: "Почніть з правильного маршруту",
-      description: "Короткий стартовий екран для нових гостей: зрозумійте, що вже можна дивитися без Discord, коли потрібно авторизуватись і який шлях обрати для участі в турнірі.",
-      primaryCta: "Підключити Discord",
       secondaryCta: "Перейти на сайт",
       dismiss: "Не показувати знову",
-      choiceEyebrow: "Оберіть свій сценарій",
-      choiceTitle: "Що ви хочете зробити на Eclyps?",
-      signals: {
-        discord: "Discord потрібен для заявок, чек-іну та диспутів",
-        schedule: "Розклад, сітка та результати відкриті для перегляду",
-        progress: "Після матчів профілі та статистика оновлюються автоматично",
-      },
-      paths: {
-        watch: {
-          title: "Я хочу дивитися",
-          body: "Ідеально, якщо ви просто знайомитесь із платформою або стежите за турніром без участі.",
-          cta: "Відкрити турнір",
-          steps: [
-            "Перегляньте формат, правила та призовий фонд",
-            "Слідкуйте за сіткою, матчами та результатами",
-            "Відкривайте профілі гравців і команд без авторизації",
-          ],
-        },
-        compete: {
-          title: "Я хочу грати",
-          body: "Шлях для гравця: Discord, заявка профілю, схвалення, реєстрація на турнір і чек-ін.",
-          cta: "Почати реєстрацію",
-          steps: [
-            "Увійдіть через Discord, щоб створити профіль",
-            "Подайте заявку гравця й дочекайтесь схвалення",
-            "Зареєструйтесь на турнір та пройдіть чек-ін",
-          ],
-        },
-        captain: {
-          title: "Я капітан команди",
-          body: "Шлях для капітана: підтверджений профіль, заявка команди, склад, схвалення та чек-ін команди.",
-          cta: "Подати команду",
-          steps: [
-            "Спочатку отримайте схвалений профіль гравця",
-            "Заповніть назву, контакти, основний склад і заміни",
-            "Після схвалення підтвердіть участь команди",
-          ],
-        },
-      },
     },
     navigationHub: {
-      eyebrow: "Дослідити Платформу",
+      eyebrow: "Швидка навігація",
       title: "Хаб Турніру",
-      description: "Отримайте прямий доступ до розділів турніру. Оберіть варіант нижче, щоб переглянути деталі, оновлення в реальному часі та керувати своєю участю.",
+      description: "Актуальні розділи Eclyps в одному місці: деталі турніру, учасники, реєстрація, сітка, матчі та фінальні рахунки.",
       cards: {
         tournament: {
           label: "Інформація про Турнір",
-          description: "Дізнайтеся про формат події, правила, регламент та призовий фонд.",
+          description: "Формат, правила, призовий фонд, статус реєстрації та опублікована сітка активної події.",
         },
         competitor: {
-          descriptionPlayers: "Перегляньте поточний список підтверджених та зареєстрованих гравців.",
-          descriptionTeams: "Перегляньте поточний список підтверджених та зареєстрованих команд.",
+          descriptionPlayers: "Публічний список гравців із профілями, регіонами, рейтингом та історією матчів.",
+          descriptionTeams: "Публічний список команд зі складами, статусами та посиланнями на профілі учасників.",
         },
         registration: {
           label: "Реєстрація та Чек-ін",
-          description: "Подайте заявку як гравець, зареєструйте свою команду та підтвердьте участь.",
+          description: "Вхід через Discord, заявка гравця або команди, схвалення адміністратора та чек-ін перед стартом.",
         },
         bracket: {
           label: "Турнірна Сітка",
-          description: "Слідкуйте за матчами в реальному часі, етапами сітки та поточною турнірною таблицею.",
+          description: "Переглядайте опубліковану сітку, раунди, пари учасників і прогрес до фіналу.",
         },
         schedule: {
           label: "Розклад Матчів",
-          description: "Стежте за розкладом ігор, майбутніми зустрічами та створюйте диспути.",
+          description: "Майбутні, live та завершені матчі з часом, статусами, рахунками й переходом у match room.",
         },
         results: {
-          label: "Результати Турніру",
-          description: "Переглядайте результати минулих турнірів, фінальні рахунки та MVP.",
+          label: "Результати Матчів",
+          description: "Фінальні рахунки завершених матчів, переможці та швидкий доступ до сторінок матчів.",
         },
       },
       viewSection: "Переглянути розділ",
@@ -114,36 +78,38 @@ const rawTranslations = {
     roleOnboarding: {
       eyebrow: "Почніть тут",
       title: "Як ви хочете використовувати Eclyps?",
-      description: "Оберіть роль та отримайте короткий план дій перед тим, як переглядати інформацію, реєструватися або очолювати команду.",
+      description: "Оберіть роль — гайд покаже тільки потрібні кроки, сторінки та статуси для перегляду або участі.",
+      emptyTitle: "Оберіть роль вище",
+      emptyBody: "Жодна вкладка не відкрита автоматично. Натисніть Глядач, Гравець або Капітан, щоб побачити короткий маршрут.",
       openGuide: "Відкрити гайд",
       closeGuide: "Закрити гайд",
-      routeLabel: "Шлях",
+      routeLabel: "маршрут",
       step: "Крок",
-      statusCalls: "Статуси",
+      statusCalls: "Важливо знати",
       guides: {
         spectator: {
           label: "Глядач",
           eyebrow: "Перегляд",
-          title: "Слідкуйте за подією без авторизації",
-          summary: "Переглядайте інформацію про турнір, стежте за сіткою, розкладом матчів та відкривайте профілі гравців чи команд. Discord потрібен лише для безпосередньої участі.",
+          title: "Дивіться турнір без Discord",
+          summary: "Без авторизації можна переглядати турнір, учасників, сітку, матчі та фінальні рахунки. Discord потрібен тільки для заявок, чек-іну та диспутів.",
           steps: [
             {
               title: "Почніть з турніру",
-              body: "Перевірте поточну подію, формат, призовий фонд, кількість гравців чи команд та деталі етапів.",
+              body: "Відкрийте активну подію, щоб побачити формат, правила, призовий фонд, статус реєстрації та ключові деталі.",
             },
             {
-              title: "Стежте за сіткою та розкладом",
-              body: "Використовуйте турнірну сітку для відстеження прогресу та розклад для перегляду часу ігор, статусів та фінальних рахунків.",
+              title: "Стежте за сіткою та матчами",
+              body: "Сітка показує прогрес турніру, а сторінка матчів — майбутні, live та завершені ігри з рахунками.",
             },
             {
-              title: "Переглядайте результати та профілі",
-              body: "Відкривайте профілі учасників для перегляду їхніх регіонів, нещодавніх матчів, статистики, рейтингу та історії виступів.",
+              title: "Відкривайте профілі",
+              body: "Профілі гравців і команд показують склад, регіон, останні матчі, статистику, рейтинг та історію виступів.",
             },
           ],
           statusNotes: [
             "Авторизація через Discord не потрібна",
             "Time TBA означає, що час матчу ще не оголошено",
-            "Сітка з'явиться після того, як її опублікують адміни",
+            "Сітка та матчі зʼявляються після публікації адмінами",
           ],
           ctas: {
             tournament: "Переглянути Турнір",
@@ -154,30 +120,30 @@ const rawTranslations = {
         player: {
           label: "Гравець",
           eyebrow: "Змагатися",
-          title: "Від авторизації в Discord до історії ELO",
-          summary: "Підключіть Discord, станьте підтвердженим гравцем Eclyps, зареєструйтеся на турнір, пройдіть чек-ін та відстежуйте ігри та рейтинг у своєму профілі.",
+          title: "Discord → заявка → чек-ін → матчі",
+          summary: "Підключіть Discord, подайте заявку гравця, дочекайтесь схвалення, зареєструйтесь на турнір і пройдіть чек-ін, коли він відкриється.",
           steps: [
             {
               title: "Увійдіть через Discord",
-              body: "Ваш акаунт Discord є основою для подання заявок, реєстрації, підтвердження присутності та вирішення диспутів.",
+              body: "Discord привʼязує ваш профіль до заявок, реєстрації, чек-іну, match room та диспутів.",
             },
             {
               title: "Подайте заявку гравця",
-              body: "Вкажіть свій нікнейм та регіон, а потім зачекайте на схвалення адміністратора, щоб розблокувати реєстрацію на турнір.",
+              body: "Вкажіть нікнейм і регіон. Після схвалення адміністратором відкривається участь у турнірах.",
             },
             {
               title: "Зареєструйтеся та пройдіть чек-ін",
-              body: "Після схвалення профілю зареєструйтеся на турнір, зачекайте схвалення слоту та підтвердьте участь під час відкритого чек-іну.",
+              body: "Після схвалення профілю подайте реєстрацію на активний турнір і підтвердьте участь у відкритий час чек-іну.",
             },
             {
-              title: "Грайте та стежте за прогресом",
-              body: "Зіграні матчі оновлюють ваш публічний профіль, історію ігор, вінрейт, серію перемог, рейтинг та ранг.",
+              title: "Грайте через match room",
+              body: "Матчі, рахунки та диспути ведуться у match room, а завершені ігри оновлюють профіль, рейтинг і статистику.",
             },
           ],
           statusNotes: [
             "Pending означає, що адмін все ще перевіряє заявку",
-            "Approved означає, що ваш профіль гравця або слот на турнірі схвалено",
-            "Checked in означає, що вашу присутність на турнірі підтверджено",
+            "Approved означає, що профіль або турнірний слот схвалено",
+            "Checked in означає, що участь підтверджено перед стартом",
           ],
           ctas: {
             registration: "Реєстрація",
@@ -188,30 +154,30 @@ const rawTranslations = {
         captain: {
           label: "Капітан",
           eyebrow: "Керувати",
-          title: "Зареєструйте команду та затвердіть склад",
-          summary: "Капітанам спочатку потрібен підтверджений профіль гравця. Після цього вони можуть подати заявку команди, склад, нікнейм капітана, замін та пройти чек-ін для всієї команди.",
+          title: "Профіль гравця → команда → чек-ін",
+          summary: "Капітан спочатку має отримати схвалений профіль гравця. Потім він подає команду, склад і проходить командний чек-ін після схвалення.",
           steps: [
             {
               title: "Станьте схваленим гравцем",
-              body: "Права капітана надаються власнику верифікованого Discord-акаунта зі схваленим профілем гравця Eclyps.",
+              body: "Капітанська заявка привʼязується до Discord-акаунта зі схваленим профілем гравця Eclyps.",
             },
             {
               title: "Подайте команду",
-              body: "Вкажіть назву команди, контакти, нікнейми 5 основних гравців та до 2 додаткових замін.",
+              body: "Додайте назву, контакти, 5 основних гравців і до 2 запасних, якщо вони потрібні формату турніру.",
             },
             {
-              title: "Зіставте нікнейм капітана",
-              body: "Нікнейм капітана має точно збігатися з одним із вказаних нікнеймів у складі команди.",
+              title: "Перевірте склад",
+              body: "Нікнейм капітана має збігатися з одним зі слотів складу, щоб система правильно визначила відповідального.",
             },
             {
               title: "Схвалення, чек-ін та участь",
-              body: "Адміністратори перевіряють команду. Після схвалення капітан або власник проходить чек-ін, і команда готова до матчів.",
+              body: "Адміни перевіряють заявку. Після схвалення капітан або власник підтверджує участь команди перед стартом.",
             },
           ],
           statusNotes: [
             "Склад має містити 5 основних гравців",
             "Заміни є необов'язковими і обмежені 2 гравцями",
-            "Лише власник або капітан може підтвердити участь команди",
+            "Командний чек-ін робить власник або капітан",
           ],
           ctas: {
             registration: "Реєстрація",
@@ -1567,80 +1533,44 @@ const rawTranslations = {
       ourInstagram: "Our Instagram",
     },
     firstVisitGuide: {
+      intro: {
+        eyebrow: "Welcome",
+        title: "Eclyps starts here",
+        description: "One clean step before the platform: press the button to open the guide and quickly understand how to watch the tournament or compete.",
+        startCta: "Start",
+      },
       eyebrow: "First launch",
-      title: "Start with the right route",
-      description: "A short launch screen for new guests: understand what you can browse without Discord, when you need to sign in, and which path fits your tournament goal.",
-      primaryCta: "Connect Discord",
       secondaryCta: "Enter site",
       dismiss: "Do not show again",
-      choiceEyebrow: "Choose your scenario",
-      choiceTitle: "What do you want to do on Eclyps?",
-      signals: {
-        discord: "Discord is required for applications, check-in, and disputes",
-        schedule: "Schedule, bracket, and results are open for browsing",
-        progress: "Profiles and statistics update automatically after matches",
-      },
-      paths: {
-        watch: {
-          title: "I want to watch",
-          body: "Best if you are exploring the platform or following the tournament without competing.",
-          cta: "Open tournament",
-          steps: [
-            "Review the format, rules, and prize pool",
-            "Follow the bracket, matches, and results",
-            "Open player and team profiles without signing in",
-          ],
-        },
-        compete: {
-          title: "I want to compete",
-          body: "The player route: Discord, player application, approval, tournament registration, and check-in.",
-          cta: "Start registration",
-          steps: [
-            "Sign in with Discord to create your profile",
-            "Submit a player application and wait for approval",
-            "Register for the tournament and complete check-in",
-          ],
-        },
-        captain: {
-          title: "I am a team captain",
-          body: "The captain route: approved player profile, team application, roster, approval, and team check-in.",
-          cta: "Submit team",
-          steps: [
-            "Get an approved player profile first",
-            "Fill in the name, contacts, main roster, and substitutes",
-            "After approval, confirm the team's participation",
-          ],
-        },
-      },
     },
     navigationHub: {
-      eyebrow: "Explore Platform",
+      eyebrow: "Quick Navigation",
       title: "Tournament Hub",
-      description: "Access tournament sections directly. Select an option below to view full details, live updates, and manage your participation.",
+      description: "Current Eclyps sections in one place: tournament details, participants, registration, bracket, matches, and final scores.",
       cards: {
         tournament: {
           label: "Tournament Info",
-          description: "Explore the event format, guidelines, rules, and prizing structure.",
+          description: "Format, rules, prize pool, registration status, and the published bracket for the active event.",
         },
         competitor: {
-          descriptionPlayers: "View the current roster of approved and registered players.",
-          descriptionTeams: "View the current roster of approved and registered teams.",
+          descriptionPlayers: "Browse player profiles with regions, rating, stats, and recent match history.",
+          descriptionTeams: "Browse team rosters, statuses, and linked player profiles.",
         },
         registration: {
           label: "Registration & Check-in",
-          description: "Apply as a competitor, register your team, and confirm attendance.",
+          description: "Discord login, player or team applications, admin approval, and pre-event check-in.",
         },
         bracket: {
-          label: "Live Bracket",
-          description: "Track live match progressions, bracket stages, and active standings.",
+          label: "Tournament Bracket",
+          description: "View the published bracket, rounds, participant pairings, and progress to the final.",
         },
         schedule: {
           label: "Match Schedule",
-          description: "Follow match timetables, upcoming scheduling, and report disputes.",
+          description: "Upcoming, live, and finished matches with times, statuses, scores, and match room links.",
         },
         results: {
-          label: "Tournament Results",
-          description: "Review historical tournament rankings, final scorelines, and MVPs.",
+          label: "Match Results",
+          description: "Final scores for completed matches, winners, and quick access to match pages.",
         },
       },
       viewSection: "View Section",
@@ -1648,36 +1578,38 @@ const rawTranslations = {
     roleOnboarding: {
       eyebrow: "Start Here",
       title: "How Do You Want to Use Eclyps?",
-      description: "Pick a role and get the short match plan before you browse, register, or lead a roster.",
+      description: "Pick a role — the guide shows only the steps, pages, and statuses you need to browse or compete.",
+      emptyTitle: "Choose a role above",
+      emptyBody: "No tab opens automatically. Select Spectator, Player, or Captain to see the short route.",
       openGuide: "Open guide",
       closeGuide: "Close guide",
       routeLabel: "route",
       step: "Step",
-      statusCalls: "Status calls",
+      statusCalls: "Good to know",
       guides: {
         spectator: {
           label: "Spectator",
           eyebrow: "Watch",
-          title: "Follow the event without logging in",
-          summary: "Browse the tournament, scan the bracket, follow match times, and open player or team profiles. Discord is only needed when you want to participate.",
+          title: "Watch the tournament without Discord",
+          summary: "Without signing in, you can browse the tournament, participants, bracket, matches, and final scores. Discord is only needed for applications, check-in, and disputes.",
           steps: [
             {
               title: "Start with the tournament",
-              body: "Check the active event, format, prize pool, player or team count, and stage details.",
+              body: "Open the active event to see format, rules, prize pool, registration status, and key details.",
             },
             {
-              title: "Track the bracket and schedule",
-              body: "Use the bracket for tournament progress and the schedule for match times, live states, and finished scores.",
+              title: "Track bracket and matches",
+              body: "The bracket shows tournament progress, while the matches page covers upcoming, live, and finished games with scores.",
             },
             {
-              title: "Read results and profiles",
-              body: "Open profiles to review regions, recent matches, stats, rating, rank, and result history.",
+              title: "Open profiles",
+              body: "Player and team profiles show roster, region, recent matches, stats, rating, and history.",
             },
           ],
           statusNotes: [
             "No Discord login required",
             "Time TBA means match time is not announced yet",
-            "Bracket appears after admins publish it",
+            "Bracket and matches appear after admins publish them",
           ],
           ctas: {
             tournament: "View Tournament",
@@ -1688,30 +1620,30 @@ const rawTranslations = {
         player: {
           label: "Player",
           eyebrow: "Compete",
-          title: "From Discord login to ELO history",
-          summary: "Connect Discord, become an approved Eclyps player, register for the active tournament, check in, then track matches and rating on your profile.",
+          title: "Discord → application → check-in → matches",
+          summary: "Connect Discord, submit a player application, wait for approval, register for the tournament, and check in when the window opens.",
           steps: [
             {
               title: "Login with Discord",
-              body: "Your Discord account anchors ownership for applications, registrations, check-in, and disputes.",
+              body: "Discord connects your profile to applications, registration, check-in, match rooms, and disputes.",
             },
             {
               title: "Apply as Player",
-              body: "Submit your nickname and region, then wait for admin approval before tournament registration unlocks.",
+              body: "Submit nickname and region. After admin approval, tournament participation unlocks.",
             },
             {
               title: "Register and check in",
-              body: "After player approval, register for the tournament, wait for tournament approval, then check in during the open window.",
+              body: "After profile approval, register for the active tournament and confirm participation during the check-in window.",
             },
             {
-              title: "Play and track progress",
-              body: "Finished matches feed your public profile, recent history, winrate, streak, rating, and rank.",
+              title: "Play through match room",
+              body: "Matches, scores, and disputes run through match room, while finished games update your profile, rating, and stats.",
             },
           ],
           statusNotes: [
             "Pending means an admin still needs to review",
-            "Approved means your player or tournament slot is accepted",
-            "Checked in means your attendance is confirmed",
+            "Approved means your profile or tournament slot is accepted",
+            "Checked in means your participation is confirmed before start",
           ],
           ctas: {
             registration: "Open Registration",
@@ -1722,30 +1654,30 @@ const rawTranslations = {
         captain: {
           label: "Captain",
           eyebrow: "Lead",
-          title: "Register a team and lock the roster",
-          summary: "Captains need an approved player profile first. Then they can submit a team registration, roster, captain nickname, substitutes, and handle team check-in.",
+          title: "Player profile → team → check-in",
+          summary: "A captain needs an approved player profile first. Then they submit the team, roster, and complete team check-in after approval.",
           steps: [
             {
               title: "Become an approved player",
-              body: "Captain ownership starts from a verified Discord account with an approved Eclyps player profile.",
+              body: "Team ownership is tied to a Discord account with an approved Eclyps player profile.",
             },
             {
               title: "Submit the team",
-              body: "Enter the team name, contact details, 5 main players, and up to 2 optional substitutes.",
+              body: "Add team name, contacts, 5 main players, and up to 2 substitutes if the tournament format needs them.",
             },
             {
-              title: "Match the captain nickname",
-              body: "The captain nickname must exactly match one of the submitted roster nicknames.",
+              title: "Check the roster",
+              body: "The captain nickname must match one roster slot so the system can identify the responsible player.",
             },
             {
               title: "Approve, check in, compete",
-              body: "Admins review the team. Once approved, the captain or owner checks in and the roster is ready for matches.",
+              body: "Admins review the application. After approval, the captain or owner confirms team participation before start.",
             },
           ],
           statusNotes: [
             "Roster requires 5 main players",
             "Substitutes are optional and limited to 2",
-            "Only the owner or captain can check in the team",
+            "Team check-in is handled by the owner or captain",
           ],
           ctas: {
             registration: "Open Registration",
