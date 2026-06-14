@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CalendarClock, Gamepad2, ListOrdered, Trophy, Users } from "lucide-react"
@@ -22,6 +23,54 @@ export const dynamic = "force-dynamic"
 
 type TournamentDetailPageProps = {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: TournamentDetailPageProps): Promise<Metadata> {
+  const { id } = await params
+  const [data, t] = await Promise.all([
+    getTournamentArchiveDetail(id),
+    getTranslations(),
+  ])
+
+  if (!data) {
+    return {
+      title: `${t.tournamentArchive.title} | Eclyps`,
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const tournament = data.tournament
+  const title = `${tournament.name} | Eclyps`
+  const description = createTournamentSeoDescription({
+    name: tournament.name,
+    game: tournament.game,
+    date: tournament.eventDate,
+    participantCount: tournament.participantCount,
+    winner: tournament.winner,
+    fallback: tournament.arenaDescription ?? tournament.resultSummary ?? t.metadata.description,
+  })
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/tournaments/${tournament.id}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `/tournaments/${tournament.id}`,
+      type: "article",
+      siteName: "Eclyps",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: tournament.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/og-image.png"],
+    },
+  }
 }
 
 export default async function TournamentDetailPage({ params }: TournamentDetailPageProps) {
@@ -109,6 +158,31 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
       <Footer />
     </main>
   )
+}
+
+function createTournamentSeoDescription({
+  name,
+  game,
+  date,
+  participantCount,
+  winner,
+  fallback,
+}: {
+  name: string
+  game: string | null
+  date: string | null
+  participantCount: number
+  winner: string | null
+  fallback: string
+}) {
+  const facts = [
+    game,
+    date ? new Date(date).getFullYear().toString() : null,
+    participantCount > 0 ? `${participantCount} participants` : null,
+    winner ? `Winner: ${winner}` : null,
+  ].filter(Boolean)
+  const description = facts.length > 0 ? `${name} — ${facts.join(" • ")}.` : fallback
+  return description.length > 160 ? `${description.slice(0, 157).trim()}...` : description
 }
 
 function TournamentHubNav({ t }: { t: any }) {

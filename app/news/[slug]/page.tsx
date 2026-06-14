@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { AdminShortcut } from "@/components/admin-shortcut"
@@ -15,6 +16,49 @@ export const dynamic = "force-dynamic"
 
 type ArticlePageProps = {
   params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug } = await params
+  const [post, t] = await Promise.all([
+    getPublishedNewsPostBySlug(slug),
+    getTranslations(),
+  ])
+
+  if (!post) {
+    return {
+      title: `${t.news.title} | Eclyps`,
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const description = createSeoDescription(post.excerpt ?? post.content, t.metadata.description)
+  const image = post.cover_image_url ?? "/og-image.png"
+  const title = `${post.title} | Eclyps`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/news/${post.slug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `/news/${post.slug}`,
+      type: "article",
+      siteName: "Eclyps",
+      publishedTime: post.published_at ?? undefined,
+      authors: [post.author_name ?? "Eclyps"],
+      images: [{ url: image, width: 1200, height: 630, alt: post.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+  }
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
@@ -101,6 +145,12 @@ async function Article({ slug }: { slug: string }) {
       </div>
     </article>
   )
+}
+
+function createSeoDescription(value: string | null, fallback: string) {
+  const compact = value?.replace(/\s+/g, " ").trim()
+  if (!compact) return fallback
+  return compact.length > 160 ? `${compact.slice(0, 157).trim()}...` : compact
 }
 
 function getCategoryLabel(category: string | null, t: any) {

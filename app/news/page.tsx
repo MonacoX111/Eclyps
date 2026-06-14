@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
@@ -12,6 +13,32 @@ import { getPublishedNewsPosts, type PublicNewsSummary } from "@/lib/data/news"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations()
+
+  return {
+    title: `${t.news.title} | Eclyps`,
+    description: t.news.subtitle,
+    alternates: {
+      canonical: "/news",
+    },
+    openGraph: {
+      title: `${t.news.title} | Eclyps`,
+      description: t.news.subtitle,
+      url: "/news",
+      type: "website",
+      siteName: "Eclyps",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Eclyps news" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${t.news.title} | Eclyps`,
+      description: t.news.subtitle,
+      images: ["/og-image.png"],
+    },
+  }
+}
 
 export default async function NewsPage() {
   return (
