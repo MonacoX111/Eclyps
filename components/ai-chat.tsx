@@ -112,6 +112,9 @@ export function AiChat() {
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 z-50 flex h-14 items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-4 py-3 font-semibold text-primary backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-primary/50 hover:shadow-[0_0_20px_oklch(0.78_0.18_165/0.25)] cursor-pointer"
+        aria-label={isOpen ? t.aiChat.closeChat : t.aiChat.title}
+        aria-expanded={isOpen}
+        aria-controls="eclyps-ai-chat-panel"
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -129,6 +132,9 @@ export function AiChat() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id="eclyps-ai-chat-panel"
+            role="dialog"
+            aria-label={t.aiChat.title}
             className="glass-card fixed bottom-24 right-6 z-50 flex h-[500px] w-[calc(100vw-2rem)] sm:w-[380px] flex-col overflow-hidden rounded-2xl shadow-[var(--glow)] border border-primary/25"
             initial={{ opacity: 0, y: 40, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
