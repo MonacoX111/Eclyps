@@ -5,6 +5,7 @@ import { m } from "framer-motion"
 import {
   BarChart3,
   CheckCircle2,
+  Compass,
   Crown,
   Eye,
   Gamepad2,
@@ -86,7 +87,11 @@ export function RoleOnboarding({ embedded = false, onNavigate }: RoleOnboardingP
               <button
                 key={guide.id}
                 type="button"
-                onClick={() => setActiveRoleId(guide.id)}
+                onClick={() =>
+                  setActiveRoleId((currentRoleId) =>
+                    currentRoleId === guide.id ? null : guide.id,
+                  )
+                }
                 className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 ${
                   isActive
                     ? "border-primary/55 bg-primary/[0.12] shadow-[0_0_46px_oklch(0.78_0.18_165_/_0.16)]"
@@ -146,7 +151,7 @@ function RoleEmptyPanel() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165/0.10),transparent_24rem)]" />
         <div className="relative mx-auto max-w-xl">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
-            <Gamepad2 className="h-5 w-5" />
+            <Compass className="h-5 w-5" />
           </span>
           <h3 className="mt-4 text-balance text-2xl font-black text-foreground">
             {t.roleOnboarding.emptyTitle}
