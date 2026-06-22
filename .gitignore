@@ -35,3 +35,5 @@ Thumbs.db
 
 # Keep real public assets
 !public/**/*.png
+.vercel
+.env*
