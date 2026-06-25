@@ -129,11 +129,11 @@ export function FirstVisitGuide({ autoOpen = false }: FirstVisitGuideProps) {
       role="dialog"
       style={{
         background:
-          "radial-gradient(circle at 50% -10%, oklch(0.78 0.18 165 / 0.16), transparent 34rem), radial-gradient(circle at 0% 100%, oklch(0.62 0.16 205 / 0.10), transparent 30rem), radial-gradient(circle at 100% 100%, oklch(0.78 0.18 165 / 0.08), transparent 32rem), linear-gradient(180deg, oklch(0.055 0.012 190) 0%, oklch(0.04 0.01 190) 54%, oklch(0.025 0.008 190) 100%)",
+          "radial-gradient(circle at 50% -10%, oklch(0.78 0.18 165 / 0.16), transparent 34rem), radial-gradient(circle at 0% 100%, oklch(0.62 0.16 205 / 0.10), transparent 30rem), radial-gradient(circle at 100% 100%, oklch(0.78 0.18 165 / 0.08), transparent 32rem), linear-gradient(180deg, oklch(0.055 0.012 190) 0%, oklch(0.045 0.011 190) 40%, oklch(0.035 0.009 190) 70%, oklch(0.025 0.008 190) 100%)",
       }}
     >
       <ParticleField />
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,transparent_0%,transparent_72%,oklch(0.025_0.008_190/0.92)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,transparent_0%,oklch(0.025_0.008_190/0.04)_30%,oklch(0.025_0.008_190/0.22)_55%,oklch(0.025_0.008_190/0.55)_78%,oklch(0.025_0.008_190/0.85)_100%)]" />
 
       <div className="relative z-[2] mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
         {stage === "intro" ? (
@@ -258,7 +258,7 @@ function IntroScreen({
   return (
     <div className="grid flex-1 place-items-center py-8 sm:py-10">
       <m.div
-        className="relative w-full max-w-2xl overflow-hidden rounded-[2rem] border border-primary/25 bg-[oklch(0.07_0.014_190/0.88)] px-6 py-8 text-center shadow-[0_0_120px_oklch(0.78_0.18_165_/_0.14)] backdrop-blur-2xl sm:px-10 sm:py-11"
+        className="relative w-full max-w-2xl overflow-hidden rounded-[2.25rem] border border-primary/20 bg-[oklch(0.068_0.014_190/0.9)] px-6 py-9 text-center shadow-[0_0_0_1px_oklch(0.78_0.18_165/0.06),0_24px_80px_-20px_oklch(0_0_0/0.8),0_0_140px_oklch(0.78_0.18_165_/_0.13)] backdrop-blur-2xl sm:px-12 sm:py-12"
         initial={{ opacity: 0, scale: 0.96, y: 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.48, ease: "easeOut" }}
@@ -281,18 +281,19 @@ function IntroScreen({
           className="relative mx-auto mt-1 h-28 w-28 object-contain drop-shadow-[0_0_34px_oklch(0.78_0.18_165_/_0.48)] sm:h-32 sm:w-32"
         />
 
-        <div className="relative mt-7 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+        <div className="relative mt-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/[0.08] px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/90">
           <Sparkles className="h-4 w-4" />
           {eyebrow}
         </div>
 
         <h1
           id="first-visit-title"
-          className="relative mx-auto mt-4 max-w-xl text-balance bg-gradient-to-b from-white via-white to-primary/82 bg-clip-text text-4xl font-semibold leading-[0.96] tracking-[-0.065em] text-transparent drop-shadow-[0_0_24px_oklch(0.78_0.18_165_/_0.16)] sm:text-5xl md:text-6xl"
-          style={{ fontFamily: '"SF Pro Display", "Inter", "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+          className="relative mx-auto mt-5 max-w-xl text-balance bg-gradient-to-br from-white via-white to-primary/70 bg-clip-text text-[2.65rem] font-medium leading-[1.04] tracking-[-0.02em] text-transparent drop-shadow-[0_0_32px_oklch(0.78_0.18_165_/_0.18)] sm:text-[3.4rem] md:text-[4rem]"
+          style={{ fontFamily: '"Unbounded", "Inter", system-ui, -apple-system, sans-serif' }}
         >
           {title}
         </h1>
+        <div className="relative mx-auto mt-5 h-px w-16 bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
         <p className="relative mx-auto mt-5 max-w-lg text-pretty text-sm leading-6 text-white/66 sm:text-base sm:leading-7">
           {description}
         </p>
