@@ -8,8 +8,21 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const isUk =
+    typeof navigator !== "undefined" &&
+    (navigator.language || "").toLowerCase().startsWith("uk")
+
+  const t = {
+    title: isUk ? "Сайт тимчасово недоступний" : "The site is temporarily unavailable",
+    body: isUk
+      ? "Сталася критична помилка інтерфейсу. Спробуй перезавантажити сторінку або повернутися на головну."
+      : "A critical interface error occurred. Try reloading the page or returning to the home page.",
+    retry: isUk ? "Спробувати ще раз" : "Try again",
+    home: isUk ? "На головну" : "Go home",
+  }
+
   return (
-    <html lang="uk">
+    <html lang={isUk ? "uk" : "en"}>
       <body className="bg-background font-sans text-foreground antialiased">
         <main className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-16 text-center">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,oklch(0.78_0.18_165_/_0.16),transparent_38%),radial-gradient(circle_at_bottom,oklch(0.54_0.18_260_/_0.12),transparent_34%)]" />
@@ -18,10 +31,10 @@ export default function GlobalError({
               Eclyps failsafe
             </p>
             <h1 className="mt-4 text-3xl font-black tracking-tight text-foreground md:text-5xl">
-              Сайт тимчасово недоступний
+              {t.title}
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/65 md:text-base">
-              Сталася критична помилка інтерфейсу. Спробуй перезавантажити сторінку або повернутися на головну.
+              {t.body}
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <button
@@ -29,13 +42,13 @@ export default function GlobalError({
                 onClick={() => reset()}
                 className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-primary/90"
               >
-                Спробувати ще раз
+                {t.retry}
               </button>
               <a
                 href="/"
                 className="rounded-full border border-primary/25 px-5 py-2.5 text-sm font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/10"
               >
-                На головну
+                {t.home}
               </a>
             </div>
           </div>
