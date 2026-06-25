@@ -113,6 +113,7 @@ export function RegistrationSection({
     checkInTone: checkInState.tone,
     checkInCanSubmit: checkInState.canCheckIn,
     participantType: summary.participantType,
+    registrationUnavailable: isDisabled,
   })
 
   return (
@@ -483,6 +484,7 @@ function buildRegistrationFlowItems({
   checkInTone,
   checkInCanSubmit,
   participantType,
+  registrationUnavailable,
 }: {
   lang: string
   hasUser: boolean
@@ -492,6 +494,7 @@ function buildRegistrationFlowItems({
   checkInTone: CheckInState["tone"]
   checkInCanSubmit: boolean
   participantType: "player" | "team"
+  registrationUnavailable: boolean
 }): RegistrationFlowItem[] {
   const isUk = lang === "uk"
   const isTeam = participantType === "team"
@@ -526,17 +529,15 @@ function buildRegistrationFlowItems({
         : hasRegistration
           ? (isUk ? "Заявка створена і очікує рішення." : "Entry submitted and waiting for decision.")
           : (isUk ? "Заповни форму реєстрації на активний турнір." : "Fill out the active tournament registration form."),
-      state: registrationApproved ? "done" : hasRegistration ? "current" : hasApprovedPlayer ? "current" : "locked",
-    },
-    {
-      id: "check-in",
-      title: isUk ? "Check-in" : "Check-in",
-      body: checkedIn
-        ? (isUk ? "Участь підтверджена перед стартом." : "Participation is confirmed before the start.")
-        : checkInCanSubmit
-          ? (isUk ? "Check-in відкритий — підтвердь участь зараз." : "Check-in is open — confirm now.")
-          : (isUk ? "Стане доступним після підтвердження заявки та відкриття вікна." : "Available after approval and when the window opens."),
-      state: checkedIn ? "done" : checkInCanSubmit ? "current" : registrationApproved ? "current" : "locked",
+      state: registrationApproved
+        ? "done"
+        : hasRegistration
+          ? "current"
+          : registrationUnavailable
+            ? "locked"
+            : hasApprovedPlayer
+              ? "current"
+              : "locked",
     },
   ]
 }

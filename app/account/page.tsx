@@ -95,6 +95,9 @@ async function AccountDashboard({
 }) {
   const userProfileId = userProfile.id
   const [t, lang] = await Promise.all([getTranslations(), getLanguage()])
+  const homepageData = await getHomepageData()
+  const registrationSummary = homepageData.registrationSummary
+  const registrationUnavailable = Boolean(registrationSummary?.isFull || registrationSummary?.isClosed)
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
     return (
@@ -356,6 +359,7 @@ async function AccountDashboard({
       searchParams={searchParams}
       invitesList={invitesList}
       joinRequestsList={joinRequestsList}
+      registrationUnavailable={registrationUnavailable}
     />
   )
 }

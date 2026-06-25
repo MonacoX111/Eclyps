@@ -76,6 +76,7 @@ export type AccountDashboardClientProps = {
   }
   invitesList?: any[]
   joinRequestsList?: any[]
+  registrationUnavailable?: boolean
 }
 
 export function AccountDashboardClient({
@@ -87,6 +88,7 @@ export function AccountDashboardClient({
   searchParams,
   invitesList = [],
   joinRequestsList = [],
+  registrationUnavailable = false,
 }: AccountDashboardClientProps) {
   const { t, lang } = useLanguage()
 
@@ -237,6 +239,7 @@ export function AccountDashboardClient({
     teamsList,
     invitesList,
     joinRequestsList,
+    registrationUnavailable,
   })
   const onboardingProgress = onboardingItems.filter((item) => item.status === "done").length
 
@@ -888,6 +891,7 @@ function buildOnboardingItems({
   teamsList,
   invitesList,
   joinRequestsList,
+  registrationUnavailable,
 }: {
   lang: string
   playerId: string
@@ -896,6 +900,7 @@ function buildOnboardingItems({
   teamsList: TeamInfo[]
   invitesList: any[]
   joinRequestsList: any[]
+  registrationUnavailable: boolean
 }): OnboardingItem[] {
   const isUk = lang === "uk"
   const hasRegistration = registrations.length > 0
@@ -934,9 +939,17 @@ function buildOnboardingItems({
         : hasRegistration
           ? (isUk ? "Заявка створена, очікує рішення." : "Entry created and waiting for review.")
           : (isUk ? "Подай заявку на активний турнір." : "Submit an entry for the active tournament."),
-      status: hasApprovedRegistration ? "done" : hasRegistration ? "current" : playerApproved ? "current" : "locked",
-      href: playerApproved ? "/registration" : undefined,
-      cta: !hasApprovedRegistration && playerApproved ? (isUk ? "До реєстрації" : "Go to registration") : undefined,
+      status: hasApprovedRegistration
+        ? "done"
+        : hasRegistration
+          ? "current"
+          : registrationUnavailable
+            ? "locked"
+            : playerApproved
+              ? "current"
+              : "locked",
+      href: playerApproved && !registrationUnavailable ? "/registration" : undefined,
+      cta: !hasApprovedRegistration && playerApproved && !registrationUnavailable ? (isUk ? "До реєстрації" : "Go to registration") : undefined,
     },
     {
       id: "team",
@@ -949,18 +962,6 @@ function buildOnboardingItems({
       status: hasTeam ? "done" : hasPendingTeamAction ? "current" : playerApproved ? "current" : "locked",
       href: hasPendingTeamAction ? "/account?tab=invites" : playerApproved ? "/teams" : undefined,
       cta: !hasTeam && playerApproved ? (isUk ? "Відкрити команди" : "Open teams") : undefined,
-    },
-    {
-      id: "check-in",
-      title: isUk ? "Check-in" : "Check-in",
-      body: hasCheckedIn
-        ? (isUk ? "Check-in підтверджено." : "Check-in is confirmed.")
-        : hasApprovedRegistration
-          ? (isUk ? "Коли check-in відкриється, підтвердь участь." : "When check-in opens, confirm participation.")
-          : (isUk ? "Стане актуальним після підтвердження реєстрації." : "This becomes relevant after registration approval."),
-      status: hasCheckedIn ? "done" : hasApprovedRegistration ? "current" : "locked",
-      href: hasApprovedRegistration ? "/registration" : undefined,
-      cta: hasApprovedRegistration && !hasCheckedIn ? (isUk ? "Перевірити check-in" : "Check status") : undefined,
     },
   ]
 }
