@@ -23,6 +23,10 @@ import { getPublicMatchDetail, isUserMatchParticipant, type MatchDetail } from "
 import { getTournamentArchiveDetail } from "@/lib/data/tournament-archive"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import { cookies } from "next/headers"
+import { ADMIN_SESSION_COOKIE, isValidAdminSession } from "@/lib/admin-auth"
+import { getMatchMessages } from "@/lib/data/match-chat"
+import { MatchChat } from "@/components/match-chat"
 
 export const dynamic = "force-dynamic"
 
@@ -32,17 +36,20 @@ type MatchPageProps = {
 
 export default async function MatchPage({ params }: MatchPageProps) {
   const { id } = await params
-  const [match, homepageData, userProfile, t, lang] = await Promise.all([
+  const [match, homepageData, userProfile, t, lang, chatMessages, cookieStore] = await Promise.all([
     getPublicMatchDetail(id),
     getHomepageData(),
     getCurrentUserProfile(),
     getTranslations(),
     getLanguage(),
+    getMatchMessages(id),
+    cookies(),
   ])
 
   if (!match) notFound()
 
   const isMatchParticipant = await isUserMatchParticipant(match, userProfile?.id ?? null)
+  const isAdmin = await isValidAdminSession(cookieStore.get(ADMIN_SESSION_COOKIE)?.value)
 
   const isActiveTournamentMatch = homepageData.tournament?.id === match.tournament.id
   const bracket = isActiveTournamentMatch
@@ -164,6 +171,16 @@ export default async function MatchPage({ params }: MatchPageProps) {
         <PublicBracket bracket={bracket} showMatchPageLink={false} />
       </MotionProvider>
 
+      <MatchChat
+        matchId={match.id}
+        initialMessages={chatMessages}
+        isParticipant={isMatchParticipant}
+        isAuthenticated={Boolean(userProfile)}
+        isAdmin={isAdmin}
+        currentUserId={userProfile?.id ?? null}
+        currentUserName={userProfile?.display_name ?? null}
+        currentUserAvatarUrl={userProfile?.avatar_url ?? null}
+      />
       <Footer />
     </main>
   )

@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { parseMatchFormData, parseRequiredIdFormData } from "./parsers"
 import { requireAdminSession, runSupabaseMutation } from "./shared"
 import { createNotification } from "@/lib/notifications/create-notification"
+import { postSystemMatchMessage } from "@/lib/data/match-chat"
 import {
   formatMatchScheduleTime,
   parseMatchScheduleInput,
@@ -74,7 +75,7 @@ export async function updateMatch(formData: FormData) {
   // Fetch the existing match to check for date/time updates
   const { data: existingMatch } = await supabaseAdmin
     .from("matches")
-    .select("scheduled_at, tournament_id, participant_1_id, participant_2_id, participant_type, round")
+    .select("scheduled_at, tournament_id, participant_1_id, participant_2_id, participant_type, round, status, score1, score2")
     .eq("id", parsedId.data.id)
     .maybeSingle()
 
@@ -87,6 +88,20 @@ export async function updateMatch(formData: FormData) {
   if (error) {
     logMutationError("update match", error)
     redirect("/admin?matchError=mutation-failed#matches")
+  }
+
+  // Post system chat messages when the match status changes.
+  if (existingMatch && existingMatch.status !== matchData.data.status) {
+    if (matchData.data.status === "live") {
+      await postSystemMatchMessage(parsedId.data.id, "🟢 Матч розпочався / Match started")
+    } else if (matchData.data.status === "finished") {
+      const s1 = matchData.data.score1 ?? 0
+      const s2 = matchData.data.score2 ?? 0
+      await postSystemMatchMessage(
+        parsedId.data.id,
+        `🏁 Матч завершено / Match finished — ${s1}:${s2}`,
+      )
+    }
   }
 
   // Trigger match_scheduled notification if the scheduled_at value actually changes!
