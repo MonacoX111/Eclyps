@@ -6,6 +6,7 @@ import { AlertTriangle, Clock, ExternalLink, Play } from "lucide-react"
 import { submitMatchDispute } from "@/app/actions/disputes"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh"
 
 import type { PublicMatchDisputeSummary } from "@/lib/data/disputes"
 

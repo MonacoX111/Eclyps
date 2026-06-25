@@ -22,6 +22,7 @@ import { Navbar } from "@/components/navbar"
 import { ParticleField } from "@/components/particle-field"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { PlayerStatsCharts } from "@/components/player-stats-charts"
 import { ProfileTabs, useProfileTab, type ProfileTabItem } from "@/components/profile-tabs"
 import { getPlayerAchievements, getTeamAchievements } from "@/lib/data/achievements"
 import type { PublicPlayerTeam, PublicProfileData, PublicTeamMember } from "@/lib/data/profiles"
@@ -397,6 +398,23 @@ function PlayerGameStats({ data }: { data: PublicProfileData }) {
       title={t.profile.playerPublic.gameStatsTitle}
       description={t.profile.playerPublic.gameStatsDescription}
     >
+      {gameStats.length > 0 && (
+        <PlayerStatsCharts
+          games={gameStats.map((g) => ({
+            game: g.game,
+            wins: g.wins,
+            losses: g.losses,
+            winRate: g.winRate,
+          }))}
+          labels={{
+            winRateByGame: t.profile.playerPublic.gameStatsTitle,
+            distribution: t.profile.stats.winRate,
+            wins: t.profile.stats.wins,
+            losses: t.profile.stats.losses,
+            winRate: t.profile.stats.winRate,
+          }}
+        />
+      )}
       {gameStats.length === 0 ? (
         <TeamEmptyState icon={Gamepad2} message={t.profile.playerPublic.noGameStats} />
       ) : (

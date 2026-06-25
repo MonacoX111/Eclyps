@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -7,6 +6,7 @@ import { m } from "framer-motion"
 import { ExternalLink, Radio, Trophy } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh"
 import { withAvatarCacheBust } from "@/lib/avatar"
 
 export type PublicBracketParticipant = {
