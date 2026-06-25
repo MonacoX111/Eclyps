@@ -6,6 +6,7 @@ import { AlertTriangle, Clock, ExternalLink, Play } from "lucide-react"
 import { submitMatchDispute } from "@/app/actions/disputes"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
+
 import type { PublicMatchDisputeSummary } from "@/lib/data/disputes"
 
 export type MatchScheduleItem = {
@@ -38,6 +39,8 @@ export function MatchSchedule({
   feedback = null,
 }: MatchScheduleProps) {
   const { t } = useLanguage()
+
+  useRealtimeRefresh({ tables: ["matches", "tournaments"], channel: "match-schedule" })
   const schedule = groupMatchesByRound(matches)
   const disputesByMatchId = new Map(disputes.map((dispute) => [dispute.match_id, dispute]))
 

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -54,6 +55,9 @@ type PublicBracketProps = {
 
 export function PublicBracket({ bracket, showMatchPageLink = true }: PublicBracketProps) {
   const { t } = useLanguage()
+
+  // Live updates: refresh server data when matches/tournaments change
+  useRealtimeRefresh({ tables: ["matches", "tournaments"], channel: "public-bracket" })
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#bracket") {

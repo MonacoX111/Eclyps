@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { sendDiscordDM } from "@/lib/notifications/discord"
 
 export type CreateNotificationPayload = {
   userProfileId: string
@@ -54,6 +55,23 @@ export async function createNotification({
       console.error("createNotification: Failed to insert notification in database:", error)
       return { ok: false, error: error.message }
     }
+
+    // Deliver the notification to the user's Discord DM (optional, fire-and-forget).
+    // Look up the recipient's linked Discord account, then DM them via the bot.
+    void (async () => {
+      const { data: profile } = await supabaseAdmin
+        .from("user_profiles")
+        .select("discord_id")
+        .eq("id", userProfileId)
+        .maybeSingle()
+
+      await sendDiscordDM({
+        discordId: profile?.discord_id ?? null,
+        title,
+        message,
+        type,
+      })
+    })()
 
     return { ok: true, data }
   } catch (err) {

@@ -6,6 +6,7 @@ import { Bell, Check, Inbox, Calendar, UserCheck, ShieldAlert, Users, CheckCircl
 import { getUserNotifications, markNotificationAsRead, type NotificationRow } from "@/lib/notifications/actions"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { useLanguage } from "@/components/language-provider"
+import { supabase } from "@/lib/supabase/client"
 import { getLocalizedNotification } from "@/lib/notifications/localize"
 
 type NotificationsBellProps = {
@@ -34,10 +35,32 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
   useEffect(() => {
     fetchNotifications()
 
-    // Poll notifications every 60 seconds as a lightweight live-update feature
-    const interval = setInterval(fetchNotifications, 60000)
-    return () => clearInterval(interval)
-  }, [])
+    // Primary: Supabase Realtime — instant delivery for this user's notifications
+    const channel = supabase
+      .channel(`notifications:${userProfile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_profile_id=eq.${userProfile.id}`,
+        },
+        () => {
+          fetchNotifications()
+        },
+      )
+      .subscribe()
+
+    // Fallback: slow poll (every 2 min) if the realtime socket drops
+    const interval = setInterval(fetchNotifications, 120000)
+
+    return () => {
+      clearInterval(interval)
+      supabase.removeChannel(channel)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile.id])
 
   // Close dropdown on click outside
   useEffect(() => {
