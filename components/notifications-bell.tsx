@@ -35,29 +35,40 @@ export function NotificationsBell({ userProfile }: NotificationsBellProps) {
   useEffect(() => {
     fetchNotifications()
 
-    // Primary: Supabase Realtime — instant delivery for this user's notifications
-    const channel = supabase
-      .channel(`notifications:${userProfile.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `user_profile_id=eq.${userProfile.id}`,
-        },
-        () => {
-          fetchNotifications()
-        },
-      )
-      .subscribe()
+    // Primary: Supabase Realtime — instant delivery for this user's notifications.
+    // Unique channel name per mount avoids "cannot add callbacks after subscribe()".
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`notifications:${userProfile.id}:${Math.random().toString(36).slice(2)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_profile_id=eq.${userProfile.id}`,
+          },
+          () => {
+            fetchNotifications()
+          },
+        )
+      channel.subscribe()
+    } catch (err) {
+      // Realtime is a non-critical enhancement — never let it crash the page.
+      console.error("NotificationsBell: failed to subscribe to realtime", err)
+    }
 
     // Fallback: slow poll (every 2 min) if the realtime socket drops
     const interval = setInterval(fetchNotifications, 120000)
 
     return () => {
       clearInterval(interval)
-      supabase.removeChannel(channel)
+      try {
+        if (channel) supabase.removeChannel(channel)
+      } catch (err) {
+        console.error("NotificationsBell: failed to remove channel", err)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile.id])

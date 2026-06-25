@@ -30,7 +30,7 @@ export function Navbar({
 }: NavbarProps) {
   const [open, setOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const pathname = usePathname()
   const shouldAutoShowGuide = autoShowGuide ?? (pathname === "/" && !userProfile)
 
@@ -53,6 +53,7 @@ export function Navbar({
     { href: "/matches", label: t.navbar.matches },
   ]
   const secondaryNavLinks = [
+    { href: "/rankings", label: lang === "uk" ? "Рейтинг" : "Rankings" },
     { href: "/tournaments", label: t.navbar.archive },
     { href: "/news", label: t.navbar.news },
   ]

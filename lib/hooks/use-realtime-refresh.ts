@@ -36,8 +36,10 @@ export function useRealtimeRefresh({
   useEffect(() => {
     if (!enabled) return
 
-    const channelName = channel ?? `realtime:${tables.join("-")}`
-    const ch = supabase.channel(channelName)
+    // Unique channel name per mount avoids "cannot add callbacks after
+    // subscribe()" when React remounts the effect and reuses a channel name.
+    const baseName = channel ?? `realtime:${tables.join("-")}`
+    const channelName = `${baseName}:${Math.random().toString(36).slice(2)}`
 
     const scheduleRefresh = () => {
       if (timerRef.current) clearTimeout(timerRef.current)
@@ -47,19 +49,29 @@ export function useRealtimeRefresh({
       }, debounceMs)
     }
 
-    for (const table of tables) {
-      ch.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table },
-        scheduleRefresh,
-      )
+    let ch: ReturnType<typeof supabase.channel> | null = null
+    try {
+      ch = supabase.channel(channelName)
+      for (const table of tables) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table },
+          scheduleRefresh,
+        )
+      }
+      ch.subscribe()
+    } catch (err) {
+      // Realtime is a non-critical enhancement — never let it crash the page.
+      console.error("useRealtimeRefresh: failed to subscribe", err)
     }
-
-    ch.subscribe()
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
-      supabase.removeChannel(ch)
+      try {
+        if (ch) supabase.removeChannel(ch)
+      } catch (err) {
+        console.error("useRealtimeRefresh: failed to remove channel", err)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, channel, debounceMs, tables.join(",")])
