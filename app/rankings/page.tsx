@@ -62,7 +62,7 @@ async function ActiveRankings() {
     wins: p.wins,
     losses: p.losses,
     href: `/players/${p.id}`,
-    avatarUrl: null,
+    avatarUrl: p.owner_profile?.avatar_url ?? null,
   }))
 
   const teamRows: RankingRow[] = teams.map((tm) => ({
