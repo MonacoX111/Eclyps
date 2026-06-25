@@ -19,7 +19,7 @@ import { ParticleField } from "@/components/particle-field"
 import { PublicBracket } from "@/components/public-bracket"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
-import { getPublicMatchDetail, type MatchDetail } from "@/lib/data/match-detail"
+import { getPublicMatchDetail, isUserMatchParticipant, type MatchDetail } from "@/lib/data/match-detail"
 import { getTournamentArchiveDetail } from "@/lib/data/tournament-archive"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
@@ -41,6 +41,8 @@ export default async function MatchPage({ params }: MatchPageProps) {
   ])
 
   if (!match) notFound()
+
+  const isMatchParticipant = await isUserMatchParticipant(match, userProfile?.id ?? null)
 
   const isActiveTournamentMatch = homepageData.tournament?.id === match.tournament.id
   const bracket = isActiveTournamentMatch
@@ -143,7 +145,11 @@ export default async function MatchPage({ params }: MatchPageProps) {
             </div>
           ) : null}
 
-          <MatchRoomGuide match={match} lang={lang} t={t} />
+          {isMatchParticipant ? (
+            <MatchRoomGuide match={match} lang={lang} t={t} />
+          ) : (
+            <SpectatorGuide match={match} lang={lang} t={t} />
+          )}
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
             <DetailsSection match={match} winnerName={winner?.name ?? null} t={t} />
@@ -303,11 +309,137 @@ function MatchRoomGuide({
         {steps.map((step) => (
           <div
             key={step.id}
-            className={`rounded-xl border p-4 ${step.isActive ? "border-primary/30 bg-primary/10" : "border-white/10 bg-black/20"}`}
+            className={`rounded-xl border p-4 transition ${step.isActive ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(0,200,150,0.10)]" : step.isDone ? "border-primary/20 bg-primary/[0.04]" : "border-white/10 bg-black/20 opacity-80"}`}
           >
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary/75">
-              {step.isDone ? <CheckCircle2 className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-primary/70" />}
-              {step.label}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary/75">
+                {step.isDone ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : step.isActive ? (
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                ) : (
+                  <span className="h-2 w-2 rounded-full bg-white/25" />
+                )}
+                {step.label}
+              </div>
+              {step.isDone ? (
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/80">
+                  {isUk ? "Готово" : "Done"}
+                </span>
+              ) : step.isActive ? (
+                <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                  {isUk ? "Зараз" : "Now"}
+                </span>
+              ) : (
+                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/35">
+                  {isUk ? "Далі" : "Next"}
+                </span>
+              )}
+            </div>
+            <h3 className="mt-3 text-sm font-bold text-white">{step.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-white/58">{step.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function SpectatorGuide({
+  match,
+  lang,
+  t,
+}: {
+  match: MatchDetail
+  lang: "uk" | "en"
+  t: any
+}) {
+  const isUk = lang === "uk"
+  const hasChannel = Boolean(match.broadcast?.url)
+  const isFinished = match.status === "finished"
+  const isLive = match.status === "live"
+
+  const steps = [
+    {
+      id: "lineup",
+      label: isUk ? "Учасники" : "Line-up",
+      title: isUk ? "Дізнайся, хто грає" : "See who is playing",
+      body: isUk
+        ? "Переглянь обох учасників, раунд і сітку, щоб розуміти контекст матчу."
+        : "Check both participants, the round, and the bracket to get the context.",
+      isActive: match.status === "upcoming",
+      isDone: isLive || isFinished,
+    },
+    {
+      id: "watch",
+      label: isUk ? "Перегляд" : "Watch",
+      title: hasChannel
+        ? (isUk ? "Дивись трансляцію" : "Watch the stream")
+        : (isUk ? "Очікуй трансляцію" : "Wait for a stream"),
+      body: hasChannel
+        ? (isUk ? "Канал трансляції доступний нижче — відкрий його під час live." : "The broadcast channel is available below — open it during live.")
+        : (isUk ? "Якщо трансляції ще немає, перевір Discord/анонси або зачекай на оновлення." : "If there is no stream yet, check Discord/announcements or wait for an update."),
+      isActive: isLive,
+      isDone: isFinished,
+    },
+    {
+      id: "result",
+      label: isUk ? "Результат" : "Result",
+      title: isUk ? "Стеж за підсумком" : "Follow the result",
+      body: isUk
+        ? "Після матчу тут зʼявиться фінальний рахунок і переможець. Слідкуй за просуванням у сітці."
+        : "After the match the final score and winner appear here. Follow the bracket progression.",
+      isActive: isFinished,
+      isDone: isFinished,
+    },
+  ]
+
+  return (
+    <section className="mt-6 rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(0,200,150,0.06),transparent_36%),rgba(255,255,255,0.02)] p-5 shadow-[0_0_36px_rgba(0,200,150,0.05)] md:p-6">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary/70">
+            {isUk ? "Для глядачів" : "For spectators"}
+          </p>
+          <h2 className="mt-2 text-xl font-black text-white">
+            {isUk ? "Як стежити за матчем" : "How to follow the match"}
+          </h2>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-white/55">
+          {formatStatus(match.status, t)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {steps.map((step) => (
+          <div
+            key={step.id}
+            className={`rounded-xl border p-4 transition ${step.isActive ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(0,200,150,0.10)]" : step.isDone ? "border-primary/20 bg-primary/[0.04]" : "border-white/10 bg-black/20 opacity-80"}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary/75">
+                {step.isDone ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : step.isActive ? (
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                ) : (
+                  <span className="h-2 w-2 rounded-full bg-white/25" />
+                )}
+                {step.label}
+              </div>
+              {step.isDone ? (
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary/80">
+                  {isUk ? "Готово" : "Done"}
+                </span>
+              ) : step.isActive ? (
+                <span className="rounded-full bg-primary/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                  {isUk ? "Зараз" : "Now"}
+                </span>
+              ) : (
+                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/35">
+                  {isUk ? "Далі" : "Next"}
+                </span>
+              )}
             </div>
             <h3 className="mt-3 text-sm font-bold text-white">{step.title}</h3>
             <p className="mt-2 text-sm leading-6 text-white/58">{step.body}</p>

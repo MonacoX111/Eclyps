@@ -383,3 +383,41 @@ function isMissingColumnError(error: { code?: string }) {
 function isMissingDisputeStorageError(error: { code?: string }) {
   return error.code === "42P01" || isMissingColumnError(error)
 }
+
+export async function isUserMatchParticipant(
+  match: Pick<MatchDetail, "participants">,
+  userProfileId: string | null,
+): Promise<boolean> {
+  if (!userProfileId) return false
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return false
+
+  const playerIds = match.participants
+    .filter((p) => p.type === "player")
+    .map((p) => p.sourceId ?? p.id)
+    .filter((value): value is string => Boolean(value))
+
+  const teamIds = match.participants
+    .filter((p) => p.type === "team")
+    .map((p) => p.sourceId ?? p.id)
+    .filter((value): value is string => Boolean(value))
+
+  if (playerIds.length > 0) {
+    const { data } = await supabaseAdmin
+      .from("players")
+      .select("id, owner_user_id")
+      .in("id", playerIds)
+    if (data?.some((row) => row.owner_user_id === userProfileId)) return true
+  }
+
+  if (teamIds.length > 0) {
+    const { data } = await supabaseAdmin
+      .from("teams")
+      .select("id, owner_user_id")
+      .in("id", teamIds)
+    if (data?.some((row) => row.owner_user_id === userProfileId)) return true
+  }
+
+  return false
+}
