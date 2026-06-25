@@ -790,7 +790,7 @@ type OnboardingItem = {
   id: string
   title: string
   body: string
-  status: "done" | "current" | "locked"
+  status: "done" | "current" | "locked" | "blocked"
   href?: string
   cta?: string
 }
@@ -839,7 +839,7 @@ function AccountOnboardingPanel({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 lg:grid-cols-5">
+      <div className={`mt-5 grid gap-3 sm:grid-cols-2 ${items.length >= 5 ? "lg:grid-cols-5" : items.length === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
         {items.map((item, index) => (
           <OnboardingStepCard key={item.id} item={item} index={index + 1} lang={lang} />
         ))}
@@ -850,13 +850,15 @@ function AccountOnboardingPanel({
 
 function OnboardingStepCard({ item, index, lang }: { item: OnboardingItem; index: number; lang: string }) {
   const stepLabel = lang === "uk" ? "Крок" : "Step"
-  const Icon = item.status === "done" ? CheckCircle2 : item.status === "current" ? Clock : Circle
+  const Icon = item.status === "done" ? CheckCircle2 : item.status === "current" ? Clock : item.status === "blocked" ? ShieldAlert : Circle
   const tone =
     item.status === "done"
       ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
       : item.status === "current"
         ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
-        : "border-white/10 bg-white/[0.025] text-white/45"
+        : item.status === "blocked"
+          ? "border-red-400/45 bg-red-500/12 text-red-200 shadow-[0_0_26px_rgba(248,113,113,0.18)]"
+          : "border-white/10 bg-white/[0.025] text-white/45"
 
   const content = (
     <div className={`flex h-full flex-col rounded-2xl border p-4 transition ${tone}`}>
@@ -874,7 +876,7 @@ function OnboardingStepCard({ item, index, lang }: { item: OnboardingItem; index
     </div>
   )
 
-  if (!item.href || item.status === "locked") return content
+  if (!item.href || item.status === "locked" || item.status === "blocked") return content
 
   return (
     <Link href={item.href} className="block h-full hover:opacity-95">
@@ -938,13 +940,17 @@ function buildOnboardingItems({
         ? (isUk ? "Є підтверджена участь у турнірі." : "There is an approved tournament entry.")
         : hasRegistration
           ? (isUk ? "Заявка створена, очікує рішення." : "Entry created and waiting for review.")
-          : (isUk ? "Подай заявку на активний турнір." : "Submit an entry for the active tournament."),
+          : registrationUnavailable
+            ? (isUk
+                ? "Реєстрація недоступна — усі місця на турнірі вже зайняті."
+                : "Registration is unavailable — all tournament slots are already taken.")
+            : (isUk ? "Подай заявку на активний турнір." : "Submit an entry for the active tournament."),
       status: hasApprovedRegistration
         ? "done"
         : hasRegistration
           ? "current"
           : registrationUnavailable
-            ? "locked"
+            ? "blocked"
             : playerApproved
               ? "current"
               : "locked",

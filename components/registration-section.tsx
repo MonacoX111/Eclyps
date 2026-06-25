@@ -229,8 +229,8 @@ export function RegistrationSection({
                 </div>
               ) : null}
               {isDisabled ? (
-                <div className="sm:col-span-2 rounded-xl border border-red-300/30 bg-red-300/10 px-4 py-4 shadow-[0_0_32px_rgba(248,113,113,0.16)]">
-                  <p className="text-sm font-semibold text-red-100">
+                <div className="sm:col-span-2 rounded-xl border border-red-400/45 bg-red-500/12 px-4 py-4 shadow-[0_0_28px_rgba(248,113,113,0.20)]">
+                  <p className="text-sm font-semibold text-red-200">
                     {disabledTitle}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-white/70">
@@ -423,7 +423,7 @@ type RegistrationFlowItem = {
   id: string
   title: string
   body: string
-  state: "done" | "current" | "locked"
+  state: "done" | "current" | "locked" | "blocked"
 }
 
 function RegistrationFlowGuide({ items, lang }: { items: RegistrationFlowItem[]; lang: string }) {
@@ -446,7 +446,7 @@ function RegistrationFlowGuide({ items, lang }: { items: RegistrationFlowItem[];
         </p>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className={`mt-4 grid gap-3 sm:grid-cols-2 ${items.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
         {items.map((item, index) => (
           <div
             key={item.id}
@@ -457,7 +457,7 @@ function RegistrationFlowGuide({ items, lang }: { items: RegistrationFlowItem[];
                 {isUk ? "Крок" : "Step"} {index + 1}
               </span>
               <span className="text-lg leading-none">
-                {item.state === "done" ? "✓" : item.state === "current" ? "→" : "•"}
+                {item.state === "done" ? "✓" : item.state === "current" ? "→" : item.state === "blocked" ? "✕" : "•"}
               </span>
             </div>
             <h4 className="mt-2 text-sm font-bold text-white">{item.title}</h4>
@@ -472,6 +472,7 @@ function RegistrationFlowGuide({ items, lang }: { items: RegistrationFlowItem[];
 function getRegistrationFlowItemClassName(state: RegistrationFlowItem["state"]) {
   if (state === "done") return "border-primary/25 bg-primary/10 text-primary"
   if (state === "current") return "border-amber-300/25 bg-amber-300/10 text-amber-100"
+  if (state === "blocked") return "border-red-400/45 bg-red-500/12 text-red-200 shadow-[0_0_28px_rgba(248,113,113,0.20)]"
   return "border-white/10 bg-black/20 text-white/45"
 }
 
@@ -525,16 +526,20 @@ function buildRegistrationFlowItems({
       id: "registration",
       title: isTeam ? (isUk ? "Заявка команди" : "Team entry") : (isUk ? "Заявка гравця" : "Player entry"),
       body: registrationApproved
-        ? (isUk ? "Участь підтверджена, дочекайся check-in." : "Entry approved; wait for check-in.")
+        ? (isUk ? "Участь підтверджена." : "Entry approved.")
         : hasRegistration
           ? (isUk ? "Заявка створена і очікує рішення." : "Entry submitted and waiting for decision.")
-          : (isUk ? "Заповни форму реєстрації на активний турнір." : "Fill out the active tournament registration form."),
+          : registrationUnavailable
+            ? (isUk
+                ? "Реєстрацію зараз неможливо виконати — усі місця на турнірі вже зайняті."
+                : "Registration is unavailable right now — all tournament slots are already taken.")
+            : (isUk ? "Заповни форму реєстрації на активний турнір." : "Fill out the active tournament registration form."),
       state: registrationApproved
         ? "done"
         : hasRegistration
           ? "current"
           : registrationUnavailable
-            ? "locked"
+            ? "blocked"
             : hasApprovedPlayer
               ? "current"
               : "locked",
