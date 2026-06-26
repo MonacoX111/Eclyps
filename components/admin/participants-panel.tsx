@@ -78,7 +78,7 @@ export function ParticipantsPanel({
             {t.admin.participants.addParticipantDesc}
           </p>
 
-          <form action={addParticipant} className="mt-4 space-y-4">
+          <form action={addParticipant} className="mt-5 space-y-5">
             <AdminField label={t.admin.participants.tournamentField}>
               <select name="tournament_id" required className={inputClassName} defaultValue="">
                 <option value="" disabled>

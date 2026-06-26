@@ -78,8 +78,8 @@ function ParticipantTypeField({
 }) {
   const { t } = useLanguage()
   return (
-    <label className="space-y-2 text-sm text-white/75">
-      <span className="block">{t.admin.extra.participantType}</span>
+    <label className="flex flex-col gap-2 text-sm text-white/75">
+      <span className="flex min-h-[2.25rem] items-end text-xs font-semibold uppercase leading-[1.2] tracking-[0.14em] text-white/45">{t.admin.extra.participantType}</span>
       <select
         name="participant_type"
         value={value}
@@ -105,8 +105,8 @@ function NameField({
   value?: string | null
 }) {
   return (
-    <label className="space-y-2 text-sm text-white/75">
-      <span className="block">{label}</span>
+    <label className="flex flex-col gap-2 text-sm text-white/75">
+      <span className="flex min-h-[2.25rem] items-end text-xs font-semibold uppercase leading-[1.2] tracking-[0.14em] text-white/45">{label}</span>
       <input name={name} list={listId} defaultValue={value ?? ""} required className={inputClassName} />
     </label>
   )

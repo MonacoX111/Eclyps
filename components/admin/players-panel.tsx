@@ -242,7 +242,7 @@ function PlayerForm({
 }) {
   const { t } = useLanguage()
   return (
-    <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
+    <form action={action} className="mt-4 grid gap-x-4 gap-y-5 sm:grid-cols-2">
       {player && <input type="hidden" name="id" value={player.id} />}
       <AdminField label={t.admin.players.realNameField}>
         <input name="name" defaultValue={player?.name ?? ""} required className={inputClassName} />

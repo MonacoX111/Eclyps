@@ -51,8 +51,8 @@ export function AdminField({
   hint?: FieldHint
 }) {
   return (
-    <label className="space-y-2 text-sm text-white/75">
-      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+    <label className="flex flex-col gap-2 text-sm text-white/75">
+      <span className="flex min-h-[2.25rem] items-end gap-1.5 text-xs font-semibold uppercase leading-[1.2] tracking-[0.14em] text-white/45">
         <span>{label}</span>
         {hint ? <FieldHintBadge hint={hint} /> : null}
       </span>

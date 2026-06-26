@@ -34,7 +34,7 @@ import {
 import { useLanguage } from "@/components/language-provider"
 
 const adminFormGridClassName =
-  "mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))]"
+  "mt-4 grid gap-x-4 gap-y-5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))]"
 const adminWideFieldClassName = "[grid-column:1/-1]"
 
 export function MatchesPanel({
