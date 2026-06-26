@@ -16,12 +16,14 @@ export type FieldHint = {
 }
 
 function FieldHintBadge({ hint }: { hint: FieldHint }) {
+  const { lang } = useLanguage()
+  const exampleLabel = lang === "uk" ? "Приклад: " : "Example: "
   return (
     <span className="group/hint relative inline-flex normal-case">
       <button
         type="button"
         tabIndex={0}
-        aria-label="Підказка"
+        aria-label={lang === "uk" ? "Підказка" : "Hint"}
         className="flex h-4 w-4 items-center justify-center rounded-full border border-white/25 text-[10px] font-bold leading-none text-white/55 transition hover:border-emerald-300/70 hover:text-emerald-200 focus:border-emerald-300/70 focus:text-emerald-200 focus:outline-none"
       >
         ?
@@ -32,7 +34,7 @@ function FieldHintBadge({ hint }: { hint: FieldHint }) {
         {hint.title ? <span className="block text-white/90">{hint.title}</span> : null}
         {hint.example ? (
           <span className="mt-1 block text-emerald-200/85">
-            <span className="text-white/40">Приклад: </span>
+            <span className="text-white/40">{exampleLabel}</span>
             {hint.example}
           </span>
         ) : null}
