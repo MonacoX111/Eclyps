@@ -8,6 +8,7 @@ import { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "@/app/ad
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 export function PlayersPanel({
   players,
@@ -240,17 +241,18 @@ function PlayerForm({
   submitLabel: string
   player?: AdminPlayer
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   return (
     <form action={action} className="mt-4 grid gap-x-4 gap-y-5 sm:grid-cols-2">
       {player && <input type="hidden" name="id" value={player.id} />}
-      <AdminField label={t.admin.players.realNameField}>
+      <AdminField label={t.admin.players.realNameField} hint={fh.players.realName}>
         <input name="name" defaultValue={player?.name ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.players.nicknameField}>
+      <AdminField label={t.admin.players.nicknameField} hint={fh.players.nickname}>
         <input name="nickname" defaultValue={player?.nickname ?? player?.display_name ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.players.regionField}>
+      <AdminField label={t.admin.players.regionField} hint={fh.players.region}>
         <input
           name="region"
           defaultValue={player?.region ?? ""}
@@ -258,13 +260,13 @@ function PlayerForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.players.seedField}>
+      <AdminField label={t.admin.players.seedField} hint={fh.players.seed}>
         <input name="seed" type="number" min={1} step={1} defaultValue={player?.seed ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.players.winsField}>
+      <AdminField label={t.admin.players.winsField} hint={fh.players.wins}>
         <input name="wins" type="number" min={0} step={1} defaultValue={player?.wins ?? 0} required className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.players.lossesField}>
+      <AdminField label={t.admin.players.lossesField} hint={fh.players.losses}>
         <input name="losses" type="number" min={0} step={1} defaultValue={player?.losses ?? 0} required className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} />

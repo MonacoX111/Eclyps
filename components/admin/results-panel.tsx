@@ -11,6 +11,7 @@ import { ResultParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 export function ResultsPanel({
   results,
@@ -141,7 +142,8 @@ function ResultForm({
   playerNames: string[]
   result?: AdminResult
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {result && <input type="hidden" name="id" value={result.id} />}
@@ -152,19 +154,19 @@ function ResultForm({
         playerNames={playerNames}
         team={result?.team}
       />
-      <AdminField label={t.admin.results.placementField}>
+      <AdminField label={t.admin.results.placementField} hint={fh.results.placement}>
         <input name="placement" type="number" min={1} step={1} defaultValue={result?.placement ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.results.labelField}>
+      <AdminField label={t.admin.results.labelField} hint={fh.results.label}>
         <input name="label" defaultValue={result?.label ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.results.mvpField}>
+      <AdminField label={t.admin.results.mvpField} hint={fh.results.mvp}>
         <input name="mvp" defaultValue={result?.mvp ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.results.scorelineField}>
+      <AdminField label={t.admin.results.scorelineField} hint={fh.results.scoreline}>
         <input name="scoreline" defaultValue={result?.scoreline ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.results.noteField}>
+      <AdminField label={t.admin.results.noteField} hint={fh.results.note}>
         <input name="note" defaultValue={result?.note ?? ""} className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />

@@ -19,6 +19,7 @@ import {
 } from "@/components/admin/admin-section"
 import { AdminField, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 const categories = ["announcement", "tournament", "update", "patch_notes"]
 
@@ -124,14 +125,15 @@ function NewsForm({
   submitLabel: string
   post?: AdminNewsPost
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {post && <input type="hidden" name="id" value={post.id} />}
-      <AdminField label={t.admin.news.titleField}>
+      <AdminField label={t.admin.news.titleField} hint={fh.news.title}>
         <input name="title" defaultValue={post?.title ?? ""} required className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.news.slugField}>
+      <AdminField label={t.admin.news.slugField} hint={fh.news.slug}>
         <input
           name="slug"
           defaultValue={post?.slug ?? ""}
@@ -141,7 +143,7 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.news.categoryField}>
+      <AdminField label={t.admin.news.categoryField} hint={fh.news.category}>
         <input
           name="category"
           list="news-categories"
@@ -150,13 +152,13 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.news.authorField}>
+      <AdminField label={t.admin.news.authorField} hint={fh.news.author}>
         <input name="author_name" defaultValue={post?.author_name ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.news.statusField}>
+      <AdminField label={t.admin.news.statusField} hint={fh.news.status}>
         <NewsStatusSelect value={post?.status} />
       </AdminField>
-      <AdminField label={t.admin.news.publishedAtField}>
+      <AdminField label={t.admin.news.publishedAtField} hint={fh.news.publishedAt}>
         <input
           name="published_at"
           type="datetime-local"
@@ -164,10 +166,10 @@ function NewsForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.news.coverImageField}>
+      <AdminField label={t.admin.news.coverImageField} hint={fh.news.coverImage}>
         <input name="cover_image_url" defaultValue={post?.cover_image_url ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.news.excerptField}>
+      <AdminField label={t.admin.news.excerptField} hint={fh.news.excerpt}>
         <textarea name="excerpt" defaultValue={post?.excerpt ?? ""} rows={3} className={inputClassName} />
       </AdminField>
       <label className="space-y-2 text-sm text-white/75 sm:col-span-2">

@@ -32,6 +32,7 @@ import {
   TournamentSelect,
 } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 const adminFormGridClassName =
   "mt-4 grid gap-x-4 gap-y-5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))]"
@@ -172,6 +173,7 @@ function BracketTemplateForm({
   matches: AdminMatch[]
 }) {
   const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   const [selectedTournamentId, setSelectedTournamentId] = useState("")
   const selectedBracketMatches = selectedTournamentId
     ? matches.filter((match) => match.tournament_id === selectedTournamentId)
@@ -204,7 +206,7 @@ function BracketTemplateForm({
           ))}
         </select>
       </AdminField>
-      <AdminField label={t.admin.matches.bracketSizeField}>
+      <AdminField label={t.admin.matches.bracketSizeField} hint={fh.matches.bracketSize}>
         <select name="bracket_size" defaultValue="8" className={inputClassName}>
           <option value="2">{t.admin.extra.participantsSelect.participants2}</option>
           <option value="4">{t.admin.extra.participantsSelect.participants4}</option>
@@ -521,7 +523,8 @@ function BracketMatchResultForm({
   match: AdminMatch
   bracketStatus: BracketLifecycleStatus
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   const isBracketFinished = bracketStatus === "finished"
   const hasParticipants = Boolean(match.participant_1_id && match.participant_2_id)
   const disabled = isBracketFinished || !hasParticipants
@@ -542,7 +545,7 @@ function BracketMatchResultForm({
       )}
       <StatusSelect value={match.status} disabled={disabled} />
       <WinnerSelect match={match} disabled={disabled} />
-      <AdminField label={t.admin.matches.score1Field}>
+      <AdminField label={t.admin.matches.score1Field} hint={fh.matches.score1}>
         <input
           name="score1"
           type="number"
@@ -553,7 +556,7 @@ function BracketMatchResultForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.score2Field}>
+      <AdminField label={t.admin.matches.score2Field} hint={fh.matches.score2}>
         <input
           name="score2"
           type="number"
@@ -733,7 +736,8 @@ function MatchForm({
   match?: AdminMatch
   mode?: "standard" | "bracket"
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   const isBracket = mode === "bracket"
 
   return (
@@ -773,7 +777,7 @@ function MatchForm({
       ) : (
         <>
           <TournamentSelect tournaments={tournaments} value={match?.tournament_id} />
-          <AdminField label={t.admin.matches.roundField}>
+          <AdminField label={t.admin.matches.roundField} hint={fh.matches.round}>
             <input name="round" defaultValue={match?.round ?? ""} className={inputClassName} />
           </AdminField>
           <MatchParticipantFields
@@ -785,15 +789,15 @@ function MatchForm({
           />
         </>
       )}
-      <AdminField label={t.admin.matches.score1Field}>
+      <AdminField label={t.admin.matches.score1Field} hint={fh.matches.score1}>
         <input name="score1" type="number" defaultValue={match?.score1 ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={t.admin.matches.score2Field}>
+      <AdminField label={t.admin.matches.score2Field} hint={fh.matches.score2}>
         <input name="score2" type="number" defaultValue={match?.score2 ?? ""} className={inputClassName} />
       </AdminField>
       <StatusSelect value={match?.status} />
       <WinnerSelect match={match} />
-      <AdminField label={t.admin.matches.scheduleDateField}>
+      <AdminField label={t.admin.matches.scheduleDateField} hint={fh.matches.scheduleDate}>
         <input
           name="schedule_date"
           type="date"
@@ -804,7 +808,7 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.scheduleTimeField}>
+      <AdminField label={t.admin.matches.scheduleTimeField} hint={fh.matches.scheduleTime}>
         <input
           name="schedule_time"
           type="time"
@@ -815,14 +819,14 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.timezoneField}>
+      <AdminField label={t.admin.matches.timezoneField} hint={fh.matches.timezone}>
         <input
           name="timezone"
           defaultValue={match?.timezone ?? DEFAULT_MATCH_TIMEZONE}
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.scheduleNoteField}>
+      <AdminField label={t.admin.matches.scheduleNoteField} hint={fh.matches.scheduleNote}>
         <input
           name="schedule_note"
           defaultValue={match?.schedule_note ?? ""}
@@ -830,7 +834,7 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.channelTypeField}>
+      <AdminField label={t.admin.matches.channelTypeField} hint={fh.matches.channelType}>
         <select
           name="broadcast_type"
           defaultValue={match?.broadcast_type ?? "other"}
@@ -843,7 +847,7 @@ function MatchForm({
           <option value="other">{t.admin.matches.otherChannelLink}</option>
         </select>
       </AdminField>
-      <AdminField label={t.admin.matches.channelUrlField}>
+      <AdminField label={t.admin.matches.channelUrlField} hint={fh.matches.channelUrl}>
         <input
           name="broadcast_url"
           type="url"
@@ -853,14 +857,14 @@ function MatchForm({
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.channelLabelField}>
+      <AdminField label={t.admin.matches.channelLabelField} hint={fh.matches.channelLabel}>
         <input
           name="broadcast_label"
           defaultValue={match?.broadcast_label ?? ""}
           className={inputClassName}
         />
       </AdminField>
-      <AdminField label={t.admin.matches.matchOrderField}>
+      <AdminField label={t.admin.matches.matchOrderField} hint={fh.matches.matchOrder}>
         <input name="match_order" type="number" min={1} step={1} defaultValue={match?.match_order ?? ""} required className={inputClassName} />
       </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
@@ -869,9 +873,10 @@ function MatchForm({
 }
 
 function WinnerSelect({ match, disabled = false }: { match?: AdminMatch; disabled?: boolean }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   return (
-    <AdminField label={t.admin.matches.winnerField}>
+    <AdminField label={t.admin.matches.winnerField} hint={fh.matches.winner}>
       <select
         name="winner_selection"
         defaultValue={

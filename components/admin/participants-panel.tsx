@@ -17,6 +17,7 @@ import {
   panelGridClassName,
 } from "@/components/admin/admin-section"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 export function ParticipantsPanel({
   participants,
@@ -34,6 +35,7 @@ export function ParticipantsPanel({
   feedback: AdminFeedback | null
 }) {
   const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<"all" | "team" | "player">("all")
@@ -79,7 +81,7 @@ export function ParticipantsPanel({
           </p>
 
           <form action={addParticipant} className="mt-5 space-y-5">
-            <AdminField label={t.admin.participants.tournamentField}>
+            <AdminField label={t.admin.participants.tournamentField} hint={fh.participants.tournament}>
               <select name="tournament_id" required className={inputClassName} defaultValue="">
                 <option value="" disabled>
                   {t.admin.participants.selectTournament}
@@ -92,7 +94,7 @@ export function ParticipantsPanel({
               </select>
             </AdminField>
 
-            <AdminField label={t.admin.participants.participantTypeField}>
+            <AdminField label={t.admin.participants.participantTypeField} hint={fh.participants.participantType}>
               <select
                 name="participant_type"
                 value={addType}
@@ -104,7 +106,7 @@ export function ParticipantsPanel({
               </select>
             </AdminField>
 
-            <AdminField label={addType === "player" ? t.admin.participants.globalPlayer : t.admin.participants.globalTeam}>
+            <AdminField label={addType === "player" ? t.admin.participants.globalPlayer : t.admin.participants.globalTeam} hint={fh.participants.global}>
               <select name="participant_id" defaultValue="" required className={inputClassName}>
                 <option value="" disabled>
                   {addType === "player" ? t.admin.participants.selectPlayer : t.admin.participants.selectTeam}
@@ -123,7 +125,7 @@ export function ParticipantsPanel({
               </select>
             </AdminField>
 
-            <AdminField label={t.admin.participants.seedField}>
+            <AdminField label={t.admin.participants.seedField} hint={fh.participants.seed}>
               <input
                 name="seed"
                 type="number"

@@ -8,6 +8,7 @@ import { createTeam, deleteTeam, updateTeam, approveTeam, rejectTeam, restoreTea
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName, pillClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
+import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
 export function TeamsPanel({
   teams,
@@ -244,25 +245,26 @@ function TeamForm({
   tournaments: AdminTournament[]
   team?: AdminTeam
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const fh = getAdminFieldHints(lang === "uk")
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {team && <input type="hidden" name="id" value={team.id} />}
       <TournamentSelect tournaments={tournaments} value={team?.tournament_id} />
 
-      <AdminField label={t.admin.teams.nameField}>
+      <AdminField label={t.admin.teams.nameField} hint={fh.teams.name}>
         <input name="name" defaultValue={team?.name ?? ""} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.teams.seedField}>
+      <AdminField label={t.admin.teams.seedField} hint={fh.teams.seed}>
         <input name="seed" type="number" min={1} step={1} defaultValue={team?.seed ?? ""} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.teams.winsField}>
+      <AdminField label={t.admin.teams.winsField} hint={fh.teams.wins}>
         <input name="wins" type="number" min={0} step={1} defaultValue={team?.wins ?? 0} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.teams.lossesField}>
+      <AdminField label={t.admin.teams.lossesField} hint={fh.teams.losses}>
         <input name="losses" type="number" min={0} step={1} defaultValue={team?.losses ?? 0} required className={inputClassName} />
       </AdminField>
 

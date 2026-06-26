@@ -68,10 +68,14 @@ export function TournamentSelect({
   tournaments: AdminTournament[]
   value?: string | null
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const hint =
+    lang === "uk"
+      ? { title: "Турнір, до якого належить цей запис.", example: "Eclyps Winter Cup 2026" }
+      : { title: "Tournament this record belongs to.", example: "Eclyps Winter Cup 2026" }
 
   return (
-    <AdminField label={t.admin.extra.tournamentLabel}>
+    <AdminField label={t.admin.extra.tournamentLabel} hint={hint}>
       <select name="tournament_id" defaultValue={value ?? ""} required className={inputClassName}>
         <option value="" disabled>
           {t.admin.extra.selectTournament}
@@ -93,10 +97,14 @@ export function StatusSelect({
   value?: string | null
   disabled?: boolean
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const hint =
+    lang === "uk"
+      ? { title: "Поточний статус запису.", example: "Майбутній, Наживо, Завершено" }
+      : { title: "Current status of the record.", example: "Upcoming, Live, Finished" }
 
   return (
-    <AdminField label={t.admin.extra.statusLabel}>
+    <AdminField label={t.admin.extra.statusLabel} hint={hint}>
       <select
         name="status"
         defaultValue={normalizeStatus(value)}
