@@ -11,6 +11,7 @@ import { useLanguage } from "@/components/language-provider"
 import type { UserProfile } from "@/lib/auth/user-profile"
 import { withAvatarCacheBust } from "@/lib/avatar"
 import { NotificationsBell } from "@/components/notifications-bell"
+import { FriendsBell } from "@/components/friends-bell"
 import { FirstVisitGuide, FIRST_VISIT_GUIDE_OPEN_EVENT } from "@/components/first-visit-guide"
 
 type NavbarProps = {
@@ -132,6 +133,7 @@ export function Navbar({
             <div className="flex items-center gap-4">
               <GuideButton />
               <LanguageSwitcher />
+              {userProfile && <FriendsBell currentUserId={userProfile.id} />}
               {userProfile && <NotificationsBell userProfile={userProfile} />}
               <AuthControl userProfile={userProfile} />
             </div>
@@ -139,6 +141,7 @@ export function Navbar({
 
           <div className="flex items-center gap-1.5 sm:gap-3 md:hidden">
             <LanguageSwitcher />
+            {userProfile && <FriendsBell currentUserId={userProfile.id} />}
             {userProfile && <NotificationsBell userProfile={userProfile} />}
             <MobileAuthAvatar userProfile={userProfile} />
             <button

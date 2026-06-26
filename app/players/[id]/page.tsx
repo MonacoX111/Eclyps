@@ -7,6 +7,8 @@ import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { PlayerDashboard, type TeamItem, type RegistrationItem } from "@/components/player-dashboard"
+import { FriendButton } from "@/components/friend-button"
+import { resolveUserProfileIdByAuthUserId, getFriendshipStatus, getFriendOverview } from "@/lib/data/friends"
 
 export const dynamic = "force-dynamic"
 
@@ -148,8 +150,35 @@ export default async function PlayerProfilePage({
     }
   }
 
+  // Friend button data (only for logged-in viewers looking at someone else's account-backed profile)
+  let friendTargetId: string | null = null
+  let friendStatus: import("@/lib/data/friends").FriendshipStatus = "none"
+  let incomingFriendshipId: string | null = null
+  if (userProfile && !isOwner && data.profile.user_id) {
+    friendTargetId = await resolveUserProfileIdByAuthUserId(data.profile.user_id)
+    if (friendTargetId && friendTargetId !== userProfile.id) {
+      friendStatus = await getFriendshipStatus(userProfile.id, friendTargetId)
+      if (friendStatus === "pending_incoming") {
+        const overview = await getFriendOverview(userProfile.id)
+        incomingFriendshipId =
+          overview.incoming.find((r) => r.id === friendTargetId)?.friendshipId ?? null
+      }
+    } else {
+      friendTargetId = null
+    }
+  }
+
   return (
     <PublicProfilePage data={data} userProfile={userProfile}>
+      {!isOwner && friendTargetId ? (
+        <div className="mb-6">
+          <FriendButton
+            targetUserProfileId={friendTargetId}
+            initialStatus={friendStatus}
+            incomingFriendshipId={incomingFriendshipId}
+          />
+        </div>
+      ) : null}
       {isOwner ? (
         <PlayerDashboard
           teams={teams}
