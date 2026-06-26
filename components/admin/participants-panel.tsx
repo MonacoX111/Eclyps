@@ -36,10 +36,10 @@ export function ParticipantsPanel({
 }) {
   const { t, lang } = useLanguage()
   const fh = getAdminFieldHints(lang === "uk")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("all")
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>("")
   const [typeFilter, setTypeFilter] = useState<"all" | "team" | "player">("all")
   const [addType, setAddType] = useState<"player" | "team">("player")
+  const [addTournamentId, setAddTournamentId] = useState<string>("")
 
   // Create lookup map for tournament names
   const tournamentNames = new Map(
@@ -48,16 +48,13 @@ export function ParticipantsPanel({
 
   // Filter participants client-side
   const filteredParticipants = participants.filter((p) => {
-    const matchesSearch = (p.display_name ?? "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-
     const matchesTournament =
-      selectedTournamentId === "all" || p.tournament_id === selectedTournamentId
+      selectedTournamentId !== "" &&
+      (selectedTournamentId === "all" || p.tournament_id === selectedTournamentId)
 
     const matchesType = typeFilter === "all" || p.participant_type === typeFilter
 
-    return matchesSearch && matchesTournament && matchesType
+    return matchesTournament && matchesType
   })
   const activeParticipantsLabel = (
     t.admin.participants.activeParticipantsLabel ?? "Active participants ({count})"
@@ -82,7 +79,16 @@ export function ParticipantsPanel({
 
           <form action={addParticipant} className="mt-5 space-y-5">
             <AdminField label={t.admin.participants.tournamentField} hint={fh.participants.tournament}>
-              <select name="tournament_id" required className={inputClassName} defaultValue="">
+              <select
+                name="tournament_id"
+                required
+                className={inputClassName}
+                value={addTournamentId}
+                onChange={(e) => {
+                  setAddTournamentId(e.target.value)
+                  setSelectedTournamentId(e.target.value)
+                }}
+              >
                 <option value="" disabled>
                   {t.admin.participants.selectTournament}
                 </option>
@@ -159,15 +165,6 @@ export function ParticipantsPanel({
             {/* Controls: Search, Tournament Filter, and Participant Type Filter */}
             <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-1 flex-col gap-2.5 sm:flex-row sm:items-center">
-                {/* Search input */}
-                <input
-                  type="text"
-                  placeholder={t.admin.participants.searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full max-w-[200px] rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none transition focus:border-primary/60"
-                />
-
                 {/* Tournament dropdown filter */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-white/45">{t.admin.participants.tournamentLabel}</span>
@@ -176,6 +173,9 @@ export function ParticipantsPanel({
                     onChange={(e) => setSelectedTournamentId(e.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-2 py-1 text-xs text-white outline-none transition focus:border-primary/60 cursor-pointer"
                   >
+                    <option value="" disabled>
+                      {lang === "uk" ? "Оберіть турнір" : "Select tournament"}
+                    </option>
                     <option value="all">{t.admin.extra.all}</option>
                     {tournaments.map((tournament) => (
                       <option key={tournament.id} value={tournament.id}>
@@ -215,7 +215,13 @@ export function ParticipantsPanel({
             </div>
 
             {filteredParticipants.length === 0 ? (
-              <AdminEmptyState>{t.admin.participants.noParticipantsFilters}</AdminEmptyState>
+              <AdminEmptyState>
+                {selectedTournamentId === ""
+                  ? lang === "uk"
+                    ? "Оберіть турнір, щоб побачити учасників"
+                    : "Select a tournament to see its participants"
+                  : t.admin.participants.noParticipantsFilters}
+              </AdminEmptyState>
             ) : (
               <div className="mt-2 space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {filteredParticipants.map((participant) => {
