@@ -143,8 +143,10 @@ function TournamentForm({
   submitLabel: string
   tournament?: AdminTournament
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
+  const isUk = lang === "uk"
   const supportedGames = getSupportedGames()
+  const hints = getFieldHints(isUk)
 
   const normalizedGame = normalizeGame(tournament?.game ?? "CS 2")
   const [selectedGame, setSelectedGame] = useState<string>(normalizedGame)
@@ -182,11 +184,11 @@ function TournamentForm({
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {tournament && <input type="hidden" name="id" value={tournament.id} />}
 
-      <AdminField label={t.admin.tournaments.nameField}>
+      <AdminField label={t.admin.tournaments.nameField} hint={hints.name}>
         <input name="name" defaultValue={tournament?.name ?? ""} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.gameField}>
+      <AdminField label={t.admin.tournaments.gameField} hint={hints.game}>
         <select
           name="game"
           value={selectedGame}
@@ -251,15 +253,15 @@ function TournamentForm({
         </dl>
       </div>
 
-      <AdminField label={t.admin.tournaments.eventDateField}>
+      <AdminField label={t.admin.tournaments.eventDateField} hint={hints.eventDate}>
         <input name="event_date" type="date" defaultValue={tournament?.event_date ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.formatField}>
+      <AdminField label={t.admin.tournaments.formatField} hint={hints.format}>
         <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.participantTypeField}>
+      <AdminField label={t.admin.tournaments.participantTypeField} hint={hints.participantType}>
         <select
           name="participant_type"
           value={participantType}
@@ -271,19 +273,19 @@ function TournamentForm({
         </select>
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.participantSlotsField}>
+      <AdminField label={t.admin.tournaments.participantSlotsField} hint={hints.participantSlots}>
         <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.matchDaysField}>
+      <AdminField label={t.admin.tournaments.matchDaysField} hint={hints.matchDays}>
         <input name="match_days" type="number" min={1} step={1} defaultValue={tournament?.match_days ?? 1} required className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.prizePoolField}>
+      <AdminField label={t.admin.tournaments.prizePoolField} hint={hints.prizePool}>
         <input name="prize_pool" defaultValue={tournament?.prize_pool ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.checkInOpensField}>
+      <AdminField label={t.admin.tournaments.checkInOpensField} hint={hints.checkInOpens}>
         <input
           name="check_in_opens_at"
           type="datetime-local"
@@ -292,7 +294,7 @@ function TournamentForm({
         />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.checkInClosesField}>
+      <AdminField label={t.admin.tournaments.checkInClosesField} hint={hints.checkInCloses}>
         <input
           name="check_in_closes_at"
           type="datetime-local"
@@ -303,16 +305,16 @@ function TournamentForm({
 
       <StatusSelect value={tournament?.status} />
 
-      <AdminField label={t.admin.tournaments.arenaTitleField}>
+      <AdminField label={t.admin.tournaments.arenaTitleField} hint={hints.arenaTitle}>
         <input name="arena_title" defaultValue={tournament?.arena_title ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.arenaTagsField}>
+      <AdminField label={t.admin.tournaments.arenaTagsField} hint={hints.arenaTags}>
         <input name="arena_tags" defaultValue={tournament?.arena_tags?.join(", ") ?? ""} placeholder="PC Platform, 5v5 Format" className={inputClassName} />
       </AdminField>
 
       <div className="sm:col-span-2">
-        <AdminField label={t.admin.tournaments.arenaDescriptionField}>
+        <AdminField label={t.admin.tournaments.arenaDescriptionField} hint={hints.arenaDescription}>
           <textarea name="arena_description" defaultValue={tournament?.arena_description ?? ""} rows={4} className={inputClassName} />
         </AdminField>
       </div>
@@ -321,24 +323,24 @@ function TournamentForm({
         <div className="rounded-xl border border-white/10 bg-black/20 p-3">
           <p className="text-sm font-medium text-white/80">{t.admin.tournaments.cinematicBracketTitle}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <AdminField label={t.admin.tournaments.bracketTitleField}>
+            <AdminField label={t.admin.tournaments.bracketTitleField} hint={hints.bracketTitle}>
               <input name="bracket_title" defaultValue={tournament?.bracket_title ?? ""} placeholder="Live Bracket" className={inputClassName} />
             </AdminField>
 
-            <AdminField label={t.admin.tournaments.bracketSubtitleField}>
+            <AdminField label={t.admin.tournaments.bracketSubtitleField} hint={hints.bracketSubtitle}>
               <input name="bracket_subtitle" defaultValue={tournament?.bracket_subtitle ?? ""} placeholder="Tournament Tree" className={inputClassName} />
             </AdminField>
 
-            <AdminField label={t.admin.tournaments.bracketStageLabelField}>
+            <AdminField label={t.admin.tournaments.bracketStageLabelField} hint={hints.bracketStage}>
               <input name="bracket_stage_label" defaultValue={tournament?.bracket_stage_label ?? ""} placeholder="Grand Final" className={inputClassName} />
             </AdminField>
 
-            <AdminField label={t.admin.tournaments.bracketParticipantLabelField}>
+            <AdminField label={t.admin.tournaments.bracketParticipantLabelField} hint={hints.bracketParticipant}>
               <input name="bracket_participant_label" defaultValue={tournament?.bracket_participant_label ?? ""} placeholder="Finalist" className={inputClassName} />
             </AdminField>
 
             <div className="sm:col-span-2">
-              <AdminField label={t.admin.tournaments.bracketArenaLabelField}>
+              <AdminField label={t.admin.tournaments.bracketArenaLabelField} hint={hints.bracketArena}>
                 <input name="bracket_arena_label" defaultValue={tournament?.bracket_arena_label ?? ""} placeholder="Eclyps Arena" className={inputClassName} />
               </AdminField>
             </div>
@@ -359,4 +361,49 @@ function formatParticipantType(type: AdminTournament["participant_type"], lang: 
 
 function formatKyivDateTime(value: string | null) {
   return value ? formatKyivCheckInDateWithLabel(value) : "???"
+}
+
+
+function getFieldHints(isUk: boolean) {
+  const uk = {
+    name: { title: "Повна назва турніру, яку бачитимуть гравці.", example: "Eclyps Winter Cup 2026" },
+    game: { title: "Гра, у якій проходитиме турнір. Від вибору залежать формати та конфігурація.", example: "Counter-Strike 2" },
+    eventDate: { title: "Дата проведення турніру (день старту).", example: "14.02.2026" },
+    format: { title: "Формат матчів — скільки карт/ігор у серії.", example: "BO1, BO3, BO5" },
+    participantType: { title: "Хто змагається: окремі гравці чи команди.", example: "Командний турнір" },
+    participantSlots: { title: "Скільки всього місць (учасників) у турнірі.", example: "8, 16, 32" },
+    matchDays: { title: "Скільки днів триватимуть матчі турніру.", example: "1, 2, 3" },
+    prizePool: { title: "Призовий фонд турніру (текст, як показувати гравцям).", example: "$500 або 10 000 грн" },
+    checkInOpens: { title: "Київський час, коли відкривається чек-ін (підтвердження участі).", example: "14.02.2026 12:00" },
+    checkInCloses: { title: "Київський час, коли чек-ін закривається. Має бути пізніше за відкриття.", example: "14.02.2026 13:30" },
+    arenaTitle: { title: "Назва «арени» — заголовок блоку турніру на сторінці події.", example: "Головна сцена Eclyps" },
+    arenaTags: { title: "Короткі теги через кому — платформа, формат, тип. Показуються як мітки.", example: "PC Platform, 5v5 Format, Online" },
+    arenaDescription: { title: "Опис арени/турніру: атмосфера, правила, що очікувати глядачам.", example: "Фінальна битва сезону за головний трофей Eclyps." },
+    bracketTitle: { title: "Кінематографічний заголовок сітки — великий напис над турнірним деревом.", example: "Live Bracket" },
+    bracketSubtitle: { title: "Підзаголовок під назвою сітки — короткий опис.", example: "Tournament Tree" },
+    bracketStage: { title: "Мітка поточного етапу сітки.", example: "Grand Final" },
+    bracketParticipant: { title: "Як називати учасника у візуалі сітки.", example: "Finalist" },
+    bracketArena: { title: "Підпис арени у блоці сітки.", example: "Eclyps Arena" },
+  }
+  const en = {
+    name: { title: "Full tournament name players will see.", example: "Eclyps Winter Cup 2026" },
+    game: { title: "Game the tournament runs in. Affects formats and configuration.", example: "Counter-Strike 2" },
+    eventDate: { title: "Tournament date (start day).", example: "2026-02-14" },
+    format: { title: "Match format — number of maps/games per series.", example: "BO1, BO3, BO5" },
+    participantType: { title: "Who competes: individual players or teams.", example: "Team tournament" },
+    participantSlots: { title: "Total number of participant slots.", example: "8, 16, 32" },
+    matchDays: { title: "How many days the matches span.", example: "1, 2, 3" },
+    prizePool: { title: "Prize pool text shown to players.", example: "$500" },
+    checkInOpens: { title: "Kyiv time when check-in opens.", example: "2026-02-14 12:00" },
+    checkInCloses: { title: "Kyiv time when check-in closes. Must be after it opens.", example: "2026-02-14 13:30" },
+    arenaTitle: { title: "Arena name — heading of the tournament block on the event page.", example: "Eclyps Main Stage" },
+    arenaTags: { title: "Short comma-separated tags — platform, format, type. Shown as chips.", example: "PC Platform, 5v5 Format, Online" },
+    arenaDescription: { title: "Arena/tournament description: vibe, rules, what to expect.", example: "The season finale for the Eclyps trophy." },
+    bracketTitle: { title: "Cinematic bracket title — big headline above the tournament tree.", example: "Live Bracket" },
+    bracketSubtitle: { title: "Subtitle under the bracket title — short description.", example: "Tournament Tree" },
+    bracketStage: { title: "Label for the current bracket stage.", example: "Grand Final" },
+    bracketParticipant: { title: "How to label a participant in the bracket visuals.", example: "Finalist" },
+    bracketArena: { title: "Arena caption in the bracket block.", example: "Eclyps Arena" },
+  }
+  return isUk ? uk : en
 }

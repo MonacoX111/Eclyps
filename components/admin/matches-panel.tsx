@@ -20,7 +20,7 @@ import {
   getScheduleDateInputValueForTimeZone,
   getScheduleTimeInputValueForTimeZone,
 } from "@/lib/matches/schedule"
-import { assignBracketSlot, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
+import { assignBracketSlot, autoGenerateBracket, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import {
@@ -184,6 +184,7 @@ function BracketTemplateForm({
       selectedBracketMatches.some((match) => match.status === "live" || match.status === "finished"))
 
   return (
+    <>
     <form action={generateBracketTemplate} className={adminFormGridClassName}>
       <AdminField label={t.admin.extra.tournamentLabel}>
         <select
@@ -238,6 +239,36 @@ function BracketTemplateForm({
         disabled={tournaments.length === 0 || blocksRegeneration}
       />
     </form>
+
+    <form action={autoGenerateBracket} className={adminFormGridClassName}>
+      <input type="hidden" name="tournament_id" value={selectedTournamentId} />
+      <div className={`${adminWideFieldClassName} rounded-xl border border-emerald-300/15 bg-emerald-300/[0.06] px-4 py-3 text-sm leading-6 text-emerald-100/90`}>
+        {lang === "uk"
+          ? "Авто-генерація: розмір сітки та посів учасників визначаться автоматично за обраним методом. Учасникам, яким не вистачило пари, буде надано прохід (bye)."
+          : "Auto-generation: bracket size and seeding are determined automatically by the chosen method. Unpaired participants receive a bye."}
+      </div>
+      <AdminField label={lang === "uk" ? "Метод посіву" : "Seeding method"}>
+        <select name="seed_method" defaultValue="rating" className={inputClassName}>
+          <option value="rating">{lang === "uk" ? "За рейтингом (посівом)" : "By rating (seed)"}</option>
+          <option value="random">{lang === "uk" ? "Випадково (жеребкування)" : "Random draw"}</option>
+        </select>
+      </AdminField>
+      <label className={`${adminWideFieldClassName} flex gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/65`}>
+        <input
+          name="confirm_regenerate"
+          type="checkbox"
+          value="true"
+          disabled={blocksRegeneration}
+          className="mt-1 h-4 w-4 accent-emerald-300 animate-none shrink-0"
+        />
+        <span>{t.admin.matches.regenerateDesc}</span>
+      </label>
+      <SubmitButton
+        label={lang === "uk" ? "Згенерувати сітку автоматично" : "Auto-generate bracket"}
+        disabled={!selectedTournamentId || tournaments.length === 0 || blocksRegeneration}
+      />
+    </form>
+    </>
   )
 }
 

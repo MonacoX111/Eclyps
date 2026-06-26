@@ -7,6 +7,12 @@ import {
   isBracketSize,
   type BracketTemplateMatch,
 } from "@/lib/brackets/template"
+import {
+  nextBracketSize,
+  seedRoundOne,
+  type SeedMethod,
+  type SeedableParticipant,
+} from "@/lib/brackets/seeding"
 import { logMutationError } from "@/lib/admin/errors"
 import { resolveMatchWinner } from "@/lib/matches/core"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
@@ -1082,4 +1088,115 @@ async function findDuplicateBracketAssignment(
 
     return row.participant_1_id === participantId || row.participant_2_id === participantId
   })
+}
+
+
+export async function autoGenerateBracket(formData: FormData) {
+  await requireAdminSession()
+
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim()
+  const methodRaw = String(formData.get("seed_method") ?? "rating").trim()
+  const method: SeedMethod = methodRaw === "random" ? "random" : "rating"
+  const confirmRegenerate = String(formData.get("confirm_regenerate") ?? "") === "true"
+
+  if (!tournamentId) {
+    redirect("/admin?tab=bracket&matchError=invalid-tournament#bracket")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
+
+  // Load the tournament (for participant type).
+  const { data: tournament, error: tournamentErr } = await supabaseAdmin
+    .from("tournaments")
+    .select("id, participant_type")
+    .eq("id", tournamentId)
+    .maybeSingle()
+
+  if (tournamentErr || !tournament) {
+    redirect("/admin?tab=bracket&matchError=tournament-not-found#bracket")
+  }
+
+  // Load confirmed participants for this tournament.
+  const { data: participantRows, error: participantsErr } = await supabaseAdmin
+    .from("participants")
+    .select("id, display_name, seed, participant_type")
+    .eq("tournament_id", tournamentId)
+
+  if (participantsErr) {
+    logMutationError("load participants for auto bracket", participantsErr)
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+  }
+
+  const participants: SeedableParticipant[] = (participantRows ?? [])
+    .filter((row) => typeof row.display_name === "string" && row.display_name.trim().length > 0)
+    .map((row) => ({
+      id: String(row.id),
+      displayName: String(row.display_name).trim(),
+      seed: typeof row.seed === "number" ? row.seed : null,
+    }))
+
+  if (participants.length < 2) {
+    redirect("/admin?tab=bracket&matchError=not-enough-participants#bracket")
+  }
+
+  const bracketSize = nextBracketSize(participants.length)
+  if (!bracketSize) {
+    redirect("/admin?tab=bracket&matchError=too-many-participants#bracket")
+  }
+
+  // Block / confirm when a bracket already exists (mirror manual generation).
+  const existingBracketStatus = await getTournamentBracketEditBlocker(supabaseAdmin, tournamentId)
+  if (existingBracketStatus) redirect(`/admin?tab=bracket&matchError=${existingBracketStatus}#bracket`)
+
+  const existingBracketMatches = await supabaseAdmin
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId)
+    .or("bracket_id.not.is.null,bracket_status.not.is.null")
+
+  if (existingBracketMatches.error) {
+    logMutationError("count bracket matches before auto generation", existingBracketMatches.error)
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+  }
+
+  if ((existingBracketMatches.count ?? 0) > 0 && !confirmRegenerate) {
+    redirect("/admin?tab=bracket&matchError=bracket-confirm-required#bracket")
+  }
+
+  if (confirmRegenerate) {
+    const deleteExistingBracket = await runSupabaseMutation("delete existing bracket before auto", () =>
+      supabaseAdmin.from("matches").delete().eq("tournament_id", tournamentId).not("bracket_id", "is", null),
+    )
+    if (deleteExistingBracket.error) {
+      logMutationError("delete existing bracket before auto", deleteExistingBracket.error)
+      redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+    }
+  }
+
+  const startingMatchOrder = await getNextMatchOrder(supabaseAdmin, tournamentId)
+  const { matches: templateMatches } = createBracketTemplateMatches({
+    tournamentId,
+    bracketSize,
+    startingMatchOrder,
+    participantType: tournament.participant_type as "team" | "player",
+  })
+
+  if (!hasValidNextMatchChain(templateMatches)) {
+    redirect("/admin?tab=bracket&matchError=invalid-bracket-chain#bracket")
+  }
+
+  // Seed participants into round 1 and auto-resolve byes.
+  const { matches: seededMatches } = seedRoundOne(templateMatches, participants, method, bracketSize)
+
+  const { error } = await runSupabaseMutation("auto generate bracket", () =>
+    supabaseAdmin.from("matches").insert(seededMatches),
+  )
+  if (error) {
+    logMutationError("auto generate bracket", error)
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+  }
+
+  revalidatePath("/admin")
+  redirect("/admin?tab=bracket&matchSuccess=bracket-auto-generated#bracket")
 }

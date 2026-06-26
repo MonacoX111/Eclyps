@@ -10,11 +10,51 @@ import { useLanguage } from "@/components/language-provider"
 export const inputClassName =
   "w-full min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-white outline-none transition placeholder:text-white/30 hover:border-white/20 focus:border-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-60"
 
-export function AdminField({ label, children }: { label: string; children: React.ReactNode }) {
+export type FieldHint = {
+  title?: string
+  example?: string
+}
+
+function FieldHintBadge({ hint }: { hint: FieldHint }) {
+  return (
+    <span className="group/hint relative inline-flex normal-case">
+      <button
+        type="button"
+        tabIndex={0}
+        aria-label="Підказка"
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-white/25 text-[10px] font-bold leading-none text-white/55 transition hover:border-emerald-300/70 hover:text-emerald-200 focus:border-emerald-300/70 focus:text-emerald-200 focus:outline-none"
+      >
+        ?
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-6 z-30 w-60 -translate-x-1/2 rounded-xl border border-white/12 bg-[#0b0f14] p-3 text-left text-xs font-normal normal-case leading-5 tracking-normal text-white/80 opacity-0 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-opacity duration-150 group-hover/hint:opacity-100 group-focus-within/hint:opacity-100">
+        {hint.title ? <span className="block text-white/90">{hint.title}</span> : null}
+        {hint.example ? (
+          <span className="mt-1 block text-emerald-200/85">
+            <span className="text-white/40">Приклад: </span>
+            {hint.example}
+          </span>
+        ) : null}
+      </span>
+    </span>
+  )
+}
+
+export function AdminField({
+  label,
+  children,
+  hint,
+}: {
+  label: string
+  children: React.ReactNode
+  hint?: FieldHint
+}) {
   return (
     <label className="space-y-2 text-sm text-white/75">
-      <span className="block text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
-        {label}
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+        <span>{label}</span>
+        {hint ? <FieldHintBadge hint={hint} /> : null}
       </span>
       {children}
     </label>
