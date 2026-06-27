@@ -77,7 +77,7 @@ export function Navbar({
           borderColor: "oklch(0.78 0.18 165 / 0.1)",
         }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-3 sm:px-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-3 py-3 sm:px-4">
           {/* Logo */}
           <a href={homeHref} className="flex items-center gap-2">
             <Image
@@ -95,42 +95,100 @@ export function Navbar({
           </a>
 
           {/* Desktop links */}
-          <div className="hidden items-center gap-5 md:flex lg:gap-7">
-            {primaryNavLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-primary"
-              >
-                {link.label}
-              </a>
-            ))}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMoreOpen((value) => !value)}
-                onBlur={() => window.setTimeout(() => setMoreOpen(false), 120)}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-primary"
-                aria-expanded={moreOpen}
-              >
-                {t.navbar.more}
-                <ChevronDown className={`h-3.5 w-3.5 transition ${moreOpen ? "rotate-180" : ""}`} />
-              </button>
-              {moreOpen ? (
-                <div className="glass-card absolute right-0 top-8 z-50 grid min-w-40 gap-1 rounded-xl border border-white/10 bg-black/90 p-2 shadow-[0_18px_60px_oklch(0.02_0.01_180_/_0.55)]">
-                  {secondaryNavLinks.map((link) => (
-                    <a
-                      key={link.href}
-                      href={link.href}
-                      className="rounded-lg px-3 py-2 text-sm font-medium text-white/65 transition hover:bg-primary/10 hover:text-primary"
-                    >
-                      {link.label}
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-4">
+          <div className="hidden items-center gap-2.5 md:flex lg:gap-4">
+            {(() => {
+              const elements: React.ReactNode[] = []
+
+              primaryNavLinks.forEach((link, idx) => {
+                const isActive =
+                  pathname === link.href ||
+                  (link.href !== "/" && pathname.startsWith(link.href))
+                elements.push(
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className={`text-sm font-medium transition-all duration-200 px-3 py-1.5 rounded-lg whitespace-nowrap ${
+                      isActive
+                        ? "text-primary bg-primary/10 border border-primary/20 font-semibold"
+                        : "text-muted-foreground hover:text-primary hover:bg-white/5 border border-transparent"
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                )
+
+                if (idx < primaryNavLinks.length - 1) {
+                  elements.push(
+                    <span
+                      key={`sep-${idx}`}
+                      className="h-3.5 w-px bg-white/10 shrink-0"
+                    />
+                  )
+                }
+              })
+
+              // Add divider before "More" dropdown
+              elements.push(
+                <span
+                  key="sep-more"
+                  className="h-3.5 w-px bg-white/10 shrink-0"
+                />
+              )
+
+              // Add "More" button
+              const isMoreActive = secondaryNavLinks.some((l) =>
+                pathname.startsWith(l.href),
+              )
+              elements.push(
+                <div key="more-dropdown" className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setMoreOpen((value) => !value)}
+                    onBlur={() =>
+                      window.setTimeout(() => setMoreOpen(false), 120)
+                    }
+                    className={`inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${
+                      isMoreActive
+                        ? "text-primary bg-primary/10 border border-primary/20 font-semibold"
+                        : "text-muted-foreground hover:text-primary hover:bg-white/5 border border-transparent"
+                    }`}
+                    aria-expanded={moreOpen}
+                  >
+                    {t.navbar.more}
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition ${
+                        moreOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {moreOpen ? (
+                    <div className="glass-card absolute right-0 top-10 z-50 grid min-w-40 gap-1 rounded-xl border border-white/10 bg-black/90 p-2 shadow-[0_18px_60px_oklch(0.02_0.01_180_/_0.55)]">
+                      {secondaryNavLinks.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          className="rounded-lg px-3 py-2 text-sm font-medium text-white/65 transition hover:bg-primary/10 hover:text-primary"
+                        >
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>,
+              )
+
+              // Add divider before utility controls
+              elements.push(
+                <span
+                  key="sep-utility"
+                  className="h-3.5 w-px bg-white/10 shrink-0"
+                />
+              )
+
+              return elements
+            })()}
+
+            <div className="flex items-center gap-3.5 lg:gap-4 shrink-0">
               <GuideButton />
               <LanguageSwitcher />
               {userProfile && <FriendsBell currentUserId={userProfile.id} />}
