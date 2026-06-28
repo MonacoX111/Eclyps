@@ -77,7 +77,7 @@ export function Navbar({
           borderColor: "oklch(0.78 0.18 165 / 0.1)",
         }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-3 py-3 sm:px-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-3 py-3 sm:px-4">
           {/* Logo */}
           <a href={homeHref} className="flex items-center gap-2">
             <Image
@@ -95,7 +95,7 @@ export function Navbar({
           </a>
 
           {/* Desktop links */}
-          <div className="hidden items-center gap-2.5 md:flex lg:gap-4">
+          <div className="hidden items-center gap-1.5 lg:flex xl:gap-3">
             {(() => {
               const elements: React.ReactNode[] = []
 
@@ -107,7 +107,7 @@ export function Navbar({
                   <a
                     key={link.href}
                     href={link.href}
-                    className={`text-sm font-medium transition-all duration-200 px-3 py-1.5 rounded-lg whitespace-nowrap ${
+                    className={`text-sm font-medium transition-all duration-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap ${
                       isActive
                         ? "text-primary bg-primary/10 border border-primary/20 font-semibold"
                         : "text-muted-foreground hover:text-primary hover:bg-white/5 border border-transparent"
@@ -147,7 +147,7 @@ export function Navbar({
                     onBlur={() =>
                       window.setTimeout(() => setMoreOpen(false), 120)
                     }
-                    className={`inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${
+                    className={`inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 px-2.5 py-1.5 rounded-lg cursor-pointer whitespace-nowrap ${
                       isMoreActive
                         ? "text-primary bg-primary/10 border border-primary/20 font-semibold"
                         : "text-muted-foreground hover:text-primary hover:bg-white/5 border border-transparent"
@@ -188,7 +188,7 @@ export function Navbar({
               return elements
             })()}
 
-            <div className="flex items-center gap-3.5 lg:gap-4 shrink-0">
+            <div className="flex items-center gap-2 xl:gap-3 shrink-0">
               <GuideButton />
               <LanguageSwitcher />
               {userProfile && <FriendsBell currentUserId={userProfile.id} />}
@@ -197,7 +197,7 @@ export function Navbar({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-3 md:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-3 lg:hidden">
             <LanguageSwitcher />
             {userProfile && <FriendsBell currentUserId={userProfile.id} />}
             {userProfile && <NotificationsBell userProfile={userProfile} />}
@@ -236,7 +236,7 @@ export function Navbar({
       {/* Mobile menu */}
       {open && (
         <m.div
-          className="border-b md:hidden"
+          className="border-b lg:hidden"
           style={{
             background: "oklch(0.07 0.01 180 / 0.95)",
             backdropFilter: "blur(16px)",
@@ -275,16 +275,28 @@ function GuideButton({ mobile = false, onClick }: { mobile?: boolean; onClick?: 
     onClick?.()
   }
 
+  if (mobile) {
+    return (
+      <button
+        type="button"
+        onClick={openGuide}
+        className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary/55 hover:bg-primary/15 w-full"
+      >
+        <CircleHelp className="h-4 w-4" />
+        {t.navbar.guide}
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
       onClick={openGuide}
-      className={`inline-flex items-center justify-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-2 text-sm font-medium text-primary transition hover:border-primary/55 hover:bg-primary/15 ${
-        mobile ? "w-full" : ""
-      }`}
+      title={t.navbar.guide}
+      aria-label={t.navbar.guide}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary transition hover:border-primary/55 hover:bg-primary/15 cursor-pointer shrink-0"
     >
       <CircleHelp className="h-4 w-4" />
-      {t.navbar.guide}
     </button>
   )
 }
@@ -347,7 +359,7 @@ function AuthControl({
         className="flex min-w-0 items-center gap-2 hover:text-primary transition group cursor-pointer"
       >
         <Avatar userProfile={userProfile} />
-        <span className="max-w-36 truncate text-sm font-medium text-white/80 group-hover:text-primary transition">
+        <span className="hidden xl:block max-w-36 truncate text-sm font-medium text-white/80 group-hover:text-primary transition">
           {userProfile.discord_username}
         </span>
       </a>
