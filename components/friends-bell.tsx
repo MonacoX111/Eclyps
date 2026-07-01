@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Clock,
   MessageCircle,
+  Loader2,
 } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
 import { supabase } from "@/lib/supabase/client"
@@ -84,6 +85,7 @@ export function FriendsBell({ currentUserId }: Props) {
   const [messages, setMessages] = useState<DirectMessage[]>([])
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const [pending, setPending] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -145,7 +147,9 @@ export function FriendsBell({ currentUserId }: Props) {
   async function openChat(friend: FriendSummary) {
     setActiveFriend(friend)
     setMessages([])
+    setLoadingHistory(true)
     await refreshConversation(friend.id)
+    setLoadingHistory(false)
     refreshOverview()
   }
 
@@ -238,7 +242,11 @@ export function FriendsBell({ currentUserId }: Props) {
                   </a>
                 </div>
                 <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto px-3 py-3">
-                  {messages.length === 0 ? (
+                  {loadingHistory ? (
+                    <div className="mt-8 flex justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-emerald-400/70" />
+                    </div>
+                  ) : messages.length === 0 ? (
                     <div className="mt-8 flex flex-col items-center gap-1.5 text-center">
                       <MessageCircle className="h-5 w-5 text-white/25" />
                       <p className="text-xs text-white/40">{t.emptyBell}</p>

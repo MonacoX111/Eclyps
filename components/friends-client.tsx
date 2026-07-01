@@ -161,6 +161,7 @@ export function FriendsClient({
   const [messages, setMessages] = useState<DirectMessage[]>([])
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
   const [pending, setPending] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
@@ -199,7 +200,11 @@ export function FriendsClient({
       setMessages([])
       return
     }
-    refreshConversation(activeId)
+    setLoadingHistory(true)
+    setMessages([]) // clear old messages immediately
+    refreshConversation(activeId).finally(() => {
+      setLoadingHistory(false)
+    })
   }, [activeId, refreshConversation])
 
   // Realtime + polling fallback
@@ -526,7 +531,11 @@ export function FriendsClient({
                 ref={scrollRef}
                 className="flex-1 space-y-2 overflow-y-auto px-4 py-4 sm:px-5"
               >
-                {messages.length === 0 ? (
+                {loadingHistory ? (
+                  <div className="flex h-full items-center justify-center py-20">
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-400/70" />
+                  </div>
+                ) : messages.length === 0 ? (
                   <div className="mx-auto mt-16 max-w-xs rounded-2xl border border-dashed border-white/10 p-6 text-center">
                     <MessageCircle className="mx-auto mb-2 h-6 w-6 text-white/30" />
                     <p className="text-sm text-white/45">{t.empty}</p>
