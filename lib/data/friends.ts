@@ -7,6 +7,7 @@ export type FriendUser = {
   displayName: string
   avatarUrl: string | null
   lastSeen?: string | null
+  playerId?: string | null
 }
 
 export type FriendSummary = FriendUser & {
@@ -53,10 +54,62 @@ function toUser(row: any): FriendUser | null {
         : "Player",
     avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
     lastSeen: typeof row.last_seen === "string" ? row.last_seen : null,
+    playerId: null, // resolved after batch lookup
   }
 }
 
-const USER_FIELDS = "id, display_name, avatar_url, last_seen"
+const USER_FIELDS = "id, display_name, avatar_url, last_seen, auth_user_id"
+
+/**
+ * Batch-resolve player IDs for a list of FriendUser objects.
+ * Looks up user_profiles.auth_user_id → players.user_id.
+ */
+async function resolvePlayerIds(
+  users: FriendUser[],
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<void> {
+  if (!admin || users.length === 0) return
+
+  // Collect auth_user_ids from user_profiles for the given user_profile ids
+  const upIds = users.map((u) => u.id)
+  const { data: profiles } = await admin
+    .from("user_profiles")
+    .select("id, auth_user_id")
+    .in("id", upIds)
+  if (!profiles || profiles.length === 0) return
+
+  const authIdMap = new Map<string, string>() // user_profile.id → auth_user_id
+  const authIds: string[] = []
+  for (const p of profiles as any[]) {
+    if (typeof p.auth_user_id === "string") {
+      authIdMap.set(p.id, p.auth_user_id)
+      authIds.push(p.auth_user_id)
+    }
+  }
+  if (authIds.length === 0) return
+
+  // Now look up players by user_id (= auth_user_id)
+  const { data: players } = await admin
+    .from("players")
+    .select("id, user_id")
+    .in("user_id", authIds)
+  if (!players || players.length === 0) return
+
+  const playerByAuthId = new Map<string, string>() // auth_user_id → player.id
+  for (const pl of players as any[]) {
+    if (typeof pl.user_id === "string" && typeof pl.id === "string") {
+      playerByAuthId.set(pl.user_id, pl.id)
+    }
+  }
+
+  // Assign player IDs back to FriendUser objects
+  for (const u of users) {
+    const authId = authIdMap.get(u.id)
+    if (authId) {
+      u.playerId = playerByAuthId.get(authId) ?? null
+    }
+  }
+}
 
 /** Resolve a user_profiles.id from an auth user id (the value players.user_id stores). */
 export async function resolveUserProfileIdByAuthUserId(
@@ -132,6 +185,11 @@ export async function getFriendOverview(
   }
 
   friends.sort((a, b) => a.displayName.localeCompare(b.displayName))
+
+  // Batch-resolve player IDs for all users
+  const allUsers: FriendUser[] = [...friends, ...incoming, ...outgoing]
+  await resolvePlayerIds(allUsers, admin)
+
   return { friends, incoming, outgoing, unreadByFriend }
 }
 
@@ -194,5 +252,10 @@ export async function getConversation(
     readAt: m.read_at ?? null,
   }))
 
-  return { messages, other: toUser(otherRow) }
+  const other = toUser(otherRow)
+  if (other) {
+    await resolvePlayerIds([other], admin)
+  }
+
+  return { messages, other }
 }

@@ -458,12 +458,18 @@ export function FriendsClient({
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <Avatar
-                    url={activeFriend.avatarUrl}
-                    name={activeFriend.displayName}
-                    online={isOnline(activeFriend.lastSeen)}
-                    size={40}
-                  />
+                  <Link
+                    href={`/players/${activeFriend.playerId ?? activeFriend.id}`}
+                    className="hover:opacity-80 transition shrink-0"
+                    title={activeFriend.displayName}
+                  >
+                    <Avatar
+                      url={activeFriend.avatarUrl}
+                      name={activeFriend.displayName}
+                      online={isOnline(activeFriend.lastSeen)}
+                      size={40}
+                    />
+                  </Link>
                   <div className="min-w-0">
                     <div className="truncate font-medium text-white">
                       {activeFriend.displayName}
@@ -694,18 +700,24 @@ function FriendsList({
             const online = isOnline(f.lastSeen)
             return (
               <li key={f.id}>
-                <button
+                <div
                   onClick={() => onSelect(f.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition ${
+                  className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition cursor-pointer ${
                     active ? "bg-emerald-400/10" : "hover:bg-white/5"
                   }`}
                 >
-                  <Avatar
-                    url={f.avatarUrl}
-                    name={f.displayName}
-                    online={online}
-                    size={40}
-                  />
+                  <Link
+                    href={`/players/${f.playerId ?? f.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hover:opacity-80 transition shrink-0"
+                  >
+                    <Avatar
+                      url={f.avatarUrl}
+                      name={f.displayName}
+                      online={online}
+                      size={40}
+                    />
+                  </Link>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-white/90">
                       {f.displayName}
@@ -723,7 +735,7 @@ function FriendsList({
                       {count > 99 ? "99+" : count}
                     </span>
                   ) : null}
-                </button>
+                </div>
               </li>
             )
           })}
@@ -771,12 +783,17 @@ function RequestsList({
     <ul className="divide-y divide-white/5 p-2">
       {items.map((r) => (
         <li key={r.friendshipId} className="flex items-center gap-3 p-2.5">
-          <Avatar
-            url={r.avatarUrl}
-            name={r.displayName}
-            online={isOnline(r.lastSeen)}
-            size={40}
-          />
+          <Link
+            href={`/players/${r.playerId ?? r.id}`}
+            className="hover:opacity-80 transition shrink-0"
+          >
+            <Avatar
+              url={r.avatarUrl}
+              name={r.displayName}
+              online={isOnline(r.lastSeen)}
+              size={40}
+            />
+          </Link>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-white/90">
               {r.displayName}
@@ -874,12 +891,17 @@ function SearchPanel({
           <ul className="divide-y divide-white/5">
             {results.map((u) => (
               <li key={u.id} className="flex items-center gap-3 p-2.5">
-                <Avatar
-                  url={u.avatarUrl}
-                  name={u.displayName}
-                  online={isOnline(u.lastSeen)}
-                  size={40}
-                />
+                <Link
+                  href={`/players/${u.playerId ?? u.id}`}
+                  className="hover:opacity-80 transition shrink-0"
+                >
+                  <Avatar
+                    url={u.avatarUrl}
+                    name={u.displayName}
+                    online={isOnline(u.lastSeen)}
+                    size={40}
+                  />
+                </Link>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-white/90">
                     {u.displayName}

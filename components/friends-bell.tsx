@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
+import Link from "next/link"
 import {
   Users,
   ArrowLeft,
@@ -208,12 +209,18 @@ export function FriendsBell({ currentUserId }: Props) {
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <Avatar
-                    url={activeFriend.avatarUrl}
-                    name={activeFriend.displayName}
-                    online={isOnline(activeFriend.lastSeen)}
-                    size={28}
-                  />
+                  <Link
+                    href={`/players/${activeFriend.playerId ?? activeFriend.id}`}
+                    className="hover:opacity-80 transition shrink-0"
+                    title={activeFriend.displayName}
+                  >
+                    <Avatar
+                      url={activeFriend.avatarUrl}
+                      name={activeFriend.displayName}
+                      online={isOnline(activeFriend.lastSeen)}
+                      size={28}
+                    />
+                  </Link>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-white">
                       {activeFriend.displayName}
@@ -293,12 +300,17 @@ export function FriendsBell({ currentUserId }: Props) {
                           </p>
                           {overview.incoming.map((r) => (
                             <div key={r.friendshipId} className="flex items-center gap-2 px-2 py-1.5">
-                              <Avatar
-                                url={r.avatarUrl}
-                                name={r.displayName}
-                                online={isOnline(r.lastSeen)}
-                                size={32}
-                              />
+                              <Link
+                                href={`/players/${r.playerId ?? r.id}`}
+                                className="hover:opacity-80 transition shrink-0"
+                              >
+                                <Avatar
+                                  url={r.avatarUrl}
+                                  name={r.displayName}
+                                  online={isOnline(r.lastSeen)}
+                                  size={32}
+                                />
+                              </Link>
                               <span className="flex-1 truncate text-sm text-white/85">{r.displayName}</span>
                               <button
                                 onClick={() => handleRespond(r.friendshipId, true)}
@@ -328,12 +340,17 @@ export function FriendsBell({ currentUserId }: Props) {
                           </p>
                           {overview.outgoing.map((r) => (
                             <div key={r.friendshipId} className="flex items-center gap-2 px-2 py-1.5 opacity-70">
-                              <Avatar
-                                url={r.avatarUrl}
-                                name={r.displayName}
-                                online={isOnline(r.lastSeen)}
-                                size={32}
-                              />
+                              <Link
+                                href={`/players/${r.playerId ?? r.id}`}
+                                className="hover:opacity-80 transition shrink-0"
+                              >
+                                <Avatar
+                                  url={r.avatarUrl}
+                                  name={r.displayName}
+                                  online={isOnline(r.lastSeen)}
+                                  size={32}
+                                />
+                              </Link>
                               <span className="flex-1 truncate text-sm text-white/70">{r.displayName}</span>
                               <span className="text-[10px] text-white/45">
                                 {t.outgoing}
@@ -358,22 +375,28 @@ export function FriendsBell({ currentUserId }: Props) {
                           overview.friends.map((f) => {
                             const count = overview.unreadByFriend[f.id] ?? 0
                             return (
-                              <button
+                              <div
                                 key={f.id}
                                 onClick={() => openChat(f)}
-                                className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5"
+                                className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5 cursor-pointer"
                               >
-                                <Avatar
-                                  url={f.avatarUrl}
-                                  name={f.displayName}
-                                  online={isOnline(f.lastSeen)}
-                                  size={32}
-                                />
+                                <Link
+                                  href={`/players/${f.playerId ?? f.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="hover:opacity-80 transition shrink-0"
+                                >
+                                  <Avatar
+                                    url={f.avatarUrl}
+                                    name={f.displayName}
+                                    online={isOnline(f.lastSeen)}
+                                    size={32}
+                                  />
+                                </Link>
                                 <span className="flex-1 truncate text-sm text-white/85">{f.displayName}</span>
                                 {count > 0 ? (
                                   <span className="min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold text-white">{count}</span>
                                 ) : null}
-                              </button>
+                              </div>
                             )
                           })
                         )}
