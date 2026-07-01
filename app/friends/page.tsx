@@ -4,6 +4,7 @@ import { getCurrentUserProfile, type UserProfile } from "@/lib/auth/user-profile
 import { getFriendOverview } from "@/lib/data/friends"
 import { getHomepageData } from "@/lib/data/homepage"
 import { FriendsClient } from "@/components/friends-client"
+import { PresenceHeartbeat } from "@/components/presence-heartbeat"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
@@ -20,6 +21,7 @@ export default async function FriendsPage() {
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-background">
       <ParticleField />
+      <PresenceHeartbeat />
       <MotionProvider>
         <div className="relative z-10 flex-1 pt-20 pb-12">
           <Suspense fallback={null}>

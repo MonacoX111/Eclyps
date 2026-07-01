@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getFriendshipStatus, getConversation, getFriendOverview } from "@/lib/data/friends"
-import type { DirectMessage, FriendOverview } from "@/lib/data/friends"
+import { searchUsers, type UserSearchResult } from "@/lib/data/user-search"
+import type { DirectMessage, FriendOverview, FriendshipStatus } from "@/lib/data/friends"
 
 const MAX_BODY = 2000
 
@@ -188,4 +189,85 @@ export async function loadFriendOverview(): Promise<{ ok: boolean; overview: Fri
   if (!me) return { ok: false, overview: null }
   const overview = await getFriendOverview(me.id)
   return { ok: true, overview }
+}
+
+export type UserSearchItem = UserSearchResult & {
+  friendshipStatus: FriendshipStatus
+  friendshipId: string | null
+}
+
+/**
+ * Search users (excluding self) and annotate each with the current friendship status
+ * so the UI can show correct action buttons (Add / Pending / Accept / Friends).
+ */
+export async function searchUsersForFriends(
+  query: string,
+): Promise<{ ok: boolean; results: UserSearchItem[] }> {
+  const me = await getCurrentUserProfile()
+  if (!me) return { ok: false, results: [] }
+  const trimmed = (query ?? "").trim()
+  if (trimmed.length < 2) return { ok: true, results: [] }
+
+  const admin = createSupabaseAdminClient()
+  if (!admin) return { ok: false, results: [] }
+
+  const rawResults = await searchUsers(trimmed, 20)
+  const candidates = rawResults.filter((u) => u.id !== me.id)
+  if (candidates.length === 0) return { ok: true, results: [] }
+
+  // Batch-fetch friendships involving me + any of these candidates
+  const ids = candidates.map((u) => u.id)
+  const { data: relations } = await admin
+    .from("friendships")
+    .select("id, status, requester_id, addressee_id")
+    .or(
+      `and(requester_id.eq.${me.id},addressee_id.in.(${ids.join(",")})),` +
+        `and(addressee_id.eq.${me.id},requester_id.in.(${ids.join(",")}))`,
+    )
+
+  const byOther = new Map<
+    string,
+    { id: string; status: string; requesterId: string; addresseeId: string }
+  >()
+  for (const r of (relations ?? []) as any[]) {
+    const otherId = r.requester_id === me.id ? r.addressee_id : r.requester_id
+    byOther.set(otherId, {
+      id: r.id,
+      status: r.status,
+      requesterId: r.requester_id,
+      addresseeId: r.addressee_id,
+    })
+  }
+
+  const results: UserSearchItem[] = candidates.map((u) => {
+    const rel = byOther.get(u.id)
+    let status: FriendshipStatus = "none"
+    let friendshipId: string | null = null
+    if (rel) {
+      friendshipId = rel.id
+      if (rel.status === "accepted") status = "friends"
+      else if (rel.status === "pending") {
+        status = rel.requesterId === me.id ? "pending_outgoing" : "pending_incoming"
+      }
+    }
+    return { ...u, friendshipStatus: status, friendshipId }
+  })
+
+  return { ok: true, results }
+}
+
+/**
+ * Update the current user's last_seen timestamp. Called from the client as a
+ * lightweight heartbeat every ~60s while the app is open.
+ */
+export async function updateMyLastSeen(): Promise<FriendActionResult> {
+  const me = await getCurrentUserProfile()
+  if (!me) return { ok: false, error: "auth" }
+  const admin = createSupabaseAdminClient()
+  if (!admin) return { ok: false, error: "server" }
+  await admin
+    .from("user_profiles")
+    .update({ last_seen: new Date().toISOString() })
+    .eq("id", me.id)
+  return { ok: true }
 }

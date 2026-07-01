@@ -12,6 +12,7 @@ import type { UserProfile } from "@/lib/auth/user-profile"
 import { withAvatarCacheBust } from "@/lib/avatar"
 import { NotificationsBell } from "@/components/notifications-bell"
 import { FriendsBell } from "@/components/friends-bell"
+import { PresenceHeartbeat } from "@/components/presence-heartbeat"
 import { FirstVisitGuide, FIRST_VISIT_GUIDE_OPEN_EVENT } from "@/components/first-visit-guide"
 
 type NavbarProps = {
@@ -55,6 +56,7 @@ export function Navbar({
   ]
   const secondaryNavLinks = [
     { href: "/rankings", label: lang === "uk" ? "Рейтинг" : "Rankings" },
+    { href: "/friends", label: t.navbar.friends },
     { href: "/tournaments", label: t.navbar.archive },
     { href: "/news", label: t.navbar.news },
   ]
@@ -63,6 +65,7 @@ export function Navbar({
   return (
     <>
       <FirstVisitGuide autoOpen={shouldAutoShowGuide} />
+      {userProfile && <PresenceHeartbeat />}
       <m.nav
       className="fixed left-0 right-0 top-0 z-50"
       initial={{ opacity: 0, y: -20 }}

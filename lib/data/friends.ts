@@ -6,6 +6,7 @@ export type FriendUser = {
   id: string
   displayName: string
   avatarUrl: string | null
+  lastSeen?: string | null
 }
 
 export type FriendSummary = FriendUser & {
@@ -51,10 +52,11 @@ function toUser(row: any): FriendUser | null {
         ? row.display_name.trim()
         : "Player",
     avatarUrl: typeof row.avatar_url === "string" ? row.avatar_url : null,
+    lastSeen: typeof row.last_seen === "string" ? row.last_seen : null,
   }
 }
 
-const USER_FIELDS = "id, display_name, avatar_url"
+const USER_FIELDS = "id, display_name, avatar_url, last_seen"
 
 /** Resolve a user_profiles.id from an auth user id (the value players.user_id stores). */
 export async function resolveUserProfileIdByAuthUserId(
