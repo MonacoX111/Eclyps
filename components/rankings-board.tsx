@@ -95,11 +95,11 @@ export function RankingsBoard({ players, teams }: RankingsBoardProps) {
           <p className="py-12 text-center text-sm text-muted-foreground">{labels.empty}</p>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-            <div className="grid grid-cols-[48px_1fr_72px_80px_72px] gap-2 border-b border-white/10 px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <div className="grid grid-cols-[36px_1fr_52px_56px] gap-2 border-b border-white/10 px-3 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground sm:grid-cols-[48px_1fr_72px_80px_72px] sm:px-4">
               <span>{labels.rank}</span>
               <span>{labels.name}</span>
               <span className="text-center">{labels.record}</span>
-              <span className="text-center">{labels.winRate}</span>
+              <span className="hidden text-center sm:block">{labels.winRate}</span>
               <span className="text-right">{labels.points}</span>
             </div>
             {rows.map((row, i) => {
@@ -108,13 +108,13 @@ export function RankingsBoard({ players, teams }: RankingsBoardProps) {
                 <Link
                   key={row.id}
                   href={row.href}
-                  className="grid grid-cols-[48px_1fr_72px_80px_72px] items-center gap-2 border-b border-white/5 px-4 py-3 text-sm transition last:border-0 hover:bg-white/[0.03]"
+                  className="grid grid-cols-[36px_1fr_52px_56px] items-center gap-2 border-b border-white/5 px-3 py-3 text-sm transition last:border-0 hover:bg-white/[0.03] sm:grid-cols-[48px_1fr_72px_80px_72px] sm:px-4"
                 >
                   <span className={`flex items-center gap-1 font-black ${rankColor(rank)}`}>
                     {rank === 1 ? <Crown className="h-4 w-4" /> : rank <= 3 ? <Medal className="h-4 w-4" /> : null}
                     {rank}
                   </span>
-                  <span className="flex items-center gap-3 truncate">
+                  <span className="flex min-w-0 items-center gap-2 sm:gap-3">
                     {row.avatarUrl ? (
                       <Image src={row.avatarUrl} alt={row.name} width={32} height={32} className="h-8 w-8 shrink-0 rounded-full object-cover" />
                     ) : (
@@ -123,7 +123,7 @@ export function RankingsBoard({ players, teams }: RankingsBoardProps) {
                     <span className="truncate font-semibold text-foreground">{row.name}</span>
                   </span>
                   <span className="text-center text-muted-foreground">{row.wins}–{row.losses}</span>
-                  <span className="text-center font-semibold text-emerald-300">{winRate(row)}%</span>
+                  <span className="hidden text-center font-semibold text-emerald-300 sm:block">{winRate(row)}%</span>
                   <span className="text-right font-black text-primary">{Math.max(0, Math.round(score(row)))}</span>
                 </Link>
               )

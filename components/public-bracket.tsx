@@ -363,7 +363,7 @@ function FinalistPanel({
             <p className="mb-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
               {label}
             </p>
-            <h3 className="break-words text-2xl font-bold text-foreground">
+            <h3 className="break-words text-lg font-bold leading-tight text-foreground sm:text-2xl">
               {participant.name}
             </h3>
           </div>

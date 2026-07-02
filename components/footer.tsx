@@ -1,11 +1,26 @@
 "use client"
 
+import { useRef } from "react"
 import Image from "next/image"
 import { instagramUrl } from "@/lib/site-config"
 import { useLanguage } from "@/components/language-provider"
+import { ADMIN_ACCESS_EVENT } from "@/components/admin-shortcut"
+
+const ADMIN_TAP_COUNT = 7
+const ADMIN_TAP_WINDOW_MS = 3000
 
 export function Footer() {
   const { t } = useLanguage()
+  const tapsRef = useRef<number[]>([])
+
+  const handleLogoTap = () => {
+    const now = Date.now()
+    tapsRef.current = [...tapsRef.current.filter((ts) => now - ts < ADMIN_TAP_WINDOW_MS), now]
+    if (tapsRef.current.length >= ADMIN_TAP_COUNT) {
+      tapsRef.current = []
+      window.dispatchEvent(new CustomEvent(ADMIN_ACCESS_EVENT))
+    }
+  }
 
   return (
     <footer className="relative z-10 border-t px-4 py-12" style={{ borderColor: "oklch(0.78 0.18 165 / 0.1)" }}>
@@ -17,7 +32,9 @@ export function Footer() {
           height={48}
           loading="lazy"
           sizes="48px"
-          className="h-12 w-12 object-contain opacity-60"
+          className="h-12 w-12 select-none object-contain opacity-60"
+          onClick={handleLogoTap}
+          draggable={false}
         />
         <p 
           className="text-sm text-muted-foreground"
