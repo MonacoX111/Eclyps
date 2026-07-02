@@ -271,14 +271,14 @@ export function MatchChat({
       {/* Backdrop (mobile) */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm sm:hidden"
+          className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm sm:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       {/* Slide-out panel */}
       <aside
-        className={`fixed bottom-0 right-0 top-0 z-40 flex w-full max-w-md flex-col border-l border-white/10 bg-[#0a0a0a]/95 shadow-2xl backdrop-blur-md transition-transform duration-300 sm:bottom-6 sm:right-6 sm:top-auto sm:h-[34rem] sm:max-h-[80vh] sm:rounded-3xl sm:border ${
+        className={`fixed bottom-0 right-0 top-0 z-[70] flex w-full max-w-md flex-col border-l border-white/10 bg-[#0a0a0a]/95 shadow-2xl backdrop-blur-md transition-transform duration-300 sm:bottom-6 sm:right-6 sm:top-auto sm:h-[34rem] sm:max-h-[80vh] sm:rounded-3xl sm:border ${
           open ? "translate-x-0" : "translate-x-[110%]"
         }`}
       >
