@@ -1042,7 +1042,9 @@ function SearchAction({
   onAccept: (fid: string) => void
   t: any
 }) {
-  const busy = pending === user.id || pending === user.friendshipId
+  const busy =
+    pending !== null &&
+    (pending === user.id || (user.friendshipId !== null && pending === user.friendshipId))
 
   if (user.friendshipStatus === "friends") {
     return (
