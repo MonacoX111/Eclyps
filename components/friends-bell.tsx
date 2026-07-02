@@ -325,7 +325,7 @@ export function FriendsBell({ currentUserId }: Props) {
                 <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                   <span className="text-sm font-semibold text-white">{t.titleBell}</span>
                   <a
-                    href="/friends"
+                    href="/friends?tab=search"
                     className="inline-flex items-center gap-1 rounded-lg bg-emerald-400/10 px-2 py-1 text-[11px] font-medium text-emerald-300 transition hover:bg-emerald-400/15"
                   >
                     <UserPlus className="h-3 w-3" />

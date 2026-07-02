@@ -155,6 +155,19 @@ export function FriendsClient({
   const [outgoing, setOutgoing] = useState(initialOutgoing)
   const [unread, setUnread] = useState<Record<string, number>>(initialUnread)
   const [tab, setTab] = useState<Tab>("friends")
+
+  // Open the tab requested via URL, e.g. /friends?tab=search
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab")
+    if (
+      requested === "friends" ||
+      requested === "incoming" ||
+      requested === "outgoing" ||
+      requested === "search"
+    ) {
+      setTab(requested)
+    }
+  }, [])
   const [filter, setFilter] = useState("")
 
   const [activeId, setActiveId] = useState<string | null>(
