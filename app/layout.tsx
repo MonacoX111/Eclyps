@@ -4,6 +4,7 @@ import { getPublicEnv } from '@/lib/env/public'
 import { getLanguage } from '@/lib/i18n/server'
 import { translations } from '@/lib/i18n/translations'
 import { LanguageProvider } from '@/components/language-provider'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const publicEnv = getPublicEnv()
@@ -93,6 +94,7 @@ export default async function RootLayout({
       <body className="font-sans antialiased">
         <LanguageProvider initialLang={lang}>
           {children}
+          <Toaster theme="dark" position="bottom-right" richColors closeButton />
         </LanguageProvider>
         {publicEnv.isProduction && <Analytics />}
       </body>

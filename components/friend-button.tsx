@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useLanguage } from "@/components/language-provider"
 import { sendFriendRequest, respondFriendRequest } from "@/app/actions/friends"
 import type { FriendshipStatus } from "@/lib/data/friends"
+import { toast } from "sonner"
 
 type Props = {
   targetUserProfileId: string
@@ -37,8 +38,13 @@ export function FriendButton({
     setError(false)
     startTransition(async () => {
       const res = await sendFriendRequest(targetUserProfileId)
-      if (res.ok) setStatus("pending_outgoing")
-      else setError(true)
+      if (res.ok) {
+        setStatus("pending_outgoing")
+        toast.success(isUk ? "Заявку в друзі надіслано!" : "Friend request sent!")
+      } else {
+        setError(true)
+        toast.error(isUk ? "Не вдалося надіслати запит." : "Failed to send request.")
+      }
     })
   }
 
@@ -50,7 +56,11 @@ export function FriendButton({
       if (res.ok) {
         setStatus("friends")
         router.refresh()
-      } else setError(true)
+        toast.success(isUk ? "Заявку в друзі прийнято!" : "Friend request accepted!")
+      } else {
+        setError(true)
+        toast.error(isUk ? "Не вдалося оновити статус заявки." : "Failed to accept request.")
+      }
     })
   }
 
@@ -60,7 +70,7 @@ export function FriendButton({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {status === "none" ? (
-        <button onClick={handleAdd} disabled={pending} className={`${base} bg-emerald-400 text-black hover:bg-emerald-300`}>
+        <button onClick={handleAdd} disabled={pending} className={`${base} bg-primary text-black hover:opacity-90 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer`}>
           {labels.add}
         </button>
       ) : null}
@@ -72,7 +82,7 @@ export function FriendButton({
       ) : null}
 
       {status === "pending_incoming" ? (
-        <button onClick={handleAccept} disabled={pending} className={`${base} bg-emerald-400 text-black hover:bg-emerald-300`}>
+        <button onClick={handleAccept} disabled={pending} className={`${base} bg-primary text-black hover:opacity-90 shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer`}>
           {labels.accept}
         </button>
       ) : null}

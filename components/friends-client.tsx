@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase/client"
 import {
   respondFriendRequest,
@@ -349,7 +350,29 @@ export function FriendsClient({
   async function handleRespond(friendshipId: string, accept: boolean) {
     setPending(friendshipId)
     const res = await respondFriendRequest(friendshipId, accept)
-    if (res.ok) await refreshOverview()
+    if (res.ok) {
+      await refreshOverview()
+      toast.success(
+        accept
+          ? (isUk ? "Заявку в друзі прийнято!" : "Friend request accepted!")
+          : (isUk ? "Заявку відхилено" : "Friend request declined")
+      )
+    } else {
+      toast.error(isUk ? "Не вдалося оновити статус заявки." : "Failed to update request status.")
+    }
+    setPending(null)
+  }
+
+  async function handleCancelRequest(friendshipId: string) {
+    setPending(friendshipId)
+    const res = await removeFriend(friendshipId)
+    if (res.ok) {
+      setOutgoing((list) => list.filter((r) => r.friendshipId !== friendshipId))
+      await refreshOverview()
+      toast.success(isUk ? "Заявку скасовано" : "Request cancelled")
+    } else {
+      toast.error(isUk ? "Не вдалося скасувати заявку." : "Failed to cancel request.")
+    }
     setPending(null)
   }
 
@@ -357,9 +380,18 @@ export function FriendsClient({
     setPending(friendshipId)
     const res = await removeFriend(friendshipId)
     if (res.ok) {
+      const friendItem = friends.find((f) => f.friendshipId === friendshipId)
+      const name = friendItem?.displayName || ""
       setFriends((list) => list.filter((f) => f.friendshipId !== friendshipId))
       if (activeId === friendId) setActiveId(null)
       setConfirmRemove(null)
+      toast.success(
+        isUk 
+          ? `Користувача ${name || ""} видалено з друзів` 
+          : `${name || "User"} removed from friends`
+      )
+    } else {
+      toast.error(isUk ? "Не вдалося видалити друга." : "Failed to remove friend.")
     }
     setPending(null)
   }
@@ -368,6 +400,8 @@ export function FriendsClient({
     setPending(userId)
     const res = await sendFriendRequest(userId)
     if (res.ok) {
+      const userItem = searchResults.find((u) => u.id === userId)
+      const name = userItem?.displayName || ""
       // Optimistically flip status in the search list
       setSearchResults((list) =>
         list.map((u) =>
@@ -375,6 +409,17 @@ export function FriendsClient({
         ),
       )
       refreshOverview()
+      toast.success(
+        isUk 
+          ? `Заявку в друзі надіслано ${name ? `користувачу ${name}` : ""}` 
+          : `Friend request sent ${name ? `to ${name}` : ""}`
+      )
+    } else {
+      toast.error(
+        isUk 
+          ? "Не вдалося надіслати запит у друзі." 
+          : "Failed to send friend request."
+      )
     }
     setPending(null)
   }
@@ -476,7 +521,7 @@ export function FriendsClient({
               variant="outgoing"
               items={outgoing}
               pending={pending}
-              onCancel={(id) => handleRespond(id, false)}
+              onCancel={handleCancelRequest}
               t={t}
               isUk={isUk}
             />
@@ -646,7 +691,7 @@ export function FriendsClient({
                 <button
                   type="submit"
                   disabled={sending || !draft.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-medium text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-black transition hover:opacity-90 disabled:opacity-50 shadow-md shadow-emerald-950/20 cursor-pointer"
                 >
                   <Send className="h-4 w-4" />
                   <span className="hidden sm:inline">{t.send}</span>
@@ -864,7 +909,7 @@ function RequestsList({
               <button
                 onClick={() => onAccept?.(r.friendshipId)}
                 disabled={pending === r.friendshipId}
-                className="inline-flex items-center gap-1 rounded-lg bg-emerald-400 px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-emerald-300 disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:opacity-50 shadow-sm cursor-pointer"
               >
                 <Check className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{t.accept}</span>
@@ -1020,7 +1065,7 @@ function SearchAction({
       <button
         onClick={() => onAccept(user.friendshipId!)}
         disabled={busy}
-        className="inline-flex items-center gap-1 rounded-lg bg-emerald-400 px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-emerald-300 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:opacity-50 shadow-sm cursor-pointer"
       >
         <Check className="h-3.5 w-3.5" />
         {t.accept}
@@ -1031,7 +1076,7 @@ function SearchAction({
     <button
       onClick={() => onAdd(user.id)}
       disabled={busy}
-      className="inline-flex items-center gap-1 rounded-lg bg-emerald-400 px-2.5 py-1.5 text-xs font-medium text-black transition hover:bg-emerald-300 disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-black transition hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 shadow-[0_0_12px_rgba(0,200,150,0.25)] cursor-pointer"
     >
       <UserPlus className="h-3.5 w-3.5" />
       {t.add}
