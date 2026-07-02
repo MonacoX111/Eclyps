@@ -1,10 +1,9 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { revalidatePath } from "next/cache"
 import { ADMIN_SESSION_COOKIE, isValidAdminSession } from "@/lib/admin-auth"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
-import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getCurrentUserProfileFast } from "@/lib/auth/user-profile"
 import { getPublicMatchDetail, isUserMatchParticipant } from "@/lib/data/match-detail"
 import type { MatchChatChannel } from "@/lib/data/match-chat"
 
@@ -40,7 +39,7 @@ export async function sendMatchMessage(input: {
   if (!body) return { ok: false, error: "empty" }
   if (body.length > MAX_BODY) return { ok: false, error: "too_long" }
 
-  const profile = await getCurrentUserProfile()
+  const profile = await getCurrentUserProfileFast()
   if (!profile) return { ok: false, error: "not_authenticated" }
 
   // Participants channel: only match participants may post.
@@ -67,7 +66,8 @@ export async function sendMatchMessage(input: {
     return { ok: false, error: "server_error" }
   }
 
-  revalidatePath(`/matches/${matchId}`)
+  // No revalidatePath here: message delivery is handled by Supabase Realtime,
+  // and rebuilding the whole match page on every message made sending slow.
   return { ok: true }
 }
 
@@ -99,7 +99,7 @@ export async function deleteMatchMessage(input: {
     return { ok: false, error: "server_error" }
   }
 
-  revalidatePath(`/matches/${matchId}`)
+  // Deletion is propagated to clients via the Realtime DELETE event.
   return { ok: true }
 }
 

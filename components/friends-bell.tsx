@@ -106,15 +106,47 @@ export function FriendsBell({ currentUserId }: Props) {
     const channel = supabase
       .channel(`friends:${currentUserId}:${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () => refreshOverview())
-      .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, () => {
-        refreshOverview()
-        if (activeFriend) refreshConversation(activeFriend.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, (payload) => {
+        // Append straight from the realtime payload (no full refetch).
+        const row = payload.new as Record<string, unknown>
+        const senderId = typeof row.sender_id === "string" ? row.sender_id : null
+        const recipientId = typeof row.recipient_id === "string" ? row.recipient_id : null
+        if (!senderId || !recipientId) return
+        if (senderId !== currentUserId && recipientId !== currentUserId) return
+
+        const otherId = senderId === currentUserId ? recipientId : senderId
+        if (activeFriend && otherId === activeFriend.id) {
+          const msg: DirectMessage = {
+            id: typeof row.id === "string" ? row.id : `rt-${Date.now()}`,
+            senderId,
+            recipientId,
+            body: typeof row.body === "string" ? row.body : "",
+            createdAt: typeof row.created_at === "string" ? row.created_at : new Date().toISOString(),
+            readAt: typeof row.read_at === "string" ? row.read_at : null,
+          }
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev
+            if (senderId === currentUserId) {
+              const tempIdx = prev.findIndex((m) => m.id.startsWith("tmp-") && m.body === msg.body)
+              if (tempIdx !== -1) {
+                const next = [...prev]
+                next[tempIdx] = msg
+                return next
+              }
+            }
+            return [...prev, msg]
+          })
+        } else if (recipientId === currentUserId) {
+          // Unread badge for another conversation — refresh counts only.
+          refreshOverview()
+        }
       })
     try { channel.subscribe() } catch {}
+    // Slow polling as a FALLBACK only (realtime handles the fast path).
     const poll = setInterval(() => {
       refreshOverview()
       if (activeFriend) refreshConversation(activeFriend.id)
-    }, 8000)
+    }, 30000)
     return () => {
       clearInterval(poll)
       try { supabase.removeChannel(channel) } catch {}
@@ -158,8 +190,9 @@ export function FriendsBell({ currentUserId }: Props) {
     const text = draft.trim()
     if (!text || !activeFriend || sending) return
     setSending(true)
+    const tempId = `tmp-${Date.now()}`
     const optimistic: DirectMessage = {
-      id: `tmp-${Date.now()}`,
+      id: tempId,
       senderId: currentUserId,
       recipientId: activeFriend.id,
       body: text,
@@ -169,7 +202,12 @@ export function FriendsBell({ currentUserId }: Props) {
     setMessages((m) => [...m, optimistic])
     setDraft("")
     const res = await sendDirectMessage(activeFriend.id, text)
-    if (res.ok) await refreshConversation(activeFriend.id)
+    if (!res.ok) {
+      // Roll back the optimistic message and restore the draft.
+      setMessages((m) => m.filter((msg) => msg.id !== tempId))
+      setDraft(text)
+    }
+    // On success no refetch: the realtime INSERT replaces the optimistic row.
     setSending(false)
   }
 

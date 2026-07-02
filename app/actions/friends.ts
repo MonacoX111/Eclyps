@@ -1,9 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { getCurrentUserProfile, getCurrentUserProfileFast } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
-import { getFriendshipStatus, getConversation, getFriendOverview } from "@/lib/data/friends"
+import { getFriendshipStatus, getConversationMessages, getFriendOverview } from "@/lib/data/friends"
 import { searchUsers, type UserSearchResult } from "@/lib/data/user-search"
 import type { DirectMessage, FriendOverview, FriendshipStatus } from "@/lib/data/friends"
 
@@ -129,7 +129,7 @@ export async function sendDirectMessage(
   otherId: string,
   body: string,
 ): Promise<FriendActionResult> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, error: "auth" }
   const text = (body ?? "").trim()
   if (!text) return { ok: false, error: "empty" }
@@ -153,7 +153,7 @@ export async function sendDirectMessage(
 }
 
 export async function markConversationRead(otherId: string): Promise<FriendActionResult> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, error: "auth" }
   const admin = createSupabaseAdminClient()
   if (!admin) return { ok: false, error: "server" }
@@ -169,23 +169,27 @@ export async function markConversationRead(otherId: string): Promise<FriendActio
 export async function loadConversation(
   otherId: string,
 ): Promise<{ ok: boolean; messages: DirectMessage[]; error?: string }> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, messages: [], error: "auth" }
-  const { messages } = await getConversation(me.id, otherId)
-  // Mark incoming as read whenever the conversation is opened/polled
   const admin = createSupabaseAdminClient()
-  if (admin) {
-    await admin
-      .from("direct_messages")
-      .update({ read_at: new Date().toISOString() })
-      .eq("recipient_id", me.id)
-      .eq("sender_id", otherId)
-      .is("read_at", null)
-  }
+
+  // Load history and mark incoming as read IN PARALLEL (was sequential before).
+  const [messages] = await Promise.all([
+    getConversationMessages(me.id, otherId),
+    admin
+      ? admin
+          .from("direct_messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("recipient_id", me.id)
+          .eq("sender_id", otherId)
+          .is("read_at", null)
+      : Promise.resolve(null),
+  ])
+
   return { ok: true, messages }
 }
 export async function loadFriendOverview(): Promise<{ ok: boolean; overview: FriendOverview | null }> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, overview: null }
   const overview = await getFriendOverview(me.id)
   return { ok: true, overview }
@@ -203,7 +207,7 @@ export type UserSearchItem = UserSearchResult & {
 export async function searchUsersForFriends(
   query: string,
 ): Promise<{ ok: boolean; results: UserSearchItem[] }> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, results: [] }
   const trimmed = (query ?? "").trim()
   if (trimmed.length < 2) return { ok: true, results: [] }
@@ -261,7 +265,7 @@ export async function searchUsersForFriends(
  * lightweight heartbeat every ~60s while the app is open.
  */
 export async function updateMyLastSeen(): Promise<FriendActionResult> {
-  const me = await getCurrentUserProfile()
+  const me = await getCurrentUserProfileFast()
   if (!me) return { ok: false, error: "auth" }
   const admin = createSupabaseAdminClient()
   if (!admin) return { ok: false, error: "server" }

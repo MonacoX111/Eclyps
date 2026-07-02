@@ -216,6 +216,47 @@ export async function getFriendshipStatus(
   return "none"
 }
 
+/**
+ * Fast conversation history for the chat UI (hot path — called on every open
+ * and poll). Runs the friendship check IN PARALLEL with the messages query and
+ * skips the "other user" profile + player-id lookups the client already has.
+ * Messages are only returned if the friendship check passes.
+ */
+export async function getConversationMessages(
+  userProfileId: string,
+  otherId: string,
+  limit = 200,
+): Promise<DirectMessage[]> {
+  const admin = createSupabaseAdminClient()
+  if (!admin) return []
+
+  const key =
+    userProfileId < otherId
+      ? `${userProfileId}:${otherId}`
+      : `${otherId}:${userProfileId}`
+
+  const [status, { data: msgs }] = await Promise.all([
+    getFriendshipStatus(userProfileId, otherId),
+    admin
+      .from("direct_messages")
+      .select("id, sender_id, recipient_id, body, created_at, read_at")
+      .eq("conversation_key", key)
+      .order("created_at", { ascending: true })
+      .limit(limit),
+  ])
+
+  if (status !== "friends") return []
+
+  return (msgs ?? []).map((m: any) => ({
+    id: m.id,
+    senderId: m.sender_id,
+    recipientId: m.recipient_id,
+    body: typeof m.body === "string" ? m.body : "",
+    createdAt: m.created_at ?? null,
+    readAt: m.read_at ?? null,
+  }))
+}
+
 export async function getConversation(
   userProfileId: string,
   otherId: string,

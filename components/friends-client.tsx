@@ -23,6 +23,7 @@ import {
   respondFriendRequest,
   removeFriend,
   sendDirectMessage,
+  markConversationRead,
   loadConversation,
   loadFriendOverview,
   sendFriendRequest,
@@ -222,11 +223,49 @@ export function FriendsClient({
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "direct_messages" },
-        () => {
+        { event: "INSERT", schema: "public", table: "direct_messages" },
+        (payload) => {
           if (cancelled) return
-          refreshOverview()
-          if (activeId) refreshConversation(activeId)
+          // Append the new message straight from the realtime payload instead
+          // of refetching the whole conversation + overview (much faster).
+          const row = payload.new as Record<string, unknown>
+          const senderId = typeof row.sender_id === "string" ? row.sender_id : null
+          const recipientId = typeof row.recipient_id === "string" ? row.recipient_id : null
+          if (!senderId || !recipientId) return
+          if (senderId !== currentUserId && recipientId !== currentUserId) return
+
+          const otherId = senderId === currentUserId ? recipientId : senderId
+          const msg: DirectMessage = {
+            id: typeof row.id === "string" ? row.id : `rt-${Date.now()}`,
+            senderId,
+            recipientId,
+            body: typeof row.body === "string" ? row.body : "",
+            createdAt: typeof row.created_at === "string" ? row.created_at : new Date().toISOString(),
+            readAt: typeof row.read_at === "string" ? row.read_at : null,
+          }
+
+          if (activeId && otherId === activeId) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === msg.id)) return prev
+              // Replace the matching optimistic (tmp-) message, if any.
+              if (senderId === currentUserId) {
+                const tempIdx = prev.findIndex((m) => m.id.startsWith("tmp-") && m.body === msg.body)
+                if (tempIdx !== -1) {
+                  const next = [...prev]
+                  next[tempIdx] = msg
+                  return next
+                }
+              }
+              return [...prev, msg]
+            })
+            // Incoming message in the open conversation — mark it read (fire-and-forget).
+            if (recipientId === currentUserId) {
+              markConversationRead(otherId).catch(() => {})
+            }
+          } else if (recipientId === currentUserId) {
+            // Message for another conversation — bump the unread badge only.
+            setUnread((u) => ({ ...u, [otherId]: (u[otherId] ?? 0) + 1 }))
+          }
         },
       )
     try {
@@ -235,11 +274,12 @@ export function FriendsClient({
       // ignore
     }
 
+    // Slow polling as a FALLBACK only (realtime handles the fast path).
     const poll = setInterval(() => {
       if (cancelled) return
       refreshOverview()
       if (activeId) refreshConversation(activeId)
-    }, 8000)
+    }, 30000)
 
     return () => {
       cancelled = true
@@ -284,8 +324,9 @@ export function FriendsClient({
     const text = draft.trim()
     if (!text || !activeId || sending) return
     setSending(true)
+    const tempId = `tmp-${Date.now()}`
     const optimistic: DirectMessage = {
-      id: `tmp-${Date.now()}`,
+      id: tempId,
       senderId: currentUserId,
       recipientId: activeId,
       body: text,
@@ -295,7 +336,13 @@ export function FriendsClient({
     setMessages((m) => [...m, optimistic])
     setDraft("")
     const res = await sendDirectMessage(activeId, text)
-    if (res.ok) await refreshConversation(activeId)
+    if (!res.ok) {
+      // Roll back the optimistic message and restore the draft.
+      setMessages((m) => m.filter((msg) => msg.id !== tempId))
+      setDraft(text)
+    }
+    // On success no refetch is needed: the realtime INSERT event
+    // replaces the optimistic message with the real row.
     setSending(false)
   }
 

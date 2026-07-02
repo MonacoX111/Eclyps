@@ -132,7 +132,21 @@ export function MatchChat({
               }
             }
           }
-          setMessages((prev) => (prev.some((m) => m.id === enriched.id) ? prev : [...prev, enriched]))
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === enriched.id)) return prev
+            // Replace the matching optimistic (temp-) message from this user, if any.
+            if (enriched.authorId && enriched.authorId === currentUserId) {
+              const tempIdx = prev.findIndex(
+                (m) => m.id.startsWith("temp-") && m.body === enriched.body && m.channel === enriched.channel,
+              )
+              if (tempIdx !== -1) {
+                const next = [...prev]
+                next[tempIdx] = enriched
+                return next
+              }
+            }
+            return [...prev, enriched]
+          })
         },
       )
       ch.on(
@@ -190,13 +204,32 @@ export function MatchChat({
     setError(null)
     const previousDraft = draft
     setDraft("")
+
+    // Optimistic UI: show the message instantly; the realtime INSERT event
+    // replaces it with the real row (deduped in the subscription handler).
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const optimistic: MatchChatMessage = {
+      id: tempId,
+      matchId,
+      channel: tab,
+      kind: "user",
+      body,
+      createdAt: new Date().toISOString(),
+      authorId: currentUserId,
+      authorName: currentUserName,
+      authorAvatarUrl: currentUserAvatarUrl,
+    }
+    setMessages((prev) => [...prev, optimistic])
+
     try {
       const res = await sendMatchMessage({ matchId, channel: tab, body })
       if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId))
         setError(t.sysFailed)
         setDraft(previousDraft)
       }
     } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
       setError(t.sysFailed)
       setDraft(previousDraft)
     } finally {

@@ -27,6 +27,42 @@ export async function getCurrentUserProfile() {
   return result.profile
 }
 
+/**
+ * Fast, read-only profile lookup for hot paths (chat, polling, heartbeats).
+ * Unlike getCurrentUserProfile(), this does NOT call the Discord API and does
+ * NOT upsert/sync the profile or player rows — it is a single auth check plus
+ * a single SELECT. Falls back to the full sync only if no profile row exists
+ * yet (first-ever action of a new user).
+ */
+export async function getCurrentUserProfileFast(): Promise<UserProfile | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) return null
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) return null
+
+  const { data: row, error: profileError } = await supabaseAdmin
+    .from("user_profiles")
+    .select(
+      "id, auth_user_id, discord_id, discord_username, display_name, avatar_url, onboarding_seen_at, created_at, updated_at",
+    )
+    .eq("auth_user_id", data.user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    logSupabaseError("Failed to fast-load user profile:", profileError)
+    return null
+  }
+
+  const profile = normalizeUserProfile(row)
+  if (profile) return profile
+
+  // No profile row yet — fall back to the full sync once.
+  const result = await upsertUserProfileFromAuthUser(data.user)
+  return result.profile
+}
+
 export async function syncCurrentUserProfile(): Promise<UserProfileSyncResult> {
   const supabase = await createSupabaseServerClient()
   const [{ data, error }, sessionResult] = await Promise.all([
