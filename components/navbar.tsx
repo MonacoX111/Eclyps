@@ -64,7 +64,7 @@ export function Navbar({
 
   return (
     <>
-      <FirstVisitGuide autoOpen={shouldAutoShowGuide} />
+      <FirstVisitGuide autoOpen={shouldAutoShowGuide} userProfile={userProfile} />
       {userProfile && <PresenceHeartbeat />}
       <m.nav
       className="fixed left-0 right-0 top-0 z-50"

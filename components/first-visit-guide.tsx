@@ -13,11 +13,14 @@ import {
   consumeDiscordAuthInProgress,
   markDiscordAuthInProgress,
 } from "@/lib/auth/discord-auth-client"
+import type { UserProfile } from "@/lib/auth/user-profile"
+import { withAvatarCacheBust } from "@/lib/avatar"
 
 type GuideStage = "intro" | "guide"
 
 type FirstVisitGuideProps = {
   autoOpen?: boolean
+  userProfile?: UserProfile | null
 }
 
 export const FIRST_VISIT_GUIDE_OPEN_EVENT = "eclyps:open-first-visit-guide"
@@ -36,7 +39,7 @@ function shouldSuppressAutoOpen() {
   return isAuthRoute || hasAuthSignal || consumeDiscordAuthInProgress()
 }
 
-export function FirstVisitGuide({ autoOpen = false }: FirstVisitGuideProps) {
+export function FirstVisitGuide({ autoOpen = false, userProfile = null }: FirstVisitGuideProps) {
   const { lang, setLanguage, t } = useLanguage()
   const [isVisible, setIsVisible] = useState(false)
   const [stage, setStage] = useState<GuideStage>("intro")
@@ -147,6 +150,7 @@ export function FirstVisitGuide({ autoOpen = false }: FirstVisitGuideProps) {
             neverShowAgain={neverShowAgain}
             setNeverShowAgain={setNeverShowAgain}
             dismissLabel={t.firstVisitGuide.dismiss}
+            userProfile={userProfile}
           />
         ) : (
           <GuideScreen
@@ -260,6 +264,7 @@ function IntroScreen({
   neverShowAgain,
   setNeverShowAgain,
   dismissLabel,
+  userProfile,
 }: {
   lang: "uk" | "en"
   setLanguage: (lang: "uk" | "en") => void
@@ -268,10 +273,12 @@ function IntroScreen({
   neverShowAgain: boolean
   setNeverShowAgain: (value: boolean) => void
   dismissLabel: string
+  userProfile: UserProfile | null
 }) {
   const { t } = useLanguage()
   const intro = t.firstVisitGuide.intro
   const [activeStep, setActiveStep] = useState(0)
+  const isSignedIn = Boolean(userProfile)
 
   return (
     <div className="grid flex-1 place-items-center py-6 sm:py-8">
@@ -375,36 +382,75 @@ function IntroScreen({
               {intro.authTitle}
             </h1>
             <p className="mx-auto mt-3 max-w-sm text-pretty text-center text-sm leading-6 text-white/60">
-              {intro.authDescription}
+              {isSignedIn ? intro.signedInDescription : intro.authDescription}
             </p>
 
             <div className="mx-auto mt-8 w-full max-w-sm">
-              <form action={loginWithDiscord} onSubmit={markDiscordAuthInProgress}>
-                <button
-                  type="submit"
-                  className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-black shadow-[0_0_30px_oklch(0.78_0.18_165_/_0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_0_44px_oklch(0.78_0.18_165_/_0.38)] focus:outline-none focus:ring-2 focus:ring-primary/70 focus:ring-offset-2 focus:ring-offset-black"
-                >
-                  <DiscordIcon className="h-5 w-5" />
-                  {intro.discordCta}
-                </button>
-              </form>
+              {isSignedIn && userProfile ? (
+                <>
+                  <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/[0.07] px-4 py-3.5">
+                    {withAvatarCacheBust(userProfile.avatar_url, userProfile.updated_at) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={withAvatarCacheBust(userProfile.avatar_url, userProfile.updated_at) ?? ""}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 shrink-0 rounded-full border border-primary/40 object-cover shadow-[0_0_16px_oklch(0.78_0.18_165_/_0.3)]"
+                      />
+                    ) : (
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-primary/40 bg-primary/15 text-base font-bold text-primary">
+                        {userProfile.display_name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">{userProfile.display_name}</p>
+                      <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-primary/90">
+                        <DiscordIcon className="h-3.5 w-3.5 shrink-0" />
+                        {intro.signedInBadge}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mt-5 flex items-center gap-3">
-                <span className="h-px flex-1 bg-white/12" />
-                <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
-                  {intro.orLabel}
-                </span>
-                <span className="h-px flex-1 bg-white/12" />
-              </div>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-black shadow-[0_0_30px_oklch(0.78_0.18_165_/_0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_0_44px_oklch(0.78_0.18_165_/_0.38)] focus:outline-none focus:ring-2 focus:ring-primary/70 focus:ring-offset-2 focus:ring-offset-black"
+                  >
+                    {intro.continueCta}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <form action={loginWithDiscord} onSubmit={markDiscordAuthInProgress}>
+                    <button
+                      type="submit"
+                      className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-black shadow-[0_0_30px_oklch(0.78_0.18_165_/_0.25)] transition hover:-translate-y-0.5 hover:shadow-[0_0_44px_oklch(0.78_0.18_165_/_0.38)] focus:outline-none focus:ring-2 focus:ring-primary/70 focus:ring-offset-2 focus:ring-offset-black"
+                    >
+                      <DiscordIcon className="h-5 w-5" />
+                      {intro.discordCta}
+                    </button>
+                  </form>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-white/14 bg-white/[0.04] px-5 py-3.5 text-sm font-semibold text-white/85 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-black"
-              >
-                <Eye className="h-4.5 w-4.5" />
-                {intro.guestCta}
-              </button>
+                  <div className="mt-5 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-white/12" />
+                    <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
+                      {intro.orLabel}
+                    </span>
+                    <span className="h-px flex-1 bg-white/12" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-white/14 bg-white/[0.04] px-5 py-3.5 text-sm font-semibold text-white/85 transition hover:border-white/30 hover:bg-white/[0.07] hover:text-white focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-black"
+                  >
+                    <Eye className="h-4.5 w-4.5" />
+                    {intro.guestCta}
+                  </button>
+                </>
+              )}
 
               <button
                 type="button"
