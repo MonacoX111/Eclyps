@@ -240,7 +240,7 @@ export function FriendsBell({ currentUserId }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 z-50 mt-2 w-[22rem] overflow-hidden rounded-2xl border border-white/12 bg-[#0b0f14] shadow-2xl"
+            className="fixed inset-x-3 top-16 z-50 overflow-hidden rounded-2xl border border-white/12 bg-[#0b0f14] shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem]"
           >
             {activeFriend ? (
               <div className="flex h-[26rem] flex-col">
