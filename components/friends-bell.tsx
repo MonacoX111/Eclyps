@@ -424,7 +424,7 @@ export function FriendsBell({ currentUserId }: Props) {
                               <div
                                 key={f.id}
                                 onClick={() => openChat(f)}
-                                className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5 cursor-pointer"
+                                className="group flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5 cursor-pointer"
                               >
                                 <Link
                                   href={`/players/${f.playerId ?? f.id}`}
@@ -441,7 +441,11 @@ export function FriendsBell({ currentUserId }: Props) {
                                 <span className="flex-1 truncate text-sm text-white/85">{f.displayName}</span>
                                 {count > 0 ? (
                                   <span className="min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold text-white">{count}</span>
-                                ) : null}
+                                ) : (
+                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition group-hover:border-emerald-400/30 group-hover:bg-emerald-400/10 group-hover:text-emerald-300">
+                                    <MessageCircle className="h-3.5 w-3.5" />
+                                  </span>
+                                )}
                               </div>
                             )
                           })
