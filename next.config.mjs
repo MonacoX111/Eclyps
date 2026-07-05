@@ -47,12 +47,19 @@ const privateRouteHeaders = [
   },
 ]
 
-/** @type {import('next').NextConfig} */
+/** @type {import("next").NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+      },
+    ],
   },
+
   async headers() {
     return [
       {
