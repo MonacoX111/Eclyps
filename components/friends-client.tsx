@@ -18,6 +18,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { useLanguage } from "@/components/language-provider"
+import { PushNotificationsToggle } from "@/components/push-notifications-toggle"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase/client"
 import {
@@ -460,12 +461,13 @@ export function FriendsClient({
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-400/10 text-emerald-300">
             <Users className="h-5 w-5" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-white sm:text-3xl">
               {t.title}
             </h1>
             <p className="mt-0.5 text-sm text-white/55">{t.subtitle}</p>
           </div>
+          <PushNotificationsToggle />
         </div>
       </header>
 

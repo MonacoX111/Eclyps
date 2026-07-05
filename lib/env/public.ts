@@ -1,4 +1,4 @@
-import { readOptionalUrlEnv, readUrlEnv } from "@/lib/env/shared"
+import { readOptionalEnv, readOptionalUrlEnv, readUrlEnv } from "@/lib/env/shared"
 
 export type PublicEnv = {
   nodeEnv: "development" | "production" | "test"
@@ -7,6 +7,7 @@ export type PublicEnv = {
   supabaseAnonKey: string
   instagramUrl: string
   siteUrl: string | null
+  vapidPublicKey: string | null
 }
 
 let cachedPublicEnv: PublicEnv | null = null
@@ -36,6 +37,7 @@ export function getPublicEnv() {
       "NEXT_PUBLIC_SITE_URL",
       process.env.NEXT_PUBLIC_SITE_URL,
     ),
+    vapidPublicKey: readOptionalEnv(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
   }
 
   return cachedPublicEnv

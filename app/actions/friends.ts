@@ -1,8 +1,10 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { after } from "next/server"
 import { getCurrentUserProfile, getCurrentUserProfileFast } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
+import { sendPushToUser } from "@/lib/push/send"
 import { getFriendshipStatus, getConversationMessages, getFriendOverview } from "@/lib/data/friends"
 import { searchUsers, type UserSearchResult } from "@/lib/data/user-search"
 import type { DirectMessage, FriendOverview, FriendshipStatus } from "@/lib/data/friends"
@@ -149,6 +151,23 @@ export async function sendDirectMessage(
     body: text,
   })
   if (error) return { ok: false, error: "insert" }
+
+  // Push-сповіщення отримувачу (виконується після відповіді, не блокує UI)
+  const senderName = me.display_name
+  const preview = text.length > 120 ? `${text.slice(0, 117)}...` : text
+  after(async () => {
+    try {
+      await sendPushToUser(otherId, {
+        title: senderName,
+        body: preview,
+        url: "/friends",
+        tag: `dm-${me.id}`,
+      })
+    } catch {
+      // push помилки не мають впливати на надсилання повідомлення
+    }
+  })
+
   return { ok: true }
 }
 
