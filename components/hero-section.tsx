@@ -69,13 +69,13 @@ export function HeroSection({
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.2, ease: "easeOut" }}
       >
-        {/* Outer glow ring */}
+        {/* Outer glow ring — pulsing via cheap opacity animation */}
         <div
-          className="logo-glow-outer absolute -inset-12 rounded-full opacity-40 blur-3xl"
+          className="animate-pulse-glow logo-glow-outer absolute -inset-12 rounded-full opacity-40 blur-3xl"
           aria-hidden="true"
         />
         <div
-          className="logo-glow-inner absolute -inset-6 rounded-full opacity-60 blur-xl"
+          className="animate-pulse-glow logo-glow-inner absolute -inset-6 rounded-full opacity-60 blur-xl"
           aria-hidden="true"
         />
         <Image
@@ -85,7 +85,10 @@ export function HeroSection({
           height={320}
           priority
           sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, (min-width: 640px) 192px, 144px"
-          className="animate-pulse-glow relative z-10 h-36 w-36 object-contain sm:h-48 sm:w-48 md:h-72 md:w-72 lg:h-80 lg:w-80"
+          className="relative z-10 h-36 w-36 object-contain sm:h-48 sm:w-48 md:h-72 md:w-72 lg:h-80 lg:w-80"
+          style={{
+            filter: "drop-shadow(0 0 24px oklch(0.78 0.18 165 / 0.4)) drop-shadow(0 0 56px oklch(0.78 0.18 165 / 0.15))",
+          }}
         />
       </m.div>
 

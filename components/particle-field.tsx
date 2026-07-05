@@ -14,11 +14,15 @@ export function ParticleField() {
 
     const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     const isSmallScreen = () => window.innerWidth < 768
-    const getFrameInterval = () => (isSmallScreen() ? 1000 / 30 : 0)
+    const isWeakDevice = () => isSmallScreen() && (navigator.hardwareConcurrency ?? 8) <= 4
+    const getFrameInterval = () =>
+      isWeakDevice() ? 1000 / 16 : isSmallScreen() ? 1000 / 20 : 0
     const getParticleLimits = () =>
-      isSmallScreen()
-        ? { initial: 36, max: 48 }
-        : { initial: 60, max: 80 }
+      isWeakDevice()
+        ? { initial: 16, max: 20 }
+        : isSmallScreen()
+          ? { initial: 24, max: 32 }
+          : { initial: 60, max: 80 }
 
     let animationId: number | null = null
     let isRunning = false
