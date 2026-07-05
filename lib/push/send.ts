@@ -53,11 +53,11 @@ export async function sendPushToUser(
 
   if (!subs || subs.length === 0) return
 
-  webpush.setVapidDetails(
-    vapid.subject.startsWith("http") ? vapid.subject : `mailto:${vapid.subject}`,
-    vapid.publicKey,
-    vapid.privateKey,
-  )
+webpush.setVapidDetails(
+  vapid.subject,
+  vapid.publicKey,
+  vapid.privateKey,
+)
 
   const body = JSON.stringify(payload)
   const staleIds: string[] = []
