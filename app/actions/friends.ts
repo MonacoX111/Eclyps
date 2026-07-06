@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { after } from "next/server"
 import { getCurrentUserProfile, getCurrentUserProfileFast } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { sendPushToUser } from "@/lib/push/send"
@@ -152,21 +151,20 @@ export async function sendDirectMessage(
   })
   if (error) return { ok: false, error: "insert" }
 
-  // Push-сповіщення отримувачу (виконується після відповіді, не блокує UI)
+  // Send the phone push before returning so serverless runtimes cannot drop it.
   const senderName = me.display_name
   const preview = text.length > 120 ? `${text.slice(0, 117)}...` : text
-  after(async () => {
-    try {
-      await sendPushToUser(otherId, {
-        title: senderName,
-        body: preview,
-        url: "/friends",
-        tag: `dm-${me.id}`,
-      })
-    } catch {
-      // push помилки не мають впливати на надсилання повідомлення
-    }
-  })
+  try {
+    await sendPushToUser(otherId, {
+      title: senderName,
+      body: preview,
+      url: "/friends",
+      tag: `dm-${me.id}`,
+    })
+  } catch (error) {
+    console.error("sendDirectMessage: failed to send push notification", error)
+    // Push failures must not block the actual DM.
+  }
 
   return { ok: true }
 }

@@ -41,23 +41,34 @@ export async function sendPushToUser(
   payload: PushPayload,
 ): Promise<void> {
   const vapid = getVapidConfig()
-  if (!vapid) return
+  if (!vapid) {
+    console.warn("sendPushToUser: VAPID keys are not configured.")
+    return
+  }
 
   const admin = createSupabaseAdminClient()
-  if (!admin) return
+  if (!admin) {
+    console.warn("sendPushToUser: Supabase admin client is unavailable.")
+    return
+  }
 
-  const { data: subs } = await admin
+  const { data: subs, error: subsError } = await admin
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("user_profile_id", userProfileId)
 
+  if (subsError) {
+    console.error("sendPushToUser: failed to load push subscriptions", subsError)
+    return
+  }
+
   if (!subs || subs.length === 0) return
 
-webpush.setVapidDetails(
-  vapid.subject,
-  vapid.publicKey,
-  vapid.privateKey,
-)
+  webpush.setVapidDetails(
+    vapid.subject,
+    vapid.publicKey,
+    vapid.privateKey,
+  )
 
   const body = JSON.stringify(payload)
   const staleIds: string[] = []
@@ -80,6 +91,11 @@ webpush.setVapidDetails(
             : 0
         if (statusCode === 404 || statusCode === 410) {
           staleIds.push(sub.id)
+        } else {
+          console.error("sendPushToUser: provider rejected notification", {
+            statusCode,
+            endpointOrigin: getEndpointOrigin(sub.endpoint),
+          })
         }
       }
     }),
@@ -87,5 +103,13 @@ webpush.setVapidDetails(
 
   if (staleIds.length > 0) {
     await admin.from("push_subscriptions").delete().in("id", staleIds)
+  }
+}
+
+function getEndpointOrigin(endpoint: string) {
+  try {
+    return new URL(endpoint).origin
+  } catch {
+    return "invalid-endpoint"
   }
 }
