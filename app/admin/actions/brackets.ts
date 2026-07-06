@@ -2,17 +2,15 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { isBracketSize } from "@/lib/brackets/template"
+import { type SeedMethod, type SeedableParticipant } from "@/lib/brackets/seeding"
+import { normalizeTournamentFormat, normalizeTournamentFormatConfig } from "@/lib/tournament-formats"
 import {
-  createBracketTemplateMatches,
-  isBracketSize,
-  type BracketTemplateMatch,
-} from "@/lib/brackets/template"
-import {
-  nextBracketSize,
-  seedRoundOne,
-  type SeedMethod,
-  type SeedableParticipant,
-} from "@/lib/brackets/seeding"
+  createTournamentTemplate,
+  generateGroupsPlayoffsBracket,
+  generateNextSwissRound,
+  generateTournamentStructure,
+} from "@/lib/tournament-engine"
 import { logMutationError } from "@/lib/admin/errors"
 import { resolveMatchWinner } from "@/lib/matches/core"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
@@ -75,7 +73,7 @@ export async function generateBracketTemplate(formData: FormData) {
 
   const { data: tournament, error: tournamentErr } = await supabaseAdmin
     .from("tournaments")
-    .select("id, participant_type")
+    .select("id, participant_type, tournament_format, format_config")
     .eq("id", parsed.data.tournament_id)
     .maybeSingle()
 
@@ -83,16 +81,25 @@ export async function generateBracketTemplate(formData: FormData) {
     redirect("/admin?tab=bracket&matchError=tournament-not-found#bracket")
   }
 
+  const tournamentFormat = normalizeTournamentFormat(tournament.tournament_format)
   const startingMatchOrder = await getNextMatchOrder(
     supabaseAdmin,
     parsed.data.tournament_id,
   )
-  const { matches } = createBracketTemplateMatches({
+  const generated = createTournamentTemplate({
     tournamentId: parsed.data.tournament_id,
+    tournamentFormat,
     bracketSize: parsed.data.bracket_size,
     startingMatchOrder,
     participantType: tournament.participant_type as "team" | "player",
+    config: normalizeTournamentFormatConfig(tournamentFormat, tournament.format_config),
   })
+
+  if (!generated.ok) {
+    redirect(`/admin?tab=bracket&matchError=${generated.error}#bracket`)
+  }
+
+  const { matches } = generated.data
 
   if (!hasValidNextMatchChain(matches)) {
     redirect("/admin?tab=bracket&matchError=invalid-bracket-chain#bracket")
@@ -290,7 +297,7 @@ export async function updateBracketMatch(formData: FormData) {
 
   const { data: match, error: matchError } = await supabaseAdmin
     .from("matches")
-    .select("id, tournament_id, bracket_id, bracket_status, participant_type, participant_1_id, participant_2_id, team1, team2, status, winner_participant_id, next_match_id, next_match_slot")
+    .select("id, tournament_id, bracket_id, bracket_status, participant_type, participant_1_id, participant_2_id, team1, team2, status, winner_participant_id, next_match_id, next_match_slot, bracket_type, bracket_round, loser_next_match_id, loser_next_match_slot")
     .eq("id", parsed.data.match_id)
     .maybeSingle()
 
@@ -357,6 +364,10 @@ export async function updateBracketMatch(formData: FormData) {
       team2: match.team2,
       nextMatchId: match.next_match_id,
       nextMatchSlot: match.next_match_slot,
+      bracketType: match.bracket_type,
+      bracketRound: match.bracket_round,
+      loserNextMatchId: match.loser_next_match_id,
+      loserNextMatchSlot: match.loser_next_match_slot,
     },
     nextStatus: parsed.data.status,
     nextWinnerParticipantId: winnerResult.winnerParticipantId,
@@ -409,6 +420,117 @@ export async function updateBracketMatch(formData: FormData) {
   revalidatePath("/admin")
   revalidatePath("/")
   redirect("/admin?tab=bracket&matchSuccess=bracket-match-updated#bracket")
+}
+
+export async function generateNextSwissRoundAction(formData: FormData) {
+  await requireAdminSession()
+
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim()
+  const bracketId = String(formData.get("bracket_id") ?? "").trim()
+  if (!tournamentId || !bracketId) {
+    redirect("/admin?tab=bracket&matchError=invalid-bracket#bracket")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
+
+  const context = await loadTournamentGenerationContext(supabaseAdmin, tournamentId)
+  if (!context.ok) redirect(`/admin?tab=bracket&matchError=${context.error}#bracket`)
+  if (context.tournamentFormat !== "swiss") {
+    redirect("/admin?tab=bracket&matchError=wrong-tournament-engine#bracket")
+  }
+
+  const matchesResult = await loadBracketMatches(supabaseAdmin, tournamentId, bracketId)
+  if (!matchesResult.ok) redirect(`/admin?tab=bracket&matchError=${matchesResult.error}#bracket`)
+  if (matchesResult.matches.some((match) => match.bracket_type !== "swiss")) {
+    redirect("/admin?tab=bracket&matchError=wrong-tournament-engine#bracket")
+  }
+
+  const startingMatchOrder = await getNextMatchOrder(supabaseAdmin, tournamentId)
+  const generated = generateNextSwissRound({
+    tournamentId,
+    participants: context.participants,
+    matches: matchesResult.matches,
+    startingMatchOrder,
+    participantType: context.participantType,
+    config: context.config,
+    bracketId,
+  })
+
+  if (!generated.ok) {
+    redirect(`/admin?tab=bracket&matchError=${generated.error}#bracket`)
+  }
+
+  const { error } = await runSupabaseMutation("generate next Swiss round", () =>
+    supabaseAdmin.from("matches").insert(generated.data.matches),
+  )
+  if (error) {
+    logMutationError("generate next Swiss round", error)
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/")
+  redirect("/admin?tab=bracket&matchSuccess=swiss-round-generated#bracket")
+}
+
+export async function generateGroupsPlayoffsAction(formData: FormData) {
+  await requireAdminSession()
+
+  const tournamentId = String(formData.get("tournament_id") ?? "").trim()
+  const bracketId = String(formData.get("bracket_id") ?? "").trim()
+  if (!tournamentId || !bracketId) {
+    redirect("/admin?tab=bracket&matchError=invalid-bracket#bracket")
+  }
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) redirect("/admin?tab=bracket&matchError=admin-client-unavailable#bracket")
+
+  const context = await loadTournamentGenerationContext(supabaseAdmin, tournamentId)
+  if (!context.ok) redirect(`/admin?tab=bracket&matchError=${context.error}#bracket`)
+  if (context.tournamentFormat !== "groups_then_playoffs") {
+    redirect("/admin?tab=bracket&matchError=wrong-tournament-engine#bracket")
+  }
+
+  const matchesResult = await loadBracketMatches(supabaseAdmin, tournamentId, bracketId)
+  if (!matchesResult.ok) redirect(`/admin?tab=bracket&matchError=${matchesResult.error}#bracket`)
+  if (matchesResult.matches.some((match) => match.bracket_type !== "groups_then_playoffs")) {
+    redirect("/admin?tab=bracket&matchError=wrong-tournament-engine#bracket")
+  }
+  if (matchesResult.matches.some((match) => !isGroupStageRound(match.bracket_round ?? match.round))) {
+    redirect("/admin?tab=bracket&matchError=playoffs-already-generated#bracket")
+  }
+
+  const startingMatchOrder = await getNextMatchOrder(supabaseAdmin, tournamentId)
+  const generated = generateGroupsPlayoffsBracket({
+    tournamentId,
+    participants: context.participants,
+    matches: matchesResult.matches,
+    startingMatchOrder,
+    participantType: context.participantType,
+    config: context.config,
+    bracketId,
+  })
+
+  if (!generated.ok) {
+    redirect(`/admin?tab=bracket&matchError=${generated.error}#bracket`)
+  }
+
+  if (!hasValidNextMatchChain(generated.data.matches)) {
+    redirect("/admin?tab=bracket&matchError=invalid-bracket-chain#bracket")
+  }
+
+  const { error } = await runSupabaseMutation("generate groups playoffs", () =>
+    supabaseAdmin.from("matches").insert(generated.data.matches),
+  )
+  if (error) {
+    logMutationError("generate groups playoffs", error)
+    redirect("/admin?tab=bracket&matchError=mutation-failed#bracket")
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/")
+  redirect("/admin?tab=bracket&matchSuccess=playoffs-generated#bracket")
 }
 
 async function getNextMatchOrder(
@@ -487,6 +609,10 @@ type BracketPropagationMatch = {
   team2: string | null
   nextMatchId: string | null
   nextMatchSlot: number | null
+  bracketType: string | null
+  bracketRound: string | null
+  loserNextMatchId: string | null
+  loserNextMatchSlot: number | null
 }
 
 type BracketPropagationResult =
@@ -709,7 +835,21 @@ async function syncBracketWinnerPropagation(
     if (!clearResult.ok) return clearResult
   }
 
-  if (nextStatus !== "finished" || !nextWinnerParticipantId || !match.nextMatchId) {
+  if (winnerChanged && match.previousWinnerParticipantId && match.loserNextMatchId) {
+    const previousLoserId = resolveLoserParticipantId(match, match.previousWinnerParticipantId)
+    if (previousLoserId) {
+      const clearLoserResult = await clearPropagatedWinnerFromNextMatch(supabaseAdmin, {
+        bracketId: match.bracketId,
+        nextMatchId: match.loserNextMatchId,
+        nextMatchSlot: match.loserNextMatchSlot,
+        participantId: previousLoserId,
+      })
+
+      if (!clearLoserResult.ok) return clearLoserResult
+    }
+  }
+
+  if (nextStatus !== "finished" || !nextWinnerParticipantId) {
     return { ok: true }
   }
 
@@ -720,24 +860,59 @@ async function syncBracketWinnerPropagation(
     return { ok: false, error: "invalid-winner" }
   }
 
-  if (match.nextMatchSlot !== 1 && match.nextMatchSlot !== 2) {
+  if (match.nextMatchId) {
+    if (match.nextMatchSlot !== 1 && match.nextMatchSlot !== 2) {
+      return { ok: false, error: "invalid-bracket-chain" }
+    }
+
+    const winnerName =
+      nextWinnerParticipantId === match.participant1Id ? match.team1 : match.team2
+
+    if (!winnerName) {
+      return { ok: false, error: "invalid-winner" }
+    }
+
+    const winnerAdvanceResult = await advanceWinnerToNextMatch(supabaseAdmin, {
+      bracketId: match.bracketId,
+      nextMatchId: match.nextMatchId,
+      nextMatchSlot: match.nextMatchSlot,
+      participantId: nextWinnerParticipantId,
+      participantName: winnerName,
+    })
+
+    if (!winnerAdvanceResult.ok) return winnerAdvanceResult
+  }
+
+  if (!match.loserNextMatchId) return { ok: true }
+
+  if (match.loserNextMatchSlot !== 1 && match.loserNextMatchSlot !== 2) {
     return { ok: false, error: "invalid-bracket-chain" }
   }
 
-  const winnerName =
-    nextWinnerParticipantId === match.participant1Id ? match.team1 : match.team2
+  if (match.bracketType === "double_elimination" && match.bracketRound === "Grand Final") {
+    if (nextWinnerParticipantId !== match.participant2Id) return { ok: true }
+  }
 
-  if (!winnerName) {
+  const loserId = resolveLoserParticipantId(match, nextWinnerParticipantId)
+  const loserName = loserId === match.participant1Id ? match.team1 : match.team2
+
+  if (!loserId || !loserName) {
     return { ok: false, error: "invalid-winner" }
   }
 
   return advanceWinnerToNextMatch(supabaseAdmin, {
     bracketId: match.bracketId,
-    nextMatchId: match.nextMatchId,
-    nextMatchSlot: match.nextMatchSlot,
-    participantId: nextWinnerParticipantId,
-    participantName: winnerName,
+    nextMatchId: match.loserNextMatchId,
+    nextMatchSlot: match.loserNextMatchSlot,
+    participantId: loserId,
+    participantName: loserName,
   })
+}
+
+function resolveLoserParticipantId(match: BracketPropagationMatch, winnerParticipantId: string) {
+  if (winnerParticipantId === match.participant1Id) return match.participant2Id
+  if (winnerParticipantId === match.participant2Id) return match.participant1Id
+  return null
 }
 
 async function advanceWinnerToNextMatch(
@@ -935,18 +1110,37 @@ async function resolveBracketLifecycleStatus(
   return { ok: true, status: "template" }
 }
 
-function hasValidNextMatchChain(matches: BracketTemplateMatch[]) {
+function hasValidNextMatchChain(
+  matches: {
+    id: string
+    next_match_id: string | null
+    next_match_slot: number | null
+    loser_next_match_id?: string | null
+    loser_next_match_slot?: number | null
+  }[],
+) {
   const ids = new Set(matches.map((match) => match.id))
 
   return matches.every((match) => {
-    if (!match.next_match_id && match.next_match_slot === null) return true
-
-    return (
-      typeof match.next_match_id === "string" &&
-      ids.has(match.next_match_id) &&
-      (match.next_match_slot === 1 || match.next_match_slot === 2)
+    const winnerPathValid = isValidMatchPath(ids, match.next_match_id, match.next_match_slot)
+    const loserPathValid = isValidMatchPath(
+      ids,
+      match.loser_next_match_id ?? null,
+      match.loser_next_match_slot ?? null,
     )
+
+    return winnerPathValid && loserPathValid
   })
+}
+
+function isValidMatchPath(ids: Set<string>, nextMatchId: string | null, nextMatchSlot: number | null) {
+  if (!nextMatchId && nextMatchSlot === null) return true
+
+  return (
+    typeof nextMatchId === "string" &&
+    ids.has(nextMatchId) &&
+    (nextMatchSlot === 1 || nextMatchSlot === 2)
+  )
 }
 
 async function getAssignableParticipant(
@@ -1090,6 +1284,93 @@ async function findDuplicateBracketAssignment(
   })
 }
 
+async function loadTournamentGenerationContext(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  tournamentId: string,
+) {
+  const { data: tournament, error: tournamentErr } = await supabaseAdmin
+    .from("tournaments")
+    .select("id, participant_type, tournament_format, format_config")
+    .eq("id", tournamentId)
+    .maybeSingle()
+
+  if (tournamentErr || !tournament) {
+    return { ok: false as const, error: "tournament-not-found" }
+  }
+
+  const tournamentFormat = normalizeTournamentFormat(tournament.tournament_format)
+
+  const { data: participantRows, error: participantsErr } = await supabaseAdmin
+    .from("participants")
+    .select("id, display_name, seed")
+    .eq("tournament_id", tournamentId)
+
+  if (participantsErr) {
+    logMutationError("load participants for tournament engine", participantsErr)
+    return { ok: false as const, error: "mutation-failed" }
+  }
+
+  const participants: SeedableParticipant[] = (participantRows ?? [])
+    .filter((row) => typeof row.display_name === "string" && row.display_name.trim().length > 0)
+    .map((row) => ({
+      id: String(row.id),
+      displayName: String(row.display_name).trim(),
+      seed: typeof row.seed === "number" ? row.seed : null,
+    }))
+
+  return {
+    ok: true as const,
+    tournamentFormat,
+    participantType: tournament.participant_type === "player" ? "player" as const : "team" as const,
+    config: normalizeTournamentFormatConfig(tournamentFormat, tournament.format_config),
+    participants,
+  }
+}
+
+async function loadBracketMatches(
+  supabaseAdmin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  tournamentId: string,
+  bracketId: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("matches")
+    .select("id, tournament_id, round, match_order, team1, team2, score1, score2, status, participant_type, participant_1_id, participant_2_id, winner_participant_id, bracket_id, bracket_type, bracket_status, round_order, bracket_round, bracket_position, next_match_id, next_match_slot, loser_next_match_id, loser_next_match_slot")
+    .eq("tournament_id", tournamentId)
+    .eq("bracket_id", bracketId)
+    .order("round_order", { ascending: true, nullsFirst: false })
+    .order("bracket_position", { ascending: true, nullsFirst: false })
+    .order("match_order", { ascending: true, nullsFirst: false })
+
+  if (error) {
+    logMutationError("load bracket matches for tournament engine", error)
+    return { ok: false as const, error: "mutation-failed" }
+  }
+
+  const matches = (data ?? []).map((match) => ({
+    ...match,
+    status: match.status === "live" || match.status === "finished" ? match.status : "upcoming" as const,
+    participant_type: match.participant_type === "player" ? "player" as const : "team" as const,
+    score1: typeof match.score1 === "number" ? match.score1 : null,
+    score2: typeof match.score2 === "number" ? match.score2 : null,
+    match_order: typeof match.match_order === "number" ? match.match_order : null,
+    round_order: typeof match.round_order === "number" ? match.round_order : null,
+    bracket_position: typeof match.bracket_position === "number" ? match.bracket_position : null,
+    next_match_slot: typeof match.next_match_slot === "number" ? match.next_match_slot : null,
+    loser_next_match_slot: typeof match.loser_next_match_slot === "number" ? match.loser_next_match_slot : null,
+  }))
+
+  if (matches.length === 0) {
+    return { ok: false as const, error: "bracket-match-not-found" }
+  }
+
+  return { ok: true as const, matches }
+}
+
+function isGroupStageRound(label: string | null | undefined) {
+  if (!label) return false
+  return /^(Group\s+([A-Z]+|\d+))\s+-\s+Round\s+\d+$/i.test(label)
+}
+
 
 export async function autoGenerateBracket(formData: FormData) {
   await requireAdminSession()
@@ -1109,13 +1390,15 @@ export async function autoGenerateBracket(formData: FormData) {
   // Load the tournament (for participant type).
   const { data: tournament, error: tournamentErr } = await supabaseAdmin
     .from("tournaments")
-    .select("id, participant_type")
+    .select("id, participant_type, tournament_format, format_config")
     .eq("id", tournamentId)
     .maybeSingle()
 
   if (tournamentErr || !tournament) {
     redirect("/admin?tab=bracket&matchError=tournament-not-found#bracket")
   }
+
+  const tournamentFormat = normalizeTournamentFormat(tournament.tournament_format)
 
   // Load confirmed participants for this tournament.
   const { data: participantRows, error: participantsErr } = await supabaseAdmin
@@ -1138,11 +1421,6 @@ export async function autoGenerateBracket(formData: FormData) {
 
   if (participants.length < 2) {
     redirect("/admin?tab=bracket&matchError=not-enough-participants#bracket")
-  }
-
-  const bracketSize = nextBracketSize(participants.length)
-  if (!bracketSize) {
-    redirect("/admin?tab=bracket&matchError=too-many-participants#bracket")
   }
 
   // Block / confirm when a bracket already exists (mirror manual generation).
@@ -1175,22 +1453,26 @@ export async function autoGenerateBracket(formData: FormData) {
   }
 
   const startingMatchOrder = await getNextMatchOrder(supabaseAdmin, tournamentId)
-  const { matches: templateMatches } = createBracketTemplateMatches({
+  const generated = generateTournamentStructure({
     tournamentId,
-    bracketSize,
+    tournamentFormat,
+    participants,
     startingMatchOrder,
     participantType: tournament.participant_type as "team" | "player",
+    seedMethod: method,
+    config: normalizeTournamentFormatConfig(tournamentFormat, tournament.format_config),
   })
 
-  if (!hasValidNextMatchChain(templateMatches)) {
+  if (!generated.ok) {
+    redirect(`/admin?tab=bracket&matchError=${generated.error}#bracket`)
+  }
+
+  if (!hasValidNextMatchChain(generated.data.matches)) {
     redirect("/admin?tab=bracket&matchError=invalid-bracket-chain#bracket")
   }
 
-  // Seed participants into round 1 and auto-resolve byes.
-  const { matches: seededMatches } = seedRoundOne(templateMatches, participants, method, bracketSize)
-
   const { error } = await runSupabaseMutation("auto generate bracket", () =>
-    supabaseAdmin.from("matches").insert(seededMatches),
+    supabaseAdmin.from("matches").insert(generated.data.matches),
   )
   if (error) {
     logMutationError("auto generate bracket", error)

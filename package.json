@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:engines": "node scripts/test-tournament-engines.mjs",
     "qa:smoke": "node scripts/qa-smoke.mjs"
   },
   "dependencies": {

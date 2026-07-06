@@ -21,6 +21,10 @@ export type AdminResult = {
   note: string | null
   participant_type: string | null
   participant_id: string | null
+  lobby_round: number | null
+  lobby_order: number | null
+  kills: number | null
+  points: number | null
 }
 
 export type AdminResultQueryResult = {
@@ -38,7 +42,7 @@ export async function getAdminResults(): Promise<AdminResultQueryResult> {
   const { rows, error } = await runAdminRowsQuery("results", async () => {
     const result = await supabase
       .from("results")
-      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id")
+      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id, lobby_round, lobby_order, kills, points")
       .order("placement", { ascending: true, nullsFirst: false })
 
     if (isMissingColumnError(result.error)) {
@@ -69,6 +73,10 @@ function normalizeResult(row: Record<string, unknown>): AdminResult | null {
     note: readNullableString(row.note),
     participant_type: readParticipantType(row.participant_type),
     participant_id: readStringId(row.participant_id),
+    lobby_round: readNullableInteger(row.lobby_round),
+    lobby_order: readNullableInteger(row.lobby_order),
+    kills: readNullableInteger(row.kills),
+    points: readNullableInteger(row.points),
   }
 }
 

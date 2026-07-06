@@ -104,7 +104,10 @@ assertMatches("results cascade migration", cascadeMigration, /alter table result
 
 const bracketActions = read("app/admin/actions/brackets.ts")
 assertContains("bracket generation action exists", bracketActions, "export async function generateBracketTemplate")
-assertContains("bracket template builder is used", bracketActions, "createBracketTemplateMatches")
+assertContains("tournament engine template generation is used", bracketActions, "createTournamentTemplate")
+assertContains("tournament engine seeded generation is used", bracketActions, "generateTournamentStructure")
+assertContains("Swiss next round action exists", bracketActions, "export async function generateNextSwissRoundAction")
+assertContains("Groups playoffs action exists", bracketActions, "export async function generateGroupsPlayoffsAction")
 assertContains("bracket chain validation exists", bracketActions, "hasValidNextMatchChain")
 assertContains("bracket duplicate assignment guard exists", bracketActions, "duplicate-bracket-participant")
 assertContains("bracket winner propagation exists", bracketActions, "syncBracketWinnerPropagation")

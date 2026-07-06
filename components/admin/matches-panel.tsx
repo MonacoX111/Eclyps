@@ -20,7 +20,18 @@ import {
   getScheduleDateInputValueForTimeZone,
   getScheduleTimeInputValueForTimeZone,
 } from "@/lib/matches/schedule"
-import { assignBracketSlot, autoGenerateBracket, createMatch, deleteMatch, generateBracketTemplate, updateBracketMatch, updateBracketStatus, updateMatch } from "@/app/admin/actions"
+import {
+  assignBracketSlot,
+  autoGenerateBracket,
+  createMatch,
+  deleteMatch,
+  generateBracketTemplate,
+  generateGroupsPlayoffsAction,
+  generateNextSwissRoundAction,
+  updateBracketMatch,
+  updateBracketStatus,
+  updateMatch,
+} from "@/app/admin/actions"
 import { MatchParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
 import {
@@ -353,6 +364,12 @@ function BracketEditor({
               tournamentId={bracket.tournamentId}
               status={bracket.status}
             />
+            <BracketFormatControls
+              bracketId={bracket.bracketId}
+              tournamentId={bracket.tournamentId}
+              bracketType={bracket.type}
+              matches={bracket.matches}
+            />
 
             <ParticipantPool
               participants={bracketParticipants}
@@ -444,6 +461,72 @@ function BracketStatusControls({
       )}
     </div>
   )
+}
+
+function BracketFormatControls({
+  bracketId,
+  tournamentId,
+  bracketType,
+  matches,
+}: {
+  bracketId: string
+  tournamentId: string
+  bracketType: string | null
+  matches: AdminMatch[]
+}) {
+  const { lang } = useLanguage()
+
+  if (bracketType === "swiss") {
+    const latestRound = Math.max(...matches.map((match) => match.round_order ?? 0))
+    const latestRoundMatches = matches.filter((match) => (match.round_order ?? 0) === latestRound)
+    const canGenerate = latestRound > 0 && latestRoundMatches.length > 0 && latestRoundMatches.every((match) => match.status === "finished")
+
+    return (
+      <form action={generateNextSwissRoundAction} className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <input type="hidden" name="tournament_id" value={tournamentId} />
+        <input type="hidden" name="bracket_id" value={bracketId} />
+        <p className="mb-3 text-xs leading-5 text-white/55">
+          {lang === "uk"
+            ? "Створює наступний Swiss round після завершення поточного раунду."
+            : "Creates the next Swiss round after the current round is finished."}
+        </p>
+        <button
+          type="submit"
+          disabled={!canGenerate}
+          className="w-full rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-300/50 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/35"
+        >
+          {lang === "uk" ? "Згенерувати наступний Swiss round" : "Generate next Swiss round"}
+        </button>
+      </form>
+    )
+  }
+
+  if (bracketType === "groups_then_playoffs") {
+    const hasPlayoffs = matches.some((match) => !isGroupStageRoundLabel(match.bracket_round ?? match.round))
+    const groupMatches = matches.filter((match) => isGroupStageRoundLabel(match.bracket_round ?? match.round))
+    const canGenerate = !hasPlayoffs && groupMatches.length > 0 && groupMatches.every((match) => match.status === "finished")
+
+    return (
+      <form action={generateGroupsPlayoffsAction} className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+        <input type="hidden" name="tournament_id" value={tournamentId} />
+        <input type="hidden" name="bracket_id" value={bracketId} />
+        <p className="mb-3 text-xs leading-5 text-white/55">
+          {lang === "uk"
+            ? "Створює playoff bracket після завершення всіх групових матчів."
+            : "Creates the playoff bracket after all group matches are finished."}
+        </p>
+        <button
+          type="submit"
+          disabled={!canGenerate}
+          className="w-full rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:border-emerald-300/50 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/35"
+        >
+          {lang === "uk" ? "Згенерувати playoffs" : "Generate playoffs"}
+        </button>
+      </form>
+    )
+  }
+
+  return null
 }
 
 function ParticipantPool({
@@ -931,6 +1014,7 @@ function groupBracketMatches(matches: AdminMatch[]) {
     return {
       tournamentId,
       bracketId,
+      type: sortedMatches.find((match) => match.bracket_type)?.bracket_type ?? null,
       status: resolveBracketStatus(sortedMatches),
       hasActiveMatches: sortedMatches.some(
         (match) => match.status === "live" || match.status === "finished",
@@ -994,6 +1078,11 @@ function normalizeBracketStatus(status: string | null): BracketLifecycleStatus {
   }
 
   return "template"
+}
+
+function isGroupStageRoundLabel(label: string | null | undefined) {
+  if (!label) return false
+  return /^(Group\s+([A-Z]+|\d+))\s+-\s+Round\s+\d+$/i.test(label)
 }
 
 function getBracketIssues(

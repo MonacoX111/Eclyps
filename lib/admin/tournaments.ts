@@ -5,6 +5,12 @@ import { supabase } from "@/lib/supabase/client"
 import { runAdminRowsQuery } from "@/lib/admin/query"
 import { getDisplayGameName } from "@/lib/games"
 import {
+  normalizeTournamentFormat,
+  normalizeTournamentFormatConfig,
+  type TournamentFormat,
+  type TournamentFormatConfig,
+} from "@/lib/tournament-formats"
+import {
   readNullableInteger,
   readNullableString,
   readParticipantType,
@@ -21,6 +27,8 @@ export type AdminTournament = {
   participant_type: "team" | "player"
   event_date: string | null
   format: string | null
+  tournament_format: TournamentFormat
+  format_config: TournamentFormatConfig
   team_count: number | null
   match_days: number | null
   status: string | null
@@ -57,7 +65,7 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
   const { rows, error } = await runAdminRowsQuery("tournaments", async () => {
     const result = await supabase
       .from("tournaments")
-      .select("id, name, game, game_mode, participant_type, event_date, format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
+      .select("id, name, game, game_mode, participant_type, event_date, format, tournament_format, format_config, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
       .order("created_at", { ascending: false })
 
     if (result.error && isMissingColumnError(result.error)) {
@@ -87,6 +95,8 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),
+    tournament_format: normalizeTournamentFormat(row.tournament_format),
+    format_config: normalizeTournamentFormatConfig(row.tournament_format, row.format_config),
     team_count: readNullableInteger(row.team_count),
     match_days: readPositiveInteger(row.match_days),
     status: readNullableString(row.status),

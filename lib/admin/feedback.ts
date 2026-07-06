@@ -267,6 +267,8 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
   if (searchParams?.matchSuccess === "bracket-locked") return feedback("success", "Bracket locked.", lang)
   if (searchParams?.matchSuccess === "bracket-unlocked") return feedback("success", "Bracket unlocked.", lang)
   if (searchParams?.matchSuccess === "bracket-match-updated") return feedback("success", "Bracket match updated.", lang)
+  if (searchParams?.matchSuccess === "swiss-round-generated") return feedback("success", "Next Swiss round generated.", lang)
+  if (searchParams?.matchSuccess === "playoffs-generated") return feedback("success", "Playoff bracket generated.", lang)
   if (!searchParams?.matchError) return null
 
   const message =
@@ -290,6 +292,15 @@ export function getMatchFeedback(searchParams?: Pick<AdminSearchParams, "matchEr
       "invalid-channel-type": "Channel type is invalid.",
       "invalid-channel-url": "Invalid channel URL",
       "invalid-bracket-size": "Bracket size must be 2, 4, 8, or 16 participants.",
+      "unsupported-tournament-format": "This tournament format does not have a generation engine available.",
+      "wrong-tournament-engine": "This action does not match the tournament format.",
+      "swiss-round-incomplete": "Finish every match in the current Swiss round before generating the next one.",
+      "swiss-round-limit-reached": "All configured Swiss rounds have already been generated.",
+      "swiss-pairing-failed": "Swiss pairings could not be generated without repeat opponents.",
+      "groups-incomplete": "Finish every group-stage match before generating playoffs.",
+      "playoffs-already-generated": "Playoff matches have already been generated for this tournament.",
+      "invalid-format-config": "Tournament format configuration is invalid.",
+      "invalid-lobby-size": "Lobby size is invalid for this tournament.",
       "invalid-bracket": "Bracket id is missing.",
       "invalid-bracket-status": "Bracket status action is invalid.",
       "bracket-confirm-required":

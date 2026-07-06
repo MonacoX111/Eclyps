@@ -44,13 +44,25 @@ export function RegistrationSection({
 }: RegistrationSectionProps) {
   const { t, lang } = useLanguage()
 
-  if (!summary) return null
-
   const userProfile = platformState?.userProfile ?? null
   const userAvatarUrl = withAvatarCacheBust(userProfile?.avatar_url, userProfile?.updated_at)
   const approvedPlayer = platformState?.approvedPlayer ?? null
   const playerApplication = platformState?.playerApplication ?? null
   const tournamentRegistration = platformState?.tournamentRegistration ?? null
+  const manageableTeams = platformState?.manageableTeams ?? []
+  const approvedTeams = manageableTeams.filter((t) => t.status === "approved")
+  
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState(approvedTeams[0]?.id ?? "")
+
+  useEffect(() => {
+    if (approvedTeams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(approvedTeams[0].id)
+    }
+  }, [approvedTeams, selectedTeamId])
+
+  if (!summary) return null
+
   const isDisabled = summary.isClosed || summary.isFull
   
   const typeLabel = summary.participantType === "player" 
@@ -80,18 +92,6 @@ export function RegistrationSection({
     t,
   })
   
-  const manageableTeams = platformState?.manageableTeams ?? []
-  const approvedTeams = manageableTeams.filter((t) => t.status === "approved")
-  
-  const [showOnboardingModal, setShowOnboardingModal] = useState(false)
-  const [selectedTeamId, setSelectedTeamId] = useState(approvedTeams[0]?.id ?? "")
-
-  useEffect(() => {
-    if (approvedTeams.length > 0 && !selectedTeamId) {
-      setSelectedTeamId(approvedTeams[0].id)
-    }
-  }, [approvedTeams, selectedTeamId])
-
   const selectedTeam = approvedTeams.find((t) => t.id === selectedTeamId)
   const isTeamAlreadyRegistered = summary.participantType === "team" && selectedTeam?.isRegistered
   const isTeamEligible = summary.participantType !== "team" || (selectedTeam && selectedTeam.eligibility?.allowed)

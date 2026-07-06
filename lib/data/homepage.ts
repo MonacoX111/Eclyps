@@ -4,15 +4,18 @@ import type { MatchScheduleItem } from "@/components/match-schedule"
 import type {
   PublicBracketData,
   PublicBracketLabels,
+  PublicLeaderboardStanding,
   PublicBracketMatch,
   PublicBracketParticipant,
   PublicBracketRound,
+  PublicRoundRobinStanding,
 } from "@/components/public-bracket"
 import type { ResultCard } from "@/components/results"
 import type { TeamCard } from "@/components/teams-grid"
 import { formatEventDate, formatEventMonthYear } from "@/lib/date-format"
 import { getLanguage } from "@/lib/i18n/server"
 import { getDisplayGameName } from "@/lib/games"
+import { getTournamentFormatLabel, normalizeTournamentFormat, type TournamentFormat } from "@/lib/tournament-formats"
 import { supabase } from "@/lib/supabase/client"
 import {
   readMatchStatus,
@@ -49,6 +52,7 @@ export type HomepageTournament = {
   participant_type: "team" | "player" | null
   event_date: string | null
   format: string | null
+  tournament_format: TournamentFormat
   team_count: number | null
   match_days: number | null
   status: string | null
@@ -145,6 +149,10 @@ export type HomepageResult = {
   note: string | null
   participant_type: "team" | "player"
   participant_id: string | null
+  lobby_round: number | null
+  lobby_order: number | null
+  kills: number | null
+  points: number | null
 }
 
 export type TournamentBlocksView = {
@@ -413,7 +421,7 @@ async function fetchHomepageResults(tournamentId: string): Promise<HomepageResul
   try {
     const { data, error } = await supabase
       .from("results")
-      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id")
+      .select("id, tournament_id, team, placement, label, mvp, scoreline, note, participant_type, participant_id, lobby_round, lobby_order, kills, points")
       .eq("tournament_id", tournamentId)
       .order("placement", { ascending: true, nullsFirst: false })
 
@@ -494,7 +502,7 @@ async function createHomepageData({
       ? getTournamentBlocksView(tournament, participantType, tournamentParticipantCount, lang)
       : null,
     participantCards,
-    publicBracket: getPublicBracketData(bracketMatches, tournament),
+    publicBracket: getPublicBracketData(bracketMatches, tournament, results),
     matchScheduleItems: getMatchScheduleItems(visibleMatches),
     resultCards: getResultCards(results, tournament),
     registrationSummary,
@@ -520,6 +528,7 @@ function normalizeHomepageTournament(
     participant_type: readTournamentParticipantType(row.participant_type),
     event_date: readNullableString(row.event_date),
     format: readNullableString(row.format),
+    tournament_format: normalizeTournamentFormat(row.tournament_format),
     team_count: readNullableInteger(row.team_count),
     match_days: readPositiveInteger(row.match_days),
     status: readNullableString(row.status),
@@ -697,6 +706,10 @@ function normalizeHomepageResult(row: Record<string, unknown>): HomepageResult |
     note: readNullableString(row.note),
     participant_type: readParticipantType(row.participant_type),
     participant_id: readStringId(row.participant_id),
+    lobby_round: readNullableInteger(row.lobby_round),
+    lobby_order: readNullableInteger(row.lobby_order),
+    kills: readNullableInteger(row.kills),
+    points: readNullableInteger(row.points),
   }
 }
 
@@ -926,6 +939,7 @@ function getMatchScheduleItems(matches: HomepageMatch[]): MatchScheduleItem[] {
 function getPublicBracketData(
   bracketMatches: HomepageMatch[],
   tournament: HomepageTournament | null,
+  results: HomepageResult[] = [],
 ): PublicBracketData | null {
   const sortedBracketMatches = [...bracketMatches].sort(compareBracketMatches)
 
@@ -964,13 +978,181 @@ function getPublicBracketData(
       }
     })
 
+  const bracketType = selectedBracketMatches.find((match) => match.bracket_type)?.bracket_type ?? tournament?.tournament_format ?? null
+  const isTableFormat = bracketType === "round_robin" || bracketType === "swiss" || bracketType === "groups_then_playoffs"
+  const isLeaderboardFormat = bracketType === "battle_royale" || bracketType === "free_for_all"
+  const standingsMatches = bracketType === "groups_then_playoffs"
+    ? selectedBracketMatches.filter((match) => isGroupRoundLabel(match.bracket_round ?? match.round))
+    : selectedBracketMatches
+
   return {
     id: bracketId,
+    type: bracketType,
+    formatLabel: getTournamentFormatLabel(bracketType ?? tournament?.tournament_format),
     status: selectedBracketMatches.find((match) => match.bracket_status)?.bracket_status ?? null,
     labels: getPublicBracketLabels(tournament),
     rounds,
-    champion: getBracketChampion(selectedBracketMatches),
+    champion: isTableFormat || isLeaderboardFormat ? null : getBracketChampion(selectedBracketMatches),
+    standings: isTableFormat
+      ? getRoundRobinStandings(standingsMatches, {
+          includeGroups: bracketType === "groups_then_playoffs",
+          includeBuchholz: bracketType === "swiss",
+        })
+      : undefined,
+    leaderboard: isLeaderboardFormat ? getLeaderboardStandings(results) : undefined,
   }
+}
+
+function getRoundRobinStandings(
+  matches: HomepageMatch[],
+  options: { includeGroups?: boolean; includeBuchholz?: boolean } = {},
+): PublicRoundRobinStanding[] {
+  const table = new Map<string, PublicRoundRobinStanding>()
+  const opponents = new Map<string, Set<string>>()
+
+  const ensureRow = (participantId: string | null, name: string | null, groupLabel?: string | null) => {
+    if (!participantId) return null
+    const group = options.includeGroups ? parseGroupLabel(groupLabel) : null
+    const key = group ? `${group.key}:${participantId}` : participantId
+    const existing = table.get(key)
+    if (existing) return existing
+
+    const row: PublicRoundRobinStanding = {
+      participantId,
+      name: name ?? "TBD",
+      groupKey: group?.key,
+      groupLabel: group?.label,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      scoreDiff: 0,
+      points: 0,
+    }
+    table.set(key, row)
+    opponents.set(key, new Set())
+    return row
+  }
+
+  for (const match of matches) {
+    const left = ensureRow(match.participant_1_id, match.team1, match.bracket_round ?? match.round)
+    const right = ensureRow(match.participant_2_id, match.team2, match.bracket_round ?? match.round)
+    if (options.includeBuchholz && left && right) {
+      opponents.get(getStandingKey(left))?.add(getStandingKey(right))
+      opponents.get(getStandingKey(right))?.add(getStandingKey(left))
+    }
+    if (!left || !right || match.status !== "finished") continue
+    if (match.score1 === null || match.score2 === null) continue
+
+    left.played += 1
+    right.played += 1
+    left.pointsFor += match.score1
+    left.pointsAgainst += match.score2
+    right.pointsFor += match.score2
+    right.pointsAgainst += match.score1
+    left.scoreDiff = left.pointsFor - left.pointsAgainst
+    right.scoreDiff = right.pointsFor - right.pointsAgainst
+
+    const leftWon = match.winner_participant_id === match.participant_1_id || (!match.winner_participant_id && match.score1 > match.score2)
+    const rightWon = match.winner_participant_id === match.participant_2_id || (!match.winner_participant_id && match.score2 > match.score1)
+
+    if (leftWon && !rightWon) {
+      left.wins += 1
+      right.losses += 1
+      left.points += 3
+    } else if (rightWon && !leftWon) {
+      right.wins += 1
+      left.losses += 1
+      right.points += 3
+    } else {
+      left.draws += 1
+      right.draws += 1
+      left.points += 1
+      right.points += 1
+    }
+  }
+
+  if (options.includeBuchholz) {
+    for (const row of table.values()) {
+      const rowOpponents = Array.from(opponents.get(getStandingKey(row)) ?? [])
+        .map((key) => table.get(key))
+        .filter(Boolean) as PublicRoundRobinStanding[]
+      row.buchholz = rowOpponents.reduce((total, opponent) => total + opponent.points, 0)
+      row.omw = rowOpponents.length
+        ? rowOpponents.reduce((total, opponent) => total + (opponent.played > 0 ? opponent.wins / opponent.played : 0), 0) / rowOpponents.length
+        : 0
+    }
+  }
+
+  const sorted = Array.from(table.values()).sort((a, b) => {
+    const groupCompare = (a.groupKey ?? "").localeCompare(b.groupKey ?? "")
+    if (options.includeGroups && groupCompare !== 0) return groupCompare
+    if (a.points !== b.points) return b.points - a.points
+    if (a.scoreDiff !== b.scoreDiff) return b.scoreDiff - a.scoreDiff
+    if (a.pointsFor !== b.pointsFor) return b.pointsFor - a.pointsFor
+    if (a.wins !== b.wins) return b.wins - a.wins
+    return a.name.localeCompare(b.name)
+  })
+
+  let currentGroup = ""
+  let rank = 0
+  return sorted.map((row) => {
+    const groupKey = row.groupKey ?? ""
+    rank = groupKey === currentGroup ? rank + 1 : 1
+    currentGroup = groupKey
+    return { ...row, rank }
+  })
+}
+
+function getLeaderboardStandings(results: HomepageResult[]): PublicLeaderboardStanding[] {
+  const rows = new Map<string, PublicLeaderboardStanding>()
+
+  for (const result of results) {
+    if (!result.participant_id && !result.team) continue
+    const participantId = result.participant_id ?? result.team ?? "participant"
+    const existing = rows.get(participantId) ?? {
+      participantId,
+      name: result.team ?? result.label ?? "TBD",
+      placement: null,
+      played: 0,
+      wins: 0,
+      kills: 0,
+      points: 0,
+    }
+
+    existing.played += 1
+    existing.wins += result.placement === 1 ? 1 : 0
+    existing.kills = (existing.kills ?? 0) + (result.kills ?? 0)
+    existing.points += result.points ?? (result.placement ? Math.max(0, 21 - result.placement) + (result.kills ?? 0) : 0)
+    existing.placement = result.placement && (!existing.placement || result.placement < existing.placement)
+      ? result.placement
+      : existing.placement
+    rows.set(participantId, existing)
+  }
+
+  return Array.from(rows.values()).sort((left, right) => {
+    if (left.points !== right.points) return right.points - left.points
+    if (left.wins !== right.wins) return right.wins - left.wins
+    if ((left.kills ?? 0) !== (right.kills ?? 0)) return (right.kills ?? 0) - (left.kills ?? 0)
+    return left.name.localeCompare(right.name)
+  }).map((row, index) => ({ ...row, placement: index + 1 }))
+}
+
+function parseGroupLabel(label: string | null | undefined) {
+  if (!label) return null
+  const match = /^(Group\s+([A-Z]+|\d+))\s+-\s+Round\s+\d+$/i.exec(label)
+  if (!match) return null
+  return { key: match[2].toUpperCase(), label: match[1] }
+}
+
+function isGroupRoundLabel(label: string | null | undefined) {
+  return Boolean(parseGroupLabel(label))
+}
+
+function getStandingKey(row: Pick<PublicRoundRobinStanding, "participantId" | "groupKey">) {
+  return row.groupKey ? `${row.groupKey}:${row.participantId}` : row.participantId
 }
 
 function getPublicBracketLabels(tournament: HomepageTournament | null): PublicBracketLabels {

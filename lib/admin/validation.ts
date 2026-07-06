@@ -6,6 +6,12 @@ import { parseKyivDateTimeInput } from "@/lib/check-ins/time"
 import { MATCH_STATUSES, isWinnerSelection } from "@/lib/matches/core"
 import { DEFAULT_MATCH_TIMEZONE, normalizeTimeZone } from "@/lib/matches/schedule"
 import { getGameConfig } from "@/lib/games"
+import {
+  TOURNAMENT_FORMATS,
+  buildTournamentFormatConfigFromFormData,
+  validateTournamentFormatSetup,
+  type TournamentFormatConfig,
+} from "@/lib/tournament-formats"
 
 const participantTypes = ["team", "player"] as const
 const registrationStatuses = ["approved", "rejected"] as const
@@ -37,6 +43,7 @@ export const tournamentSchema = z.object({
   participant_type: participantTypeSchema(),
   event_date: optionalString(),
   format: optionalString(),
+  tournament_format: z.enum(TOURNAMENT_FORMATS),
   team_count: positiveInteger(),
   match_days: positiveInteger(),
   status: statusSchema(),
@@ -118,6 +125,10 @@ export const resultSchema = z.object({
   scoreline: optionalString(),
   note: optionalString(),
   participant_type: participantTypeSchema(),
+  lobby_round: optionalPositiveInteger(),
+  lobby_order: optionalPositiveInteger(),
+  kills: optionalNonNegativeInteger(),
+  points: optionalNonNegativeInteger(),
 })
 
 export const bracketTemplateSchema = z.object({
@@ -185,7 +196,9 @@ export const disputeReviewSchema = z.object({
 
 export type AdminLoginInput = z.infer<typeof loginPasswordSchema>
 export type ActiveTournamentInput = z.infer<typeof activeTournamentSchema>
-export type TournamentInput = z.infer<typeof tournamentSchema>
+export type TournamentInput = z.infer<typeof tournamentSchema> & {
+  format_config: TournamentFormatConfig
+}
 export type TeamInput = z.infer<typeof teamSchema>
 export type PlayerInput = z.infer<typeof playerSchema>
 export type MatchInput = z.infer<typeof matchSchema>
@@ -232,14 +245,36 @@ export function parseRequiredIdFormData(
 export function parseTournamentFormData(
   formData: FormData,
 ): ParseResult<TournamentInput> {
-  return parseFormData(tournamentSchema, formData, {
+  const parsed = parseFormData(tournamentSchema, formData, {
     name: "invalid-name",
     game: "invalid-game",
     participant_type: "invalid-participant-type",
     team_count: "invalid-team-count",
     match_days: "invalid-match-days",
+    tournament_format: "invalid-tournament-format",
     status: "invalid-status",
   })
+
+  if (!parsed.ok) return parsed
+
+  const formatConfig = buildTournamentFormatConfigFromFormData(parsed.data.tournament_format, formData)
+  const setupError = validateTournamentFormatSetup(
+    parsed.data.tournament_format,
+    parsed.data.team_count,
+    formatConfig,
+  )
+
+  if (setupError) {
+    return { ok: false, error: setupError }
+  }
+
+  return {
+    ok: true,
+    data: {
+      ...parsed.data,
+      format_config: formatConfig,
+    },
+  }
 }
 
 export function parseTeamFormData(formData: FormData): ParseResult<TeamInput> {
@@ -287,6 +322,10 @@ export function parseResultFormData(formData: FormData): ParseResult<ResultInput
     team: "invalid-result-team",
     placement: "invalid-placement",
     participant_type: "invalid-participant-type",
+    lobby_round: "invalid-placement",
+    lobby_order: "invalid-placement",
+    kills: "invalid-score",
+    points: "invalid-score",
   })
 }
 

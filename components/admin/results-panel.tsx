@@ -169,6 +169,18 @@ function ResultForm({
       <AdminField label={t.admin.results.noteField} hint={fh.results.note}>
         <input name="note" defaultValue={result?.note ?? ""} className={inputClassName} />
       </AdminField>
+      <AdminField label={lang === "uk" ? "Lobby round" : "Lobby round"}>
+        <input name="lobby_round" type="number" min={1} step={1} defaultValue={result?.lobby_round ?? ""} className={inputClassName} />
+      </AdminField>
+      <AdminField label={lang === "uk" ? "Lobby" : "Lobby"}>
+        <input name="lobby_order" type="number" min={1} step={1} defaultValue={result?.lobby_order ?? ""} className={inputClassName} />
+      </AdminField>
+      <AdminField label={lang === "uk" ? "Kills" : "Kills"}>
+        <input name="kills" type="number" min={0} step={1} defaultValue={result?.kills ?? ""} className={inputClassName} />
+      </AdminField>
+      <AdminField label={lang === "uk" ? "Points" : "Points"}>
+        <input name="points" type="number" min={0} step={1} defaultValue={result?.points ?? ""} className={inputClassName} />
+      </AdminField>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
     </form>
   )

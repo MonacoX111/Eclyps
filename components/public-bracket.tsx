@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { m } from "framer-motion"
-import { ExternalLink, Radio, Trophy } from "lucide-react"
+import { ExternalLink, GitBranch, ListOrdered, Radio, Table2, Trophy, UsersRound } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { useLanguage } from "@/components/language-provider"
 import { useRealtimeRefresh } from "@/lib/hooks/use-realtime-refresh"
@@ -32,12 +32,44 @@ export type PublicBracketRound = {
   matches: PublicBracketMatch[]
 }
 
+export type PublicRoundRobinStanding = {
+  participantId: string
+  name: string
+  groupKey?: string
+  groupLabel?: string
+  rank?: number
+  played: number
+  wins: number
+  draws: number
+  losses: number
+  pointsFor: number
+  pointsAgainst: number
+  scoreDiff: number
+  points: number
+  buchholz?: number
+  omw?: number
+}
+
+export type PublicLeaderboardStanding = {
+  participantId: string
+  name: string
+  placement: number | null
+  played: number
+  wins: number
+  kills?: number
+  points: number
+}
+
 export type PublicBracketData = {
   id: string
+  type?: string | null
+  formatLabel?: string | null
   status: string | null
   labels: PublicBracketLabels
   rounds: PublicBracketRound[]
   champion: string | null
+  standings?: PublicRoundRobinStanding[]
+  leaderboard?: PublicLeaderboardStanding[]
 }
 
 export type PublicBracketLabels = {
@@ -79,6 +111,7 @@ export function PublicBracket({ bracket, showMatchPageLink = true }: PublicBrack
   const finalOnly =
     hasBracket && bracket!.rounds.length === 1 && bracket!.rounds[0]?.matches.length === 1
   const finalMatch = hasBracket ? bracket!.rounds.at(-1)?.matches.at(-1) ?? null : null
+  const bracketType = bracket?.type ?? null
 
   return (
     <section className="relative z-10 px-4 py-24" id="bracket">
@@ -88,9 +121,20 @@ export function PublicBracket({ bracket, showMatchPageLink = true }: PublicBrack
         <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-black/30 px-4 py-6 shadow-[0_0_60px_oklch(0.78_0.18_165_/_0.06)] md:px-6 md:py-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,oklch(0.78_0.18_165_/_0.10),transparent_36%)]" />
+          {hasBracket ? <FormatBadge bracket={bracket!} /> : null}
 
           {!hasBracket ? (
             <BracketEmptyState />
+          ) : bracketType === "round_robin" ? (
+            <TableFormatView bracket={bracket!} title="Round Robin" subtitle="Standings" />
+          ) : bracketType === "swiss" ? (
+            <SwissBracket bracket={bracket!} />
+          ) : bracketType === "groups_then_playoffs" ? (
+            <GroupsPlayoffsBracket bracket={bracket!} />
+          ) : bracketType === "battle_royale" || bracketType === "free_for_all" ? (
+            <LobbyLeaderboardBracket bracket={bracket!} />
+          ) : bracketType === "double_elimination" ? (
+            <DoubleEliminationBracket bracket={bracket!} />
           ) : finalOnly && finalMatch ? (
             <FinalOnlyBracket
               match={finalMatch}
@@ -104,6 +148,22 @@ export function PublicBracket({ bracket, showMatchPageLink = true }: PublicBrack
         </div>
       </div>
     </section>
+  )
+}
+
+function FormatBadge({ bracket }: { bracket: PublicBracketData }) {
+  return (
+    <div className="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-3">
+      <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-primary">
+        <GitBranch className="h-3.5 w-3.5" />
+        {bracket.formatLabel ?? getFormatLabel(bracket.type)}
+      </span>
+      {bracket.status ? (
+        <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
+          {bracket.status}
+        </span>
+      ) : null}
+    </div>
   )
 }
 
@@ -191,6 +251,286 @@ function FinalOnlyBracket({
           </Link>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function TableFormatView({
+  bracket,
+  title,
+  subtitle,
+}: {
+  bracket: PublicBracketData
+  title: string
+  subtitle: string
+}) {
+  return (
+    <div className="relative z-10 space-y-8">
+      <StandingsTable standings={bracket.standings ?? []} title={title} subtitle={subtitle} />
+      <MatchListByRound bracket={bracket} />
+    </div>
+  )
+}
+
+function SwissBracket({ bracket }: { bracket: PublicBracketData }) {
+  return (
+    <div className="relative z-10 space-y-8">
+      <StandingsTable standings={bracket.standings ?? []} title="Swiss" subtitle="Standings" showBuchholz />
+      <MatchListByRound bracket={bracket} />
+    </div>
+  )
+}
+
+function GroupsPlayoffsBracket({ bracket }: { bracket: PublicBracketData }) {
+  const groupLabels = Array.from(new Set((bracket.standings ?? []).map((row) => row.groupLabel).filter(Boolean)))
+  const groupRounds = bracket.rounds.filter((round) => round.label.startsWith("Group "))
+  const playoffRounds = bracket.rounds.filter((round) => !round.label.startsWith("Group "))
+  const playoffBracket = { ...bracket, rounds: playoffRounds }
+
+  return (
+    <div className="relative z-10 space-y-8">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {groupLabels.map((groupLabel) => (
+          <StandingsTable
+            key={groupLabel}
+            standings={(bracket.standings ?? []).filter((row) => row.groupLabel === groupLabel)}
+            title={groupLabel ?? "Group"}
+            subtitle="Group table"
+            compact
+          />
+        ))}
+      </div>
+      {playoffRounds.length > 0 ? (
+        <MultiRoundBracket bracket={playoffBracket} finalMatch={playoffRounds.at(-1)?.matches.at(-1) ?? null} />
+      ) : (
+        <MatchListByRound bracket={{ ...bracket, rounds: groupRounds }} />
+      )}
+    </div>
+  )
+}
+
+function DoubleEliminationBracket({ bracket }: { bracket: PublicBracketData }) {
+  const winners = bracket.rounds.filter((round) => round.label.startsWith("Winners"))
+  const losers = bracket.rounds.filter((round) => round.label.startsWith("Losers"))
+  const finals = bracket.rounds.filter((round) => round.label.startsWith("Grand Final"))
+
+  return (
+    <div className="relative z-10 space-y-10">
+      <BracketRoundBand title="Winners Bracket" rounds={winners} icon="winners" />
+      <BracketRoundBand title="Losers Bracket" rounds={losers} icon="losers" />
+      <BracketRoundBand title="Grand Final" rounds={finals} icon="final" />
+    </div>
+  )
+}
+
+function LobbyLeaderboardBracket({ bracket }: { bracket: PublicBracketData }) {
+  return (
+    <div className="relative z-10 space-y-8">
+      <LeaderboardTable leaderboard={bracket.leaderboard ?? []} />
+      <LobbyRounds rounds={bracket.rounds} />
+    </div>
+  )
+}
+
+function StandingsTable({
+  standings,
+  title,
+  subtitle,
+  showBuchholz = false,
+  compact = false,
+}: {
+  standings: PublicRoundRobinStanding[]
+  title: string
+  subtitle: string
+  showBuchholz?: boolean
+  compact?: boolean
+}) {
+  if (standings.length === 0) return null
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-black/25">
+      <div className="border-b border-white/10 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/80">{title}</p>
+        <h3 className="mt-1 text-lg font-bold text-foreground">{subtitle}</h3>
+      </div>
+      <div className="bracket-scroll overflow-x-auto">
+        <table className="min-w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <tr className="border-b border-white/10">
+              <th className="px-4 py-3">#</th>
+              <th className="px-4 py-3">Participant</th>
+              <th className="px-4 py-3 text-center">P</th>
+              <th className="px-4 py-3 text-center">W</th>
+              <th className="px-4 py-3 text-center">D</th>
+              <th className="px-4 py-3 text-center">L</th>
+              <th className="px-4 py-3 text-center">Diff</th>
+              {showBuchholz ? <th className="px-4 py-3 text-center">Buchholz</th> : null}
+              {showBuchholz ? <th className="px-4 py-3 text-center">OMW</th> : null}
+              <th className="px-4 py-3 text-center">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {standings.map((row, index) => (
+              <tr key={row.participantId} className="border-b border-white/5 last:border-0">
+                <td className="px-4 py-3 font-mono text-primary">{index + 1}</td>
+                <td className="px-4 py-3 font-semibold text-foreground">{row.name}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.played}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.wins}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.draws}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.losses}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.scoreDiff}</td>
+                {showBuchholz ? <td className="px-4 py-3 text-center text-white/75">{row.buchholz ?? 0}</td> : null}
+                {showBuchholz ? <td className="px-4 py-3 text-center text-white/75">{formatPercent(row.omw)}</td> : null}
+                <td className="px-4 py-3 text-center font-bold text-primary">{row.points}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {compact ? null : (
+        <div className="border-t border-white/10 px-4 py-3 text-xs text-white/45">
+          Sorted by points, score diff, points for, wins, then name.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LeaderboardTable({ leaderboard }: { leaderboard: PublicLeaderboardStanding[] }) {
+  if (leaderboard.length === 0) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-black/25 p-5 text-sm text-white/60">
+        Leaderboard will appear after final placements are saved.
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-black/25">
+      <div className="border-b border-white/10 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/80">Leaderboard</p>
+        <h3 className="mt-1 text-lg font-bold text-foreground">Placements</h3>
+      </div>
+      <div className="bracket-scroll overflow-x-auto">
+        <table className="min-w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <tr className="border-b border-white/10">
+              <th className="px-4 py-3">#</th>
+              <th className="px-4 py-3">Participant</th>
+              <th className="px-4 py-3 text-center">Played</th>
+              <th className="px-4 py-3 text-center">Wins</th>
+              <th className="px-4 py-3 text-center">Kills</th>
+              <th className="px-4 py-3 text-center">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leaderboard.map((row, index) => (
+              <tr key={row.participantId} className="border-b border-white/5 last:border-0">
+                <td className="px-4 py-3 font-mono text-primary">{row.placement ?? index + 1}</td>
+                <td className="px-4 py-3 font-semibold text-foreground">{row.name}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.played}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.wins}</td>
+                <td className="px-4 py-3 text-center text-white/75">{row.kills ?? 0}</td>
+                <td className="px-4 py-3 text-center font-bold text-primary">{row.points}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function MatchListByRound({ bracket }: { bracket: PublicBracketData }) {
+  return (
+    <div className="space-y-4">
+      {bracket.rounds.map((round) => (
+        <div key={`${round.order}-${round.label}`} className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <Table2 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{round.label}</h3>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {round.matches.map((match) => (
+              <BracketMatchCard key={match.id} match={match} showConnector={false} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function LobbyRounds({ rounds }: { rounds: PublicBracketRound[] }) {
+  return (
+    <div className="space-y-4">
+      {rounds.map((round) => (
+        <div key={`${round.order}-${round.label}`} className="rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <UsersRound className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{round.label}</h3>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {round.matches.map((match) => (
+              <LobbyCard key={match.id} match={match} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function LobbyCard({ match }: { match: PublicBracketMatch }) {
+  return (
+    <Link
+      href={`/matches/${match.id}`}
+      className="block rounded-xl border border-white/10 bg-black/25 p-4 transition hover:border-primary/35"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+          <ListOrdered className="h-5 w-5" />
+        </span>
+        <StatusBadge status={match.status} />
+      </div>
+      <h4 className="mt-4 break-words text-base font-bold text-foreground">{match.label}</h4>
+      <p className="mt-2 text-sm text-white/55">{match.participants[1].name}</p>
+    </Link>
+  )
+}
+
+function BracketRoundBand({
+  title,
+  rounds,
+  icon,
+}: {
+  title: string
+  rounds: PublicBracketRound[]
+  icon: "winners" | "losers" | "final"
+}) {
+  if (rounds.length === 0) return null
+
+  const bandBracket: PublicBracketData = {
+    id: title,
+    status: null,
+    labels: {
+      title,
+      subtitle: title,
+      stageLabel: title,
+      participantLabel: "Participant",
+      arenaLabel: title,
+    },
+    rounds,
+    champion: null,
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+      <div className="mb-5 flex items-center gap-2">
+        {icon === "final" ? <Trophy className="h-4 w-4 text-primary" /> : <GitBranch className="h-4 w-4 text-primary" />}
+        <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{title}</h3>
+      </div>
+      <MultiRoundBracket bracket={bandBracket} finalMatch={rounds.at(-1)?.matches.at(-1) ?? null} />
     </div>
   )
 }
@@ -564,4 +904,21 @@ function getStatusClassName(status: PublicBracketMatch["status"]) {
 
 function formatStatus(status: PublicBracketMatch["status"], t: any) {
   return status === "finished" ? t.bracket.finished : t.bracket.upcoming
+}
+
+function getFormatLabel(type: string | null | undefined) {
+  return {
+    single_elimination: "Single Elimination",
+    double_elimination: "Double Elimination",
+    round_robin: "Round Robin",
+    swiss: "Swiss",
+    groups_then_playoffs: "Groups + Playoffs",
+    battle_royale: "Battle Royale",
+    free_for_all: "Free-for-All",
+  }[type ?? ""] ?? "Tournament"
+}
+
+function formatPercent(value: number | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0%"
+  return `${Math.round(value * 100)}%`
 }

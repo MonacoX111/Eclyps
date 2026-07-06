@@ -2,6 +2,12 @@ import { useState } from "react"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import { getGameConfig, getSupportedGames, normalizeGame } from "@/lib/games"
+import {
+  TOURNAMENT_FORMAT_DEFINITIONS,
+  getTournamentFormatDefinition,
+  normalizeTournamentFormatConfig,
+  type TournamentFormat,
+} from "@/lib/tournament-formats"
 import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/admin/formatters"
 import { createTournament, deleteTournament, updateTournament } from "@/app/admin/actions"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName } from "@/components/admin/admin-section"
@@ -71,7 +77,7 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           <div className="min-w-0">
             <h4 className="break-words font-medium">{tournament.name ?? t.admin.tournaments.untitledTournament}</h4>
             <p className="mt-1 break-words text-sm text-white/55">
-              {normalizeGame(tournament.game) === "CS 2" && tournament.game_mode ? `CS 2 (${gameConfig.name})` : (tournament.game ?? t.admin.tournaments.unknownGame)} {"\u2022"} {formatDisplayDate(tournament.event_date)}
+              {normalizeGame(tournament.game) === "CS 2" && tournament.game_mode ? `CS 2 (${gameConfig.name})` : (tournament.game ?? t.admin.tournaments.unknownGame)} {"\u2022"} {formatDisplayDate(tournament.event_date)} {"\u2022"} {getTournamentFormatDefinition(tournament.tournament_format).shortLabel}
             </p>
           </div>
 
@@ -101,6 +107,10 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           <div>
             <dt className="text-white/35">{t.admin.tournaments.participantTypeLabel}</dt>
             <dd className="mt-1">{formatParticipantType(tournament.participant_type, lang, t)}</dd>
+          </div>
+          <div>
+            <dt className="text-white/35">{isUkLabel(lang, "Структура турніру", "Tournament structure")}</dt>
+            <dd className="mt-1">{getTournamentFormatDefinition(tournament.tournament_format).label}</dd>
           </div>
           <div>
             <dt className="text-white/35">{t.admin.tournaments.matchDaysLabel}</dt>
@@ -162,6 +172,9 @@ function TournamentForm({
     (tournament?.participant_type as "team" | "player") ?? 
     (tournament?.game ? getGameConfig(tournament.game, initialMode).participantType : "team")
   )
+  const [selectedTournamentFormat, setSelectedTournamentFormat] = useState<TournamentFormat>(
+    tournament?.tournament_format ?? "single_elimination",
+  )
 
   const handleGameChange = (gameValue: string) => {
     setSelectedGame(gameValue)
@@ -179,6 +192,11 @@ function TournamentForm({
   }
 
   const gameConfig = getGameConfig(selectedGame, selectedMode)
+  const tournamentFormatDefinition = getTournamentFormatDefinition(selectedTournamentFormat)
+  const tournamentFormatConfig = normalizeTournamentFormatConfig(
+    selectedTournamentFormat,
+    tournament?.format_config,
+  )
 
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -260,6 +278,28 @@ function TournamentForm({
       <AdminField label={t.admin.tournaments.formatField} hint={hints.format}>
         <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
       </AdminField>
+
+      <AdminField label={isUk ? "Структура турніру" : "Tournament structure"} hint={hints.tournamentFormat}>
+        <select
+          name="tournament_format"
+          value={selectedTournamentFormat}
+          onChange={(e) => setSelectedTournamentFormat(e.target.value as TournamentFormat)}
+          className={inputClassName}
+        >
+          {TOURNAMENT_FORMAT_DEFINITIONS.map((format) => (
+            <option key={format.id} value={format.id} className="bg-neutral-900 text-white">
+              {format.label}{format.isImplemented ? "" : isUk ? " (engine скоро)" : " (engine soon)"}
+            </option>
+          ))}
+        </select>
+      </AdminField>
+
+      <TournamentFormatConfigFields
+        key={selectedTournamentFormat}
+        definition={tournamentFormatDefinition}
+        config={tournamentFormatConfig}
+        isUk={isUk}
+      />
 
       <AdminField label={t.admin.tournaments.participantTypeField} hint={hints.participantType}>
         <select
@@ -353,6 +393,217 @@ function TournamentForm({
   )
 }
 
+
+function TournamentFormatConfigFields({
+  definition,
+  config,
+  isUk,
+}: {
+  definition: ReturnType<typeof getTournamentFormatDefinition>
+  config: ReturnType<typeof normalizeTournamentFormatConfig>
+  isUk: boolean
+}) {
+  const fieldSet = new Set(definition.configurableFields)
+
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-primary/15 bg-primary/5 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
+            {isUk ? "Налаштування структури" : "Structure settings"}: {definition.label}
+          </p>
+          <p className="mt-2 text-sm leading-6 text-white/55">{definition.description}</p>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 px-2.5 py-1 text-xs text-white/60">
+          {definition.minParticipants}
+          {definition.maxParticipants ? `-${definition.maxParticipants}` : "+"} {isUk ? "учасників" : "participants"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {fieldSet.has("matches_per_opponent") && (
+          <AdminField
+            label={isUk ? "Матчів проти кожного суперника" : "Matches per opponent"}
+            hint={{
+              title: isUk ? "1 = один круг, 2 = double round-robin." : "1 = single round, 2 = double round-robin.",
+              example: "1 або 2",
+            }}
+          >
+            <input
+              name="config_matches_per_opponent"
+              type="number"
+              min={1}
+              max={4}
+              step={1}
+              defaultValue={config.matches_per_opponent}
+              className={inputClassName}
+            />
+          </AdminField>
+        )}
+
+        {fieldSet.has("swiss_rounds") && (
+          <AdminField
+            label={isUk ? "Кількість Swiss-раундів" : "Swiss rounds"}
+            hint={{
+              title: isUk ? "Порожньо = система сама порахує рекомендовану кількість." : "Empty = the engine will calculate a recommended round count.",
+              example: "5",
+            }}
+          >
+            <input
+              name="config_swiss_rounds"
+              type="number"
+              min={1}
+              max={20}
+              step={1}
+              defaultValue={config.swiss_rounds ?? ""}
+              className={inputClassName}
+            />
+          </AdminField>
+        )}
+
+        {fieldSet.has("group_count") && (
+          <AdminField
+            label={isUk ? "Кількість груп" : "Group count"}
+            hint={{
+              title: isUk ? "На скільки груп розділити учасників перед плейофом." : "How many groups to split participants into before playoffs.",
+              example: "2 або 4",
+            }}
+          >
+            <input
+              name="config_group_count"
+              type="number"
+              min={2}
+              max={32}
+              step={1}
+              defaultValue={config.group_count ?? ""}
+              className={inputClassName}
+            />
+          </AdminField>
+        )}
+
+        {fieldSet.has("advancing_per_group") && (
+          <AdminField
+            label={isUk ? "Виходять з групи" : "Advance per group"}
+            hint={{
+              title: isUk ? "Скільки найкращих учасників з кожної групи проходять у плейоф." : "How many top participants from each group advance to playoffs.",
+              example: "2",
+            }}
+          >
+            <input
+              name="config_advancing_per_group"
+              type="number"
+              min={1}
+              max={16}
+              step={1}
+              defaultValue={config.advancing_per_group}
+              className={inputClassName}
+            />
+          </AdminField>
+        )}
+
+        {fieldSet.has("lobby_size") && (
+          <AdminField
+            label={isUk ? "Розмір лобі" : "Lobby size"}
+            hint={{
+              title: isUk ? "Скільки учасників одночасно грають в одному матчі/лобі." : "How many participants play in the same match/lobby.",
+              example: "8, 16, 32",
+            }}
+          >
+            <input
+              name="config_lobby_size"
+              type="number"
+              min={2}
+              max={512}
+              step={1}
+              defaultValue={config.lobby_size ?? ""}
+              className={inputClassName}
+            />
+          </AdminField>
+        )}
+
+        {fieldSet.has("scoring_model") && (
+          <AdminField
+            label={isUk ? "Модель очок" : "Scoring model"}
+            hint={{
+              title: isUk ? "Як рахувати позиції у таблиці/лідерборді." : "How standings/leaderboards should calculate placements.",
+              example: "Placement + kills",
+            }}
+          >
+            <select name="config_scoring_model" defaultValue={config.scoring_model} className={inputClassName}>
+              <option value="match_wins" className="bg-neutral-900 text-white">Match wins</option>
+              <option value="points" className="bg-neutral-900 text-white">Points</option>
+              <option value="placement" className="bg-neutral-900 text-white">Placement</option>
+              <option value="kills_and_placement" className="bg-neutral-900 text-white">Kills + placement</option>
+            </select>
+          </AdminField>
+        )}
+
+        {(fieldSet.has("points_win") || fieldSet.has("points_draw") || fieldSet.has("points_loss")) && (
+          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-3">
+            <AdminField label={isUk ? "Очки за перемогу" : "Win points"}>
+              <input name="config_points_win" type="number" min={0} max={20} step={1} defaultValue={config.points_win} className={inputClassName} />
+            </AdminField>
+            <AdminField label={isUk ? "Очки за нічию" : "Draw points"}>
+              <input name="config_points_draw" type="number" min={0} max={20} step={1} defaultValue={config.points_draw} className={inputClassName} />
+            </AdminField>
+            <AdminField label={isUk ? "Очки за поразку" : "Loss points"}>
+              <input name="config_points_loss" type="number" min={0} max={20} step={1} defaultValue={config.points_loss} className={inputClassName} />
+            </AdminField>
+          </div>
+        )}
+
+        {fieldSet.has("third_place_match") && (
+          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+            <input type="hidden" name="config_third_place_match" value="false" />
+            <input
+              name="config_third_place_match"
+              type="checkbox"
+              value="true"
+              defaultChecked={config.third_place_match}
+              className="mt-1"
+            />
+            <span>
+              <span className="block font-medium text-white/85">{isUk ? "Матч за 3 місце" : "Third-place match"}</span>
+              <span className="mt-1 block text-xs leading-5 text-white/45">
+                {isUk ? "Зберегти цю опцію для майбутнього генератора плейофів." : "Save this option for the playoff generator."}
+              </span>
+            </span>
+          </label>
+        )}
+
+        {fieldSet.has("grand_final_reset") && (
+          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+            <input type="hidden" name="config_grand_final_reset" value="false" />
+            <input
+              name="config_grand_final_reset"
+              type="checkbox"
+              value="true"
+              defaultChecked={config.grand_final_reset}
+              className="mt-1"
+            />
+            <span>
+              <span className="block font-medium text-white/85">{isUk ? "Grand Final Reset" : "Grand Final Reset"}</span>
+              <span className="mt-1 block text-xs leading-5 text-white/45">
+                {isUk ? "Якщо переможець нижньої сітки виграє гранд-фінал, створюється reset-фінал." : "If the lower-bracket winner takes grand final, create a reset final."}
+              </span>
+            </span>
+          </label>
+        )}
+
+        {definition.configurableFields.length === 0 && (
+          <p className="sm:col-span-2 text-sm text-white/50">
+            {isUk ? "Для цього формату немає додаткових налаштувань." : "This format has no extra settings."}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function isUkLabel(lang: string, uk: string, en: string) {
+  return lang === "uk" ? uk : en
+}
+
 function formatParticipantType(type: AdminTournament["participant_type"], lang: string, t: any) {
   return type === "team"
     ? t.admin.tournaments.teamTournamentOption
@@ -370,6 +621,7 @@ function getFieldHints(isUk: boolean) {
     game: { title: "Гра, у якій проходитиме турнір. Від вибору залежать формати та конфігурація.", example: "Counter-Strike 2" },
     eventDate: { title: "Дата проведення турніру (день старту).", example: "14.02.2026" },
     format: { title: "Формат матчів — скільки карт/ігор у серії.", example: "BO1, BO3, BO5" },
+    tournamentFormat: { title: "Структура турніру. На цьому етапі повністю працює Single Elimination; інші формати підготовлені для наступних engines.", example: "Single Elimination, Round Robin, Swiss" },
     participantType: { title: "Хто змагається: окремі гравці чи команди.", example: "Командний турнір" },
     participantSlots: { title: "Скільки всього місць (учасників) у турнірі.", example: "8, 16, 32" },
     matchDays: { title: "Скільки днів триватимуть матчі турніру.", example: "1, 2, 3" },
@@ -390,6 +642,7 @@ function getFieldHints(isUk: boolean) {
     game: { title: "Game the tournament runs in. Affects formats and configuration.", example: "Counter-Strike 2" },
     eventDate: { title: "Tournament date (start day).", example: "2026-02-14" },
     format: { title: "Match format — number of maps/games per series.", example: "BO1, BO3, BO5" },
+    tournamentFormat: { title: "Tournament structure. Single Elimination is fully working now; other formats are prepared for the next engines.", example: "Single Elimination, Round Robin, Swiss" },
     participantType: { title: "Who competes: individual players or teams.", example: "Team tournament" },
     participantSlots: { title: "Total number of participant slots.", example: "8, 16, 32" },
     matchDays: { title: "How many days the matches span.", example: "1, 2, 3" },
