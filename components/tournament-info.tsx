@@ -101,7 +101,7 @@ export function TournamentInfo({
         ) : null}
 
         <div className="mb-12 grid gap-4 sm:grid-cols-3">
-          <Link href="/matches" className={`${quickLinkClassName} border-primary/45 bg-primary/10 shadow-[0_0_28px_rgba(0,255,170,0.14)] hover:bg-primary/15`}>
+          <Link href="/matches" className={quickLinkClassName}>
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
               <Swords className="h-5 w-5" />
             </span>
@@ -112,26 +112,26 @@ export function TournamentInfo({
             <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
           </Link>
 
-          <Link href="#bracket" className={`${quickLinkClassName} border-cyan-400/35 bg-cyan-400/10 shadow-[0_0_28px_rgba(34,211,238,0.12)] hover:bg-cyan-400/15`}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/15 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.16)]">
+          <Link href="#bracket" className={quickLinkClassName}>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
               <Trophy className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1 text-left">
               <span className="block text-base font-black text-foreground">{t.matchPage.openBracket}</span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/80">Tournament grid</span>
+              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Tournament grid</span>
             </span>
-            <span className="text-xl text-cyan-300 transition-transform duration-300 group-hover:translate-x-1">→</span>
+            <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
           </Link>
 
-          <Link href="/tournaments" className={`${quickLinkClassName} border-amber-300/35 bg-amber-300/10 shadow-[0_0_28px_rgba(252,211,77,0.11)] hover:bg-amber-300/15`}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/15 text-amber-200 shadow-[0_0_18px_rgba(252,211,77,0.15)]">
+          <Link href="/tournaments" className={quickLinkClassName}>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
               <Calendar className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1 text-left">
               <span className="block text-base font-black text-foreground">{t.tournamentArchive.tournamentArchive}</span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-amber-200/80">Past events</span>
+              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Past events</span>
             </span>
-            <span className="text-xl text-amber-200 transition-transform duration-300 group-hover:translate-x-1">→</span>
+            <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
           </Link>
         </div>
 
@@ -190,7 +190,7 @@ export function TournamentInfo({
 }
 
 const quickLinkClassName =
-  "group relative flex items-center gap-4 overflow-hidden rounded-3xl border p-4 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_0_34px_rgba(0,255,170,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 before:pointer-events-none before:absolute before:inset-x-5 before:top-0 before:h-px before:bg-white/45 before:opacity-60"
+  "group relative flex items-center gap-4 overflow-hidden rounded-3xl border border-primary/45 bg-[linear-gradient(135deg,rgba(0,255,170,0.14),rgba(0,20,14,0.78))] p-4 shadow-[0_0_28px_rgba(0,255,170,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/70 hover:bg-primary/15 hover:shadow-[0_0_38px_rgba(0,255,170,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 before:pointer-events-none before:absolute before:inset-x-5 before:top-0 before:h-px before:bg-primary/70 before:opacity-80 after:pointer-events-none after:absolute after:-right-10 after:-top-10 after:h-24 after:w-24 after:rounded-full after:bg-primary/10 after:blur-2xl after:transition-opacity after:duration-300 group-hover:after:opacity-100"
 
 function readDisplayValue(value?: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
