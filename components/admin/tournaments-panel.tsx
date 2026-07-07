@@ -197,13 +197,34 @@ function TournamentForm({
     selectedTournamentFormat,
     tournament?.format_config,
   )
+  const isWizard = !tournament
+  const wizardSteps = [
+    {
+      title: isUk ? "Основне" : "Basics",
+      description: isUk ? "Назва, гра, дата, призи та банер." : "Name, game, date, prize pool, and banner.",
+    },
+    {
+      title: isUk ? "Формат" : "Format",
+      description: isUk ? "Структура, учасники, слоти та check-in." : "Structure, participants, slots, and check-in.",
+    },
+    {
+      title: isUk ? "Frontend" : "Frontend",
+      description: isUk ? "Тексти для публічної сторінки та bracket-блоку." : "Public page copy and bracket presentation.",
+    },
+  ]
+  const [wizardStep, setWizardStep] = useState(0)
+  const isFirstWizardStep = wizardStep === 0
+  const isLastWizardStep = wizardStep === wizardSteps.length - 1
 
   return (
-    <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
+    <form action={action} className="mt-4 space-y-4">
       {tournament && <input type="hidden" name="id" value={tournament.id} />}
+      {isWizard ? <TournamentWizardSteps steps={wizardSteps} activeStep={wizardStep} /> : null}
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 0)}>
 
       <AdminField label={t.admin.tournaments.nameField} hint={hints.name}>
-        <input name="name" defaultValue={tournament?.name ?? ""} required className={inputClassName} />
+        <input name="name" defaultValue={tournament?.name ?? ""} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.gameField} hint={hints.game}>
@@ -279,6 +300,9 @@ function TournamentForm({
         <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
       </AdminField>
 
+      </div>
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 1)}>
       <AdminField label={isUk ? "Структура турніру" : "Tournament structure"} hint={hints.tournamentFormat}>
         <select
           name="tournament_format"
@@ -314,11 +338,11 @@ function TournamentForm({
       </AdminField>
 
       <AdminField label={t.admin.tournaments.participantSlotsField} hint={hints.participantSlots}>
-        <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} required className={inputClassName} />
+        <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.matchDaysField} hint={hints.matchDays}>
-        <input name="match_days" type="number" min={1} step={1} defaultValue={tournament?.match_days ?? 1} required className={inputClassName} />
+        <input name="match_days" type="number" min={1} step={1} defaultValue={tournament?.match_days ?? 1} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.prizePoolField} hint={hints.prizePool}>
@@ -336,7 +360,6 @@ function TournamentForm({
       >
         <input
           name="banner_url"
-          type="url"
           defaultValue={tournament?.banner_url ?? ""}
           placeholder="https://.../banner.jpg"
           className={inputClassName}
@@ -363,6 +386,9 @@ function TournamentForm({
 
       <StatusSelect value={tournament?.status} />
 
+      </div>
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 2)}>
       <AdminField label={t.admin.tournaments.arenaTitleField} hint={hints.arenaTitle}>
         <input name="arena_title" defaultValue={tournament?.arena_title ?? ""} className={inputClassName} />
       </AdminField>
@@ -406,9 +432,86 @@ function TournamentForm({
         </div>
       </div>
 
-      <SubmitButton label={submitLabel} />
+      </div>
+
+      {isWizard ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            disabled={isFirstWizardStep}
+            onClick={() => setWizardStep((step) => Math.max(step - 1, 0))}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/70 transition hover:border-white/25 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isUk ? "Назад" : "Back"}
+          </button>
+          <div className="text-center text-xs text-white/45">
+            {wizardStep + 1} / {wizardSteps.length}
+          </div>
+          {isLastWizardStep ? (
+            <SubmitButton label={submitLabel} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWizardStep((step) => Math.min(step + 1, wizardSteps.length - 1))}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-emerald-200"
+            >
+              {isUk ? "Далі" : "Next"}
+            </button>
+          )}
+        </div>
+      ) : (
+        <SubmitButton label={submitLabel} />
+      )}
     </form>
   )
+}
+
+function TournamentWizardSteps({
+  steps,
+  activeStep,
+}: {
+  steps: { title: string; description: string }[]
+  activeStep: number
+}) {
+  return (
+    <ol className="grid gap-2 sm:grid-cols-3">
+      {steps.map((step, index) => {
+        const isActive = index === activeStep
+        const isDone = index < activeStep
+
+        return (
+          <li
+            key={step.title}
+            className={`rounded-xl border p-3 transition ${
+              isActive
+                ? "border-emerald-300/50 bg-emerald-300/10"
+                : isDone
+                  ? "border-emerald-300/20 bg-emerald-300/5"
+                  : "border-white/10 bg-black/20"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                  isActive || isDone ? "bg-emerald-300 text-black" : "bg-white/10 text-white/45"
+                }`}
+              >
+                {index + 1}
+              </span>
+              <p className="text-sm font-semibold text-white/85">{step.title}</p>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-white/45">{step.description}</p>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function getTournamentWizardPanelClassName(isWizard: boolean, activeStep: number, step: number) {
+  if (!isWizard) return "grid gap-3 sm:grid-cols-2"
+
+  return activeStep === step ? "grid gap-3 sm:grid-cols-2" : "hidden"
 }
 
 
