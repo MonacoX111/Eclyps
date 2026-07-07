@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic"
 
 export default async function TournamentPage() {
   return (
-    <main className="relative min-h-screen overflow-x-hidden pt-20">
+    <main className="relative min-h-screen overflow-x-hidden pt-[65px]">
       <AdminShortcut />
       <ParticleField />
       <MotionProvider>

@@ -72,8 +72,27 @@ export function TournamentInfo({
   const displayArenaTitle = arenaTitle === "Enter the Arena" ? t.tournament.enterArena : arenaTitle
 
   return (
-    <section className="relative z-10 px-4 py-24" id="tournament">
-      <div className="mx-auto max-w-6xl">
+    <section className="relative z-10 overflow-hidden px-4 py-24" id="tournament">
+      {bannerUrl ? (
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-80"
+          style={{ backgroundImage: `url("${bannerUrl}")` }}
+          aria-hidden="true"
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,12,0.68),rgba(5,8,12,0.9)_55%,rgba(5,8,12,0.96))]" />
+        </div>
+      ) : null}
+
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 50% at 50% 24%, oklch(0.78 0.18 165 / 0.08) 0%, transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 mx-auto max-w-6xl">
         {/* Section header */}
         <SectionHeading eyebrow={t.tournament.upcomingEvent} title={tournamentName}>
           {visibleGame ? (
@@ -83,55 +102,15 @@ export function TournamentInfo({
           ) : null}
         </SectionHeading>
 
-        {bannerUrl ? (
-          <m.div
-            className="relative mb-12 overflow-hidden rounded-3xl border border-primary/20 bg-black/40 shadow-[0_0_50px_rgba(0,255,170,0.12)]"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-          >
-            <div
-              className="h-56 w-full bg-cover bg-center md:h-80"
-              style={{ backgroundImage: `url("${bannerUrl}")` }}
-              aria-label={tournamentName}
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-          </m.div>
-        ) : null}
-
-        <div className="mb-12 grid gap-4 sm:grid-cols-3">
+        <div className="mb-10 flex flex-wrap justify-center gap-3">
           <Link href="/matches" className={quickLinkClassName}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
-              <Swords className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block text-base font-black text-foreground">{t.matchPage.openMatches}</span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Live games</span>
-            </span>
-            <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
+            {t.matchPage.openMatches}
           </Link>
-
           <Link href="#bracket" className={quickLinkClassName}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
-              <Trophy className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block text-base font-black text-foreground">{t.matchPage.openBracket}</span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Tournament grid</span>
-            </span>
-            <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
+            {t.matchPage.openBracket}
           </Link>
-
           <Link href="/tournaments" className={quickLinkClassName}>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/35 bg-primary/15 text-primary shadow-[0_0_18px_rgba(0,255,170,0.18)]">
-              <Calendar className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block text-base font-black text-foreground">{t.tournamentArchive.tournamentArchive}</span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">Past events</span>
-            </span>
-            <span className="text-xl text-primary transition-transform duration-300 group-hover:translate-x-1">→</span>
+            {t.tournamentArchive.tournamentArchive}
           </Link>
         </div>
 
@@ -190,7 +169,7 @@ export function TournamentInfo({
 }
 
 const quickLinkClassName =
-  "group relative flex items-center gap-4 overflow-hidden rounded-3xl border border-primary/45 bg-[linear-gradient(135deg,rgba(0,255,170,0.14),rgba(0,20,14,0.78))] p-4 shadow-[0_0_28px_rgba(0,255,170,0.14),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/70 hover:bg-primary/15 hover:shadow-[0_0_38px_rgba(0,255,170,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 before:pointer-events-none before:absolute before:inset-x-5 before:top-0 before:h-px before:bg-primary/70 before:opacity-80 after:pointer-events-none after:absolute after:-right-10 after:-top-10 after:h-24 after:w-24 after:rounded-full after:bg-primary/10 after:blur-2xl after:transition-opacity after:duration-300 group-hover:after:opacity-100"
+  "inline-flex items-center justify-center rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm font-semibold text-white/70 transition hover:border-primary/40 hover:text-primary"
 
 function readDisplayValue(value?: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null
