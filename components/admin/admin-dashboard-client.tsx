@@ -811,6 +811,9 @@ export function AdminDashboardClient({
                   />
                   <TournamentsPanel
                     tournaments={tournaments}
+                    participants={participants}
+                    matches={matches}
+                    registrations={registrations}
                     fetchError={fetchError(tournaments, feedbacks.tournament)}
                     feedback={feedbacks.tournament}
                   />

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import type { AdminPlayer } from "@/lib/admin/players"
 import type { AdminResult } from "@/lib/admin/results"
 import type { AdminTeam } from "@/lib/admin/teams"
@@ -9,7 +10,7 @@ import { createTournamentNameMap, getPlayerNames, getTeamNames } from "@/lib/adm
 import { createResult, deleteResult, updateResult } from "@/app/admin/actions"
 import { ResultParticipantFields } from "@/components/admin-participant-fields"
 import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, pillClassName, recordClassName } from "@/components/admin/admin-section"
-import { AdminField, DeleteForm, inputClassName, SubmitButton, TournamentSelect } from "@/components/admin/admin-form-fields"
+import { AdminField, DeleteForm, inputClassName, SubmitButton } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
 import { getAdminFieldHints } from "@/components/admin/admin-field-hints"
 
@@ -144,10 +145,40 @@ function ResultForm({
 }) {
   const { t, lang } = useLanguage()
   const fh = getAdminFieldHints(lang === "uk")
+  const [selectedTournamentId, setSelectedTournamentId] = useState(result?.tournament_id ?? tournaments[0]?.id ?? "")
+  const selectedTournament = tournaments.find((tournament) => tournament.id === selectedTournamentId)
+  const isLobbyResult =
+    selectedTournament?.tournament_format === "battle_royale" ||
+    selectedTournament?.tournament_format === "free_for_all"
+
   return (
     <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2">
       {result && <input type="hidden" name="id" value={result.id} />}
-      <TournamentSelect tournaments={tournaments} value={result?.tournament_id} />
+      <AdminField
+        label={t.admin.extra.tournamentLabel}
+        hint={
+          lang === "uk"
+            ? { title: "Турнір, до якого належить цей результат.", example: "Eclyps Winter Cup 2026" }
+            : { title: "Tournament this result belongs to.", example: "Eclyps Winter Cup 2026" }
+        }
+      >
+        <select
+          name="tournament_id"
+          value={selectedTournamentId}
+          onChange={(event) => setSelectedTournamentId(event.target.value)}
+          required
+          className={inputClassName}
+        >
+          <option value="" disabled>
+            {t.admin.extra.selectTournament}
+          </option>
+          {tournaments.map((tournament) => (
+            <option key={tournament.id} value={tournament.id} className="bg-neutral-900 text-white">
+              {tournament.name ?? t.admin.extra.untitledTournament}
+            </option>
+          ))}
+        </select>
+      </AdminField>
       <ResultParticipantFields
         initialType={result?.participant_type}
         teamNames={teamNames}
@@ -169,18 +200,36 @@ function ResultForm({
       <AdminField label={t.admin.results.noteField} hint={fh.results.note}>
         <input name="note" defaultValue={result?.note ?? ""} className={inputClassName} />
       </AdminField>
-      <AdminField label={lang === "uk" ? "Lobby round" : "Lobby round"}>
-        <input name="lobby_round" type="number" min={1} step={1} defaultValue={result?.lobby_round ?? ""} className={inputClassName} />
-      </AdminField>
-      <AdminField label={lang === "uk" ? "Lobby" : "Lobby"}>
-        <input name="lobby_order" type="number" min={1} step={1} defaultValue={result?.lobby_order ?? ""} className={inputClassName} />
-      </AdminField>
-      <AdminField label={lang === "uk" ? "Kills" : "Kills"}>
-        <input name="kills" type="number" min={0} step={1} defaultValue={result?.kills ?? ""} className={inputClassName} />
-      </AdminField>
-      <AdminField label={lang === "uk" ? "Points" : "Points"}>
-        <input name="points" type="number" min={0} step={1} defaultValue={result?.points ?? ""} className={inputClassName} />
-      </AdminField>
+      <div className={`sm:col-span-2 rounded-xl border p-4 ${isLobbyResult ? "border-primary/15 bg-primary/5" : "border-white/10 bg-black/20"}`}>
+        <div className="mb-3 flex flex-col gap-1">
+          <p className="text-sm font-semibold text-white/85">
+            {lang === "uk" ? "Lobby result details" : "Lobby result details"}
+          </p>
+          <p className="text-xs leading-5 text-white/45">
+            {isLobbyResult
+              ? lang === "uk"
+                ? "Для Battle Royale / FFA заповни лобі, місце, kills і points — з цього будується leaderboard."
+                : "For Battle Royale / FFA, fill lobby, placement, kills, and points for leaderboard calculations."
+              : lang === "uk"
+                ? "Для звичайних форматів ці поля можна залишити порожніми."
+                : "For regular formats, these fields can stay empty."}
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <AdminField label={lang === "uk" ? "Lobby round" : "Lobby round"}>
+            <input name="lobby_round" type="number" min={1} step={1} defaultValue={result?.lobby_round ?? ""} className={inputClassName} />
+          </AdminField>
+          <AdminField label={lang === "uk" ? "Lobby" : "Lobby"}>
+            <input name="lobby_order" type="number" min={1} step={1} defaultValue={result?.lobby_order ?? ""} className={inputClassName} />
+          </AdminField>
+          <AdminField label={lang === "uk" ? "Kills" : "Kills"}>
+            <input name="kills" type="number" min={0} step={1} defaultValue={result?.kills ?? ""} className={inputClassName} />
+          </AdminField>
+          <AdminField label={lang === "uk" ? "Points" : "Points"}>
+            <input name="points" type="number" min={0} step={1} defaultValue={result?.points ?? ""} className={inputClassName} />
+          </AdminField>
+        </div>
+      </div>
       <SubmitButton label={submitLabel} disabled={tournaments.length === 0} />
     </form>
   )

@@ -1,4 +1,7 @@
 import { useState } from "react"
+import type { AdminMatch } from "@/lib/admin/matches"
+import type { AdminParticipant } from "@/lib/admin/participants"
+import type { AdminRegistration } from "@/lib/admin/registrations"
 import type { AdminTournament } from "@/lib/admin/tournaments"
 import type { AdminFeedback, AdminFormAction } from "@/lib/admin/types"
 import { getGameConfig, getSupportedGames, normalizeGame } from "@/lib/games"
@@ -10,7 +13,7 @@ import {
 } from "@/lib/tournament-formats"
 import { formatDisplayDate, formatDisplayDateTime, formatStatus } from "@/lib/admin/formatters"
 import { createTournament, deleteTournament, updateTournament } from "@/app/admin/actions"
-import { AdminEmptyState, AdminSection, innerPanelClassName, panelGridClassName, recordClassName } from "@/components/admin/admin-section"
+import { AdminEmptyState, AdminSection, innerPanelClassName, recordClassName } from "@/components/admin/admin-section"
 import { AdminField, DeleteForm, inputClassName, StatusSelect, SubmitButton } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
 import {
@@ -20,10 +23,16 @@ import {
 
 export function TournamentsPanel({
   tournaments,
+  participants,
+  matches,
+  registrations,
   fetchError,
   feedback,
 }: {
   tournaments: AdminTournament[]
+  participants: AdminParticipant[]
+  matches: AdminMatch[]
+  registrations: AdminRegistration[]
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
@@ -38,8 +47,8 @@ export function TournamentsPanel({
       fetchError={fetchError}
       fetchLabel="tournaments"
     >
-      <div className={panelGridClassName}>
-        <article className={innerPanelClassName}>
+      <div className="mt-6 grid gap-5 2xl:grid-cols-[minmax(360px,0.72fr)_minmax(0,1.28fr)]">
+        <article className={`${innerPanelClassName} min-w-0`}>
           <h3 className="text-lg font-medium">{t.admin.tournaments.createTournament}</h3>
           <p className="mt-2 text-sm leading-6 text-white/55">
             {t.admin.tournaments.createTournamentDesc}
@@ -48,7 +57,7 @@ export function TournamentsPanel({
           <TournamentForm action={createTournament} submitLabel={t.admin.tournaments.createTournament} />
         </article>
 
-        <article className={innerPanelClassName}>
+        <article className={`${innerPanelClassName} min-w-0`}>
           <h3 className="text-lg font-medium">{t.admin.tournaments.existingTournaments}</h3>
 
           {tournaments.length === 0 ? (
@@ -56,7 +65,13 @@ export function TournamentsPanel({
           ) : (
             <div className="mt-4 space-y-4">
               {tournaments.map((tournament) => (
-                <TournamentRecord key={tournament.id} tournament={tournament} />
+                <TournamentRecord
+                  key={tournament.id}
+                  tournament={tournament}
+                  participants={participants.filter((participant) => participant.tournament_id === tournament.id)}
+                  matches={matches.filter((match) => match.tournament_id === tournament.id)}
+                  registrations={registrations.filter((registration) => registration.tournament_id === tournament.id)}
+                />
               ))}
             </div>
           )}
@@ -66,12 +81,23 @@ export function TournamentsPanel({
   )
 }
 
-function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
+function TournamentRecord({
+  tournament,
+  participants,
+  matches,
+  registrations,
+}: {
+  tournament: AdminTournament
+  participants: AdminParticipant[]
+  matches: AdminMatch[]
+  registrations: AdminRegistration[]
+}) {
   const { t, lang } = useLanguage()
   const gameConfig = getGameConfig(tournament.game, tournament.game_mode)
+  const health = buildTournamentHealth(tournament, participants, matches, registrations, lang)
 
   return (
-    <details className={recordClassName}>
+    <details className={`${recordClassName} min-w-0`}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -81,7 +107,7 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-xs">
+          <div className="flex max-w-full flex-wrap gap-2 text-xs">
             <span className="rounded-full border border-white/10 px-2.5 py-1 text-white/65">
               {formatStatus(tournament.status)}
             </span>
@@ -90,6 +116,9 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
                 {t.admin.tournaments.activeBadge}
               </span>
             )}
+            <span className={`rounded-full border px-2.5 py-1 ${health.tone === "ready" ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : health.tone === "error" ? "border-red-300/20 bg-red-300/10 text-red-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`}>
+              {health.label}
+            </span>
           </div>
         </div>
       </summary>
@@ -126,14 +155,16 @@ function TournamentRecord({ tournament }: { tournament: AdminTournament }) {
           </div>
         </dl>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <TournamentHealthPanel items={health.items} lang={lang} />
+
+        <div className="mt-5 grid gap-4">
           <TournamentForm
             action={updateTournament}
             submitLabel={t.admin.tournaments.saveChanges}
             tournament={tournament}
           />
-          <div className="p-3 rounded-xl border border-red-500/10 bg-red-950/5 self-start">
-            <p className="text-[10px] text-red-400 font-semibold mb-2 max-w-[160px] leading-relaxed">
+          <div className="rounded-xl border border-red-500/10 bg-red-950/5 p-3">
+            <p className="mb-2 text-[10px] font-semibold leading-relaxed text-red-400">
               {t.admin.dangerousAction}
             </p>
             <DeleteForm action={deleteTournament} id={tournament.id} />
@@ -175,6 +206,10 @@ function TournamentForm({
   const [selectedTournamentFormat, setSelectedTournamentFormat] = useState<TournamentFormat>(
     tournament?.tournament_format ?? "single_elimination",
   )
+  const [participantSlots, setParticipantSlots] = useState<string>(
+    tournament?.team_count ? String(tournament.team_count) : "",
+  )
+  const [bannerUrl, setBannerUrl] = useState<string>(tournament?.banner_url ?? "")
 
   const handleGameChange = (gameValue: string) => {
     setSelectedGame(gameValue)
@@ -197,6 +232,14 @@ function TournamentForm({
     selectedTournamentFormat,
     tournament?.format_config,
   )
+  const slotPreview = getSlotHealthDetail(tournamentFormatDefinition, Number(participantSlots), isUk)
+  const slotPreviewTone: TournamentHealthTone =
+    Number(participantSlots) > 0 &&
+    Number(participantSlots) >= tournamentFormatDefinition.minParticipants &&
+    (tournamentFormatDefinition.maxParticipants === null || Number(participantSlots) <= tournamentFormatDefinition.maxParticipants) &&
+    (selectedTournamentFormat !== "single_elimination" || isPowerOfTwo(Number(participantSlots)))
+      ? "ready"
+      : "warning"
   const isWizard = true
   const wizardSteps = [
     {
@@ -232,6 +275,15 @@ function TournamentForm({
     <form action={action} className="mt-4 space-y-4">
       {tournament && <input type="hidden" name="id" value={tournament.id} />}
       {isWizard ? <TournamentWizardSteps steps={wizardSteps} activeStep={wizardStep} /> : null}
+      {isWizard ? (
+        <TournamentWizardAssistant
+          formatLabel={tournamentFormatDefinition.label}
+          slotDetail={slotPreview}
+          slotTone={slotPreviewTone}
+          bannerUrl={bannerUrl}
+          isUk={isUk}
+        />
+      ) : null}
 
       <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 0)}>
 
@@ -272,11 +324,11 @@ function TournamentForm({
       )}
 
       {/* Dynamic Game Info Card */}
-      <div className="sm:col-span-2 rounded-xl border border-white/10 bg-black/20 p-4">
+      <div className="rounded-xl border border-white/10 bg-black/20 p-4 xl:col-span-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
           {t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Конфігурація гри" : "Game Configuration"}: {gameConfig.fullName}
         </p>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-white/60 sm:grid-cols-4">
+        <dl className="mt-3 grid gap-3 text-xs text-white/60 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Формат учасників" : "Roster Format"}</dt>
             <dd className="mt-1 font-medium text-white capitalize">{gameConfig.rosterLabel}</dd>
@@ -294,7 +346,7 @@ function TournamentForm({
             <dd className="mt-1 font-medium text-white">{gameConfig.matchFormats.join(", ")}</dd>
           </div>
           {gameConfig.mapPool.length > 0 && (
-            <div className="col-span-2 sm:col-span-4">
+            <div className="sm:col-span-2 xl:col-span-4">
               <dt className="text-white/35">{t.admin.tournaments.createTournamentDesc.includes("налаштування") ? "Список мап" : "Map Pool"}</dt>
               <dd className="mt-1 font-medium text-white break-words">{gameConfig.mapPool.join(", ")}</dd>
             </div>
@@ -329,6 +381,7 @@ function TournamentForm({
         <input
           name="banner_url"
           defaultValue={tournament?.banner_url ?? ""}
+          onChange={(event) => setBannerUrl(event.target.value)}
           placeholder="https://.../banner.jpg"
           className={inputClassName}
         />
@@ -375,7 +428,15 @@ function TournamentForm({
       </AdminField>
 
       <AdminField label={t.admin.tournaments.participantSlotsField} hint={hints.participantSlots}>
-        <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} className={inputClassName} />
+        <input
+          name="team_count"
+          type="number"
+          min={1}
+          step={1}
+          defaultValue={tournament?.team_count ?? ""}
+          onChange={(event) => setParticipantSlots(event.target.value)}
+          className={inputClassName}
+        />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.matchDaysField} hint={hints.matchDays}>
@@ -416,16 +477,16 @@ function TournamentForm({
         <input name="arena_tags" defaultValue={tournament?.arena_tags?.join(", ") ?? ""} placeholder="PC Platform, 5v5 Format" className={inputClassName} />
       </AdminField>
 
-      <div className="sm:col-span-2">
+      <div className="xl:col-span-2">
         <AdminField label={t.admin.tournaments.arenaDescriptionField} hint={hints.arenaDescription}>
           <textarea name="arena_description" defaultValue={tournament?.arena_description ?? ""} rows={4} className={inputClassName} />
         </AdminField>
       </div>
 
-      <div className="sm:col-span-2">
+      <div className="xl:col-span-2">
         <div className="rounded-xl border border-white/10 bg-black/20 p-3">
           <p className="text-sm font-medium text-white/80">{t.admin.tournaments.cinematicBracketTitle}</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <AdminField label={t.admin.tournaments.bracketTitleField} hint={hints.bracketTitle}>
               <input name="bracket_title" defaultValue={tournament?.bracket_title ?? ""} placeholder="Live Bracket" className={inputClassName} />
             </AdminField>
@@ -442,7 +503,7 @@ function TournamentForm({
               <input name="bracket_participant_label" defaultValue={tournament?.bracket_participant_label ?? ""} placeholder="Finalist" className={inputClassName} />
             </AdminField>
 
-            <div className="sm:col-span-2">
+            <div className="xl:col-span-2">
               <AdminField label={t.admin.tournaments.bracketArenaLabelField} hint={hints.bracketArena}>
                 <input name="bracket_arena_label" defaultValue={tournament?.bracket_arena_label ?? ""} placeholder="Eclyps Arena" className={inputClassName} />
               </AdminField>
@@ -454,7 +515,7 @@ function TournamentForm({
       </div>
 
       {isWizard ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid gap-3 rounded-xl border border-white/10 bg-black/20 p-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <button
             type="button"
             disabled={isFirstWizardStep}
@@ -467,12 +528,14 @@ function TournamentForm({
             {wizardStep + 1} / {wizardSteps.length}
           </div>
           {isLastWizardStep ? (
-            <SubmitButton label={submitLabel} />
+            <div className="sm:justify-self-end">
+              <SubmitButton label={submitLabel} />
+            </div>
           ) : (
             <button
               type="button"
               onClick={() => setWizardStep((step) => Math.min(step + 1, wizardSteps.length - 1))}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-emerald-200"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-emerald-200 sm:justify-self-end"
             >
               {isUk ? "Далі" : "Next"}
             </button>
@@ -492,45 +555,261 @@ function TournamentWizardSteps({
   steps: { title: string; description: string }[]
   activeStep: number
 }) {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      {steps.map((step, index) => {
-        const isActive = index === activeStep
-        const isDone = index < activeStep
+  const currentStep = steps[activeStep] ?? steps[0]
 
-        return (
-          <li
-            key={step.title}
-            className={`rounded-xl border p-3 transition ${
-              isActive
-                ? "border-emerald-300/50 bg-emerald-300/10"
-                : isDone
-                  ? "border-emerald-300/20 bg-emerald-300/5"
-                  : "border-white/10 bg-black/20"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${
-                  isActive || isDone ? "bg-emerald-300 text-black" : "bg-white/10 text-white/45"
-                }`}
-              >
-                {index + 1}
-              </span>
-              <p className="text-sm font-semibold text-white/85">{step.title}</p>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-white/45">{step.description}</p>
-          </li>
-        )
-      })}
-    </ol>
+  return (
+    <div className="rounded-xl border border-emerald-300/25 bg-emerald-300/10 p-3">
+      <div className="flex items-start gap-3">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-300 text-xs font-bold text-black">
+          {activeStep + 1}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-white/90">{currentStep.title}</p>
+            <span className="w-fit rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/55">
+              {activeStep + 1} / {steps.length}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-white/55">{currentStep.description}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TournamentWizardAssistant({
+  formatLabel,
+  slotDetail,
+  slotTone,
+  bannerUrl,
+  isUk,
+}: {
+  formatLabel: string
+  slotDetail: string
+  slotTone: TournamentHealthTone
+  bannerUrl: string
+  isUk: boolean
+}) {
+  const trimmedBannerUrl = bannerUrl.trim()
+
+  return (
+    <div className="grid gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+      <div className="grid gap-2">
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
+            {isUk ? "Обраний формат" : "Selected format"}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-white/85">{formatLabel}</p>
+        </div>
+        <div className={`rounded-lg border p-3 ${slotTone === "ready" ? "border-emerald-300/15 bg-emerald-300/5" : "border-amber-300/15 bg-amber-300/5"}`}>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
+            {isUk ? "Перевірка слотів" : "Slot check"}
+          </p>
+          <p className={`mt-1 text-sm font-medium ${slotTone === "ready" ? "text-emerald-100" : "text-amber-100"}`}>
+            {slotDetail}
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
+        {trimmedBannerUrl ? (
+          <div
+            className="h-32 bg-cover bg-center sm:h-40"
+            style={{ backgroundImage: `url("${trimmedBannerUrl}")` }}
+            aria-label={isUk ? "Preview банера турніру" : "Tournament banner preview"}
+          />
+        ) : (
+          <div className="grid min-h-24 place-items-center px-3 py-5 text-center text-xs leading-5 text-white/35">
+            {isUk ? "Додай URL банера, щоб побачити preview." : "Add a banner URL to preview it here."}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
 function getTournamentWizardPanelClassName(isWizard: boolean, activeStep: number, step: number) {
-  if (!isWizard) return "grid gap-3 sm:grid-cols-2"
+  if (!isWizard) return "grid gap-3 xl:grid-cols-2"
 
-  return activeStep === step ? "grid gap-3 sm:grid-cols-2" : "hidden"
+  return activeStep === step ? "grid gap-3 xl:grid-cols-2" : "hidden"
+}
+
+type TournamentHealthTone = "ready" | "warning" | "error"
+
+type TournamentHealthItem = {
+  id: string
+  tone: TournamentHealthTone
+  label: string
+  detail: string
+}
+
+function TournamentHealthPanel({
+  items,
+  lang,
+}: {
+  items: TournamentHealthItem[]
+  lang: string
+}) {
+  const isUk = lang === "uk"
+  const visibleItems = items.filter((item) => item.tone !== "ready")
+  const readyItems = items.length - visibleItems.length
+
+  return (
+    <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-white/85">
+            {isUk ? "Готовність турніру" : "Tournament health"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-white/45">
+            {isUk
+              ? `${readyItems}/${items.length} перевірок без проблем.`
+              : `${readyItems}/${items.length} checks look good.`}
+          </p>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 px-2.5 py-1 text-xs text-white/55">
+          {visibleItems.length === 0
+            ? isUk ? "Готовий" : "Ready"
+            : isUk ? `${visibleItems.length} пункт(ів)` : `${visibleItems.length} item(s)`}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        {(visibleItems.length > 0 ? visibleItems : items).map((item) => (
+          <div
+            key={item.id}
+            className={`rounded-lg border px-3 py-2 text-sm ${
+              item.tone === "ready"
+                ? "border-emerald-300/15 bg-emerald-300/5 text-emerald-100"
+                : item.tone === "error"
+                  ? "border-red-300/15 bg-red-300/5 text-red-100"
+                  : "border-amber-300/15 bg-amber-300/5 text-amber-100"
+            }`}
+          >
+            <div className="font-medium">{item.label}</div>
+            <div className="mt-1 text-xs leading-5 text-white/50">{item.detail}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function buildTournamentHealth(
+  tournament: AdminTournament,
+  participants: AdminParticipant[],
+  matches: AdminMatch[],
+  registrations: AdminRegistration[],
+  lang: string,
+) {
+  const isUk = lang === "uk"
+  const items: TournamentHealthItem[] = []
+  const definition = getTournamentFormatDefinition(tournament.tournament_format)
+  const slots = tournament.team_count ?? 0
+  const approvedRegistrations = registrations.filter((registration) => registration.status === "approved").length
+
+  items.push({
+    id: "active",
+    tone: tournament.is_active ? "ready" : "warning",
+    label: tournament.is_active
+      ? isUk ? "Турнір активний" : "Tournament is active"
+      : isUk ? "Турнір не активний" : "Tournament is not active",
+    detail: tournament.is_active
+      ? isUk ? "Він може показуватись у головних блоках сайту." : "It can be used by the main public site blocks."
+      : isUk ? "Активуй його, якщо це головний поточний турнір." : "Activate it if this is the main current tournament.",
+  })
+
+  const slotTone: TournamentHealthTone =
+    slots < definition.minParticipants ||
+    (definition.maxParticipants !== null && slots > definition.maxParticipants) ||
+    (definition.id === "single_elimination" && !isPowerOfTwo(slots))
+      ? "error"
+      : "ready"
+  items.push({
+    id: "slots",
+    tone: slotTone,
+    label: isUk ? "Слоти відповідають формату" : "Slots fit the format",
+    detail: getSlotHealthDetail(definition, slots, isUk),
+  })
+
+  items.push({
+    id: "participants",
+    tone: slots > 0 && participants.length >= slots ? "ready" : "warning",
+    label: isUk ? "Слоти заповнюються" : "Slots are being filled",
+    detail: isUk
+      ? `${participants.length}/${slots || "?"} учасник(ів) у participants, ${approvedRegistrations} approved registration.`
+      : `${participants.length}/${slots || "?"} participant slot(s), ${approvedRegistrations} approved registration(s).`,
+  })
+
+  items.push({
+    id: "matches",
+    tone: matches.length > 0 ? "ready" : "warning",
+    label: isUk ? "Матчі згенеровані" : "Matches generated",
+    detail: matches.length > 0
+      ? isUk ? `${matches.length} матч(ів) прив'язано до турніру.` : `${matches.length} match(es) linked to the tournament.`
+      : isUk ? "Після додавання учасників згенеруй структуру/матчі." : "After adding participants, generate the structure/matches.",
+  })
+
+  const checkInTone: TournamentHealthTone =
+    tournament.check_in_opens_at &&
+    tournament.check_in_closes_at &&
+    new Date(tournament.check_in_opens_at).getTime() > new Date(tournament.check_in_closes_at).getTime()
+      ? "error"
+      : tournament.check_in_opens_at && tournament.check_in_closes_at
+        ? "ready"
+        : "warning"
+  items.push({
+    id: "check-in",
+    tone: checkInTone,
+    label: isUk ? "Check-in налаштований" : "Check-in configured",
+    detail: checkInTone === "error"
+      ? isUk ? "Закриття check-in стоїть раніше за відкриття." : "Check-in closes before it opens."
+      : tournament.check_in_opens_at && tournament.check_in_closes_at
+        ? isUk ? "Вікно check-in має відкриття і закриття." : "The check-in window has open and close times."
+        : isUk ? "Додай час відкриття і закриття check-in." : "Add check-in open and close times.",
+  })
+
+  items.push({
+    id: "banner",
+    tone: tournament.banner_url ? "ready" : "warning",
+    label: isUk ? "Банер доданий" : "Banner added",
+    detail: tournament.banner_url
+      ? isUk ? "Банер буде використано на головній і сторінках турніру." : "The banner is used on the homepage and tournament pages."
+      : isUk ? "Без банера сайт покаже стандартний фон." : "Without a banner, the site falls back to the default visual.",
+  })
+
+  const hasError = items.some((item) => item.tone === "error")
+  const hasWarning = items.some((item) => item.tone === "warning")
+
+  return {
+    items,
+    tone: hasError ? "error" : hasWarning ? "warning" : "ready",
+    label: hasError
+      ? isUk ? "Є помилки" : "Has errors"
+      : hasWarning
+        ? isUk ? "Потребує уваги" : "Needs attention"
+        : isUk ? "Готовий" : "Ready",
+  }
+}
+
+function getSlotHealthDetail(
+  definition: ReturnType<typeof getTournamentFormatDefinition>,
+  slots: number,
+  isUk: boolean,
+) {
+  const range = definition.maxParticipants
+    ? `${definition.minParticipants}-${definition.maxParticipants}`
+    : `${definition.minParticipants}+`
+
+  if (!slots) return isUk ? `Вкажи кількість слотів. Для цього формату потрібно ${range}.` : `Set slot count. This format needs ${range}.`
+  if (slots < definition.minParticipants) return isUk ? `Замало слотів: потрібно мінімум ${definition.minParticipants}.` : `Too few slots: minimum is ${definition.minParticipants}.`
+  if (definition.maxParticipants !== null && slots > definition.maxParticipants) return isUk ? `Забагато слотів: максимум ${definition.maxParticipants}.` : `Too many slots: maximum is ${definition.maxParticipants}.`
+  if (definition.id === "single_elimination" && !isPowerOfTwo(slots)) return isUk ? "Для Single Elimination слоти мають бути 2/4/8/16." : "Single Elimination slots should be 2/4/8/16."
+  return isUk ? `${slots} слотів підходить для ${definition.label}.` : `${slots} slots fit ${definition.label}.`
+}
+
+function isPowerOfTwo(value: number) {
+  return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0
 }
 
 
@@ -546,7 +825,7 @@ function TournamentFormatConfigFields({
   const fieldSet = new Set(definition.configurableFields)
 
   return (
-    <div className="sm:col-span-2 rounded-xl border border-primary/15 bg-primary/5 p-4">
+    <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 xl:col-span-2">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary/80">
@@ -560,7 +839,7 @@ function TournamentFormatConfigFields({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
         {fieldSet.has("matches_per_opponent") && (
           <AdminField
             label={isUk ? "Матчів проти кожного суперника" : "Matches per opponent"}
@@ -679,7 +958,7 @@ function TournamentFormatConfigFields({
         )}
 
         {(fieldSet.has("points_win") || fieldSet.has("points_draw") || fieldSet.has("points_loss")) && (
-          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 xl:col-span-2 xl:grid-cols-3">
             <AdminField label={isUk ? "Очки за перемогу" : "Win points"}>
               <input name="config_points_win" type="number" min={0} max={20} step={1} defaultValue={config.points_win} className={inputClassName} />
             </AdminField>
@@ -693,7 +972,7 @@ function TournamentFormatConfigFields({
         )}
 
         {fieldSet.has("third_place_match") && (
-          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70 xl:col-span-2">
             <input type="hidden" name="config_third_place_match" value="false" />
             <input
               name="config_third_place_match"
@@ -712,7 +991,7 @@ function TournamentFormatConfigFields({
         )}
 
         {fieldSet.has("grand_final_reset") && (
-          <label className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+          <label className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70 xl:col-span-2">
             <input type="hidden" name="config_grand_final_reset" value="false" />
             <input
               name="config_grand_final_reset"
@@ -731,7 +1010,7 @@ function TournamentFormatConfigFields({
         )}
 
         {definition.configurableFields.length === 0 && (
-          <p className="sm:col-span-2 text-sm text-white/50">
+          <p className="text-sm text-white/50 xl:col-span-2">
             {isUk ? "Для цього формату немає додаткових налаштувань." : "This format has no extra settings."}
           </p>
         )}
