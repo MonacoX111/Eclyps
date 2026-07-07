@@ -8,21 +8,25 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export async function checkInTournament(formData: FormData) {
   const tournamentId = readFormString(formData.get("tournament_id"))
+  const redirectTarget = readRedirectTarget(formData.get("redirect_to"))
+  const redirectHash = redirectTarget === "/account" ? "player-tournament" : "registration"
+  const errorRedirect = (error: string): never => redirect(`${redirectTarget}?checkInError=${error}#${redirectHash}`)
+  const successRedirect = (success: string): never => redirect(`${redirectTarget}?checkInSuccess=${success}#${redirectHash}`)
 
   if (!tournamentId) {
-    redirect("/registration?checkInError=invalid-tournament#registration")
+    return errorRedirect("invalid-tournament")
   }
 
   const userProfile = await getCurrentUserProfile()
 
   if (!userProfile) {
-    redirect("/registration?checkInError=discord-login-required#registration")
+    return errorRedirect("discord-login-required")
   }
 
   const supabaseAdmin = createSupabaseAdminClient()
 
   if (!supabaseAdmin) {
-    redirect("/registration?checkInError=service-unavailable#registration")
+    return errorRedirect("service-unavailable")
   }
 
   const { data: registration, error: registrationError } = await supabaseAdmin
@@ -37,19 +41,19 @@ export async function checkInTournament(formData: FormData) {
 
   if (registrationError) {
     console.error("Failed to resolve registration for check-in:", registrationError)
-    redirect("/registration?checkInError=service-unavailable#registration")
+    return errorRedirect("service-unavailable")
   }
 
   if (!registration) {
-    redirect("/registration?checkInError=registration-required#registration")
+    return errorRedirect("registration-required")
   }
 
   if (registration.status !== "approved" || !registration.participant_id) {
-    redirect("/registration?checkInError=registration-pending#registration")
+    return errorRedirect("registration-pending")
   }
 
   if (registration.check_in_status === "checked_in") {
-    redirect("/registration?checkInSuccess=already-checked-in#registration")
+    return successRedirect("already-checked-in")
   }
 
   const { data: tournament, error: tournamentError } = await supabaseAdmin
@@ -59,15 +63,15 @@ export async function checkInTournament(formData: FormData) {
     .maybeSingle()
 
   if (tournamentError || !tournament) {
-    redirect("/registration?checkInError=invalid-tournament#registration")
+    return errorRedirect("invalid-tournament")
   }
 
   if (tournament.status !== "upcoming") {
-    redirect("/registration?checkInError=check-in-closed#registration")
+    return errorRedirect("check-in-closed")
   }
 
   if (tournament.participant_type !== registration.participant_type) {
-    redirect("/registration?checkInError=ownership-required#registration")
+    return errorRedirect("ownership-required")
   }
 
   const windowState = getCheckInWindowStateUtc({
@@ -76,11 +80,7 @@ export async function checkInTournament(formData: FormData) {
   })
 
   if (windowState !== "open") {
-    redirect(
-      windowState === "soon"
-        ? "/registration?checkInError=check-in-not-open#registration"
-        : "/registration?checkInError=check-in-closed#registration",
-    )
+    return errorRedirect(windowState === "soon" ? "check-in-not-open" : "check-in-closed")
   }
 
   const ownsRegistration = await verifyOwnership({
@@ -92,7 +92,7 @@ export async function checkInTournament(formData: FormData) {
   })
 
   if (!ownsRegistration) {
-    redirect("/registration?checkInError=ownership-required#registration")
+    return errorRedirect("ownership-required")
   }
 
   const nowIso = new Date().toISOString()
@@ -112,17 +112,18 @@ export async function checkInTournament(formData: FormData) {
 
   if (updateError) {
     console.error("Failed to check in registration:", updateError)
-    redirect("/registration?checkInError=service-unavailable#registration")
+    return errorRedirect("service-unavailable")
   }
 
   if (!checkedInRegistration) {
-    redirect("/registration?checkInSuccess=already-checked-in#registration")
+    return successRedirect("already-checked-in")
   }
 
   revalidatePath("/")
   revalidatePath("/registration")
+  revalidatePath("/account")
   revalidatePath("/admin")
-  redirect("/registration?checkInSuccess=checked-in#registration")
+  return successRedirect("checked-in")
 }
 
 async function verifyOwnership({
@@ -177,4 +178,9 @@ function readFormString(value: FormDataEntryValue | null) {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null
+}
+
+function readRedirectTarget(value: FormDataEntryValue | null) {
+  const target = readFormString(value)
+  return target === "/account" ? "/account" : "/registration"
 }

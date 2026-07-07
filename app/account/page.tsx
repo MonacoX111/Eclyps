@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { AccountDashboardClient } from "@/components/account-dashboard-client"
+import { AccountDashboardClient, type AccountPlayerMatch } from "@/components/account-dashboard-client"
 import { getCurrentUserProfile, type UserProfile } from "@/lib/auth/user-profile"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getUserNotifications } from "@/lib/notifications/actions"
@@ -22,6 +22,8 @@ type AccountPageProps = {
     joinRequestError?: string
     joinRequestSuccess?: string
     discordRefresh?: string
+    checkInError?: string
+    checkInSuccess?: string
   }>
 }
 
@@ -91,6 +93,8 @@ async function AccountDashboard({
     joinRequestError?: string
     joinRequestSuccess?: string
     discordRefresh?: string
+    checkInError?: string
+    checkInSuccess?: string
   }
 }) {
   const userProfileId = userProfile.id
@@ -174,11 +178,14 @@ async function AccountDashboard({
         id,
         tournament_id,
         registration_type,
+        participant_type,
         status,
         check_in_status,
+        checked_in_at,
         created_at,
         participant_id,
-        tournaments:tournaments(name)
+        display_name,
+        tournaments:tournaments(id, name, game, game_mode, status, event_date, check_in_opens_at, check_in_closes_at, banner_url)
       `)
       .eq("user_profile_id", userProfileId)
       .order("created_at", { ascending: false }),
@@ -300,6 +307,28 @@ async function AccountDashboard({
 
   const teamsList = Array.from(teamMap.values())
   const teamIds = teamsList.map((team) => team.id)
+  const participantIds = Array.from(
+    new Set(
+      registrations
+        .map((registration: any) => registration.participant_id)
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0),
+    ),
+  )
+  let playerMatches: AccountPlayerMatch[] = []
+
+  if (participantIds.length > 0) {
+    const { data, error } = await supabaseAdmin
+      .from("matches")
+      .select("id, tournament_id, round, bracket_round, status, scheduled_at, timezone, schedule_note, team1, team2, score1, score2, participant_1_id, participant_2_id, winner_participant_id")
+      .or(`participant_1_id.in.(${participantIds.join(",")}),participant_2_id.in.(${participantIds.join(",")})`)
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+
+    if (error) {
+      console.error(`Error fetching player tournament matches: [${error.code || "No code"}] ${error.message || "No message"}`)
+    } else {
+      playerMatches = (data ?? []) as AccountPlayerMatch[]
+    }
+  }
 
   if (teamIds.length > 0) {
     const [teamMemberRowsRes, regsRes] = await Promise.all([
@@ -355,6 +384,7 @@ async function AccountDashboard({
       player={player}
       teamsList={teamsList}
       registrations={registrations}
+      playerMatches={playerMatches}
       notifications={notifications}
       searchParams={searchParams}
       invitesList={invitesList}

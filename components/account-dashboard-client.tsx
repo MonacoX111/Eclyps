@@ -23,6 +23,7 @@ import {
   Settings,
   Inbox,
   LogOut,
+  AlertTriangle,
 } from "lucide-react"
 
 import { useLanguage } from "@/components/language-provider"
@@ -38,6 +39,9 @@ import { refreshDiscordProfile } from "@/app/account/actions"
 import { acceptTeamInvite, declineTeamInvite } from "@/app/actions/invites"
 import { leaveTeam } from "@/app/actions/teams"
 import { cancelTeamJoinRequest } from "@/app/actions/team-join-requests"
+import { checkInTournament } from "@/app/actions/check-ins"
+import { formatKyivCheckInDateWithLabel, getCheckInWindowStateUtc } from "@/lib/check-ins/time"
+import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 
 export type TeamInfo = {
   id: string
@@ -59,11 +63,56 @@ type TeamRow = {
   created_at: string | null
 }
 
+export type AccountTournamentSummary = {
+  id?: string | null
+  name?: string | null
+  game?: string | null
+  game_mode?: string | null
+  status?: string | null
+  event_date?: string | null
+  check_in_opens_at?: string | null
+  check_in_closes_at?: string | null
+  banner_url?: string | null
+}
+
+export type AccountRegistration = {
+  id: string
+  tournament_id: string
+  registration_type?: "player" | "team" | string | null
+  participant_type?: "player" | "team" | string | null
+  status?: string | null
+  check_in_status?: "not_checked_in" | "checked_in" | string | null
+  checked_in_at?: string | null
+  created_at?: string | null
+  participant_id?: string | null
+  display_name?: string | null
+  tournaments?: AccountTournamentSummary | AccountTournamentSummary[] | null
+}
+
+export type AccountPlayerMatch = {
+  id: string
+  tournament_id?: string | null
+  round?: string | null
+  bracket_round?: string | null
+  status?: string | null
+  scheduled_at?: string | null
+  timezone?: string | null
+  schedule_note?: string | null
+  team1?: string | null
+  team2?: string | null
+  score1?: number | null
+  score2?: number | null
+  participant_1_id?: string | null
+  participant_2_id?: string | null
+  winner_participant_id?: string | null
+}
+
 export type AccountDashboardClientProps = {
   userProfile: UserProfile
   player: any
   teamsList: TeamInfo[]
-  registrations: any[]
+  registrations: AccountRegistration[]
+  playerMatches?: AccountPlayerMatch[]
   notifications: any[]
   searchParams?: {
     teamError?: string
@@ -73,6 +122,8 @@ export type AccountDashboardClientProps = {
     joinRequestError?: string
     joinRequestSuccess?: string
     discordRefresh?: string
+    checkInError?: string
+    checkInSuccess?: string
   }
   invitesList?: any[]
   joinRequestsList?: any[]
@@ -84,6 +135,7 @@ export function AccountDashboardClient({
   player,
   teamsList,
   registrations,
+  playerMatches = [],
   notifications,
   searchParams,
   invitesList = [],
@@ -170,7 +222,31 @@ export function AccountDashboardClient({
       const timer = setTimeout(() => setSuccessMessage(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [searchParams?.discordRefresh, searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, searchParams?.joinRequestError, searchParams?.joinRequestSuccess, lang, t])
+    if (searchParams?.checkInSuccess) {
+      const messages: Record<string, string> = {
+        "checked-in": lang === "uk" ? "Check-in пройдено. Участь підтверджено." : "Check-in complete. Participation confirmed.",
+        "already-checked-in": lang === "uk" ? "Ти вже підтвердив участь." : "You have already checked in.",
+      }
+      setSuccessMessage(messages[searchParams.checkInSuccess] ?? messages["checked-in"])
+      const timer = setTimeout(() => setSuccessMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+    if (searchParams?.checkInError) {
+      const messages: Record<string, string> = {
+        "invalid-tournament": lang === "uk" ? "Турнір не знайдено." : "Tournament was not found.",
+        "discord-login-required": lang === "uk" ? "Увійди через Discord, щоб пройти check-in." : "Sign in with Discord to check in.",
+        "service-unavailable": lang === "uk" ? "Сервіс check-in тимчасово недоступний." : "Check-in service is temporarily unavailable.",
+        "registration-required": lang === "uk" ? "Спочатку зареєструйся на турнір." : "Register for the tournament first.",
+        "registration-pending": lang === "uk" ? "Заявка ще не підтверджена адміном." : "Your registration is not approved yet.",
+        "check-in-not-open": lang === "uk" ? "Check-in ще не відкритий." : "Check-in is not open yet.",
+        "check-in-closed": lang === "uk" ? "Check-in закритий." : "Check-in is closed.",
+        "ownership-required": lang === "uk" ? "Цей check-in доступний тільки власнику заявки." : "Only the registration owner can check in.",
+      }
+      setErrorMessage(messages[searchParams.checkInError] ?? (lang === "uk" ? "Не вдалося пройти check-in." : "Could not complete check-in."))
+      const timer = setTimeout(() => setErrorMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams?.discordRefresh, searchParams?.inviteError, searchParams?.inviteSuccess, searchParams?.teamError, searchParams?.teamSuccess, searchParams?.joinRequestError, searchParams?.joinRequestSuccess, searchParams?.checkInSuccess, searchParams?.checkInError, lang, t])
 
   const statusBadgeClass = (status: string) => {
     switch (status) {
@@ -242,6 +318,11 @@ export function AccountDashboardClient({
     registrationUnavailable,
   })
   const onboardingProgress = onboardingItems.filter((item) => item.status === "done").length
+  const playerTournamentExperience = buildPlayerTournamentExperience({
+    registrations,
+    playerMatches,
+    lang,
+  })
 
   const activityItems = [
     ...teamsList.map((team) => ({
@@ -410,6 +491,12 @@ export function AccountDashboardClient({
         completed={onboardingProgress}
         total={onboardingItems.length}
         lang={lang}
+      />
+
+      <PlayerTournamentExperiencePanel
+        experience={playerTournamentExperience}
+        lang={lang}
+        statusBadgeClass={statusBadgeClass}
       />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -783,6 +870,366 @@ export function AccountDashboardClient({
       </div>
     </section>
   )
+}
+
+type PlayerTournamentExperience = {
+  registration: AccountRegistration | null
+  tournament: AccountTournamentSummary | null
+  nextMatch: AccountPlayerMatch | null
+  checkInState: "none" | "pending" | "ready" | "soon" | "closed" | "done"
+  primaryLabel: string
+  primaryBody: string
+}
+
+function PlayerTournamentExperiencePanel({
+  experience,
+  lang,
+  statusBadgeClass,
+}: {
+  experience: PlayerTournamentExperience
+  lang: string
+  statusBadgeClass: (status: string) => string
+}) {
+  const isUk = lang === "uk"
+  const registration = experience.registration
+  const tournament = experience.tournament
+  const nextMatch = experience.nextMatch
+
+  return (
+    <DashboardPanel
+      id="player-tournament"
+      title={isUk ? "Мій турнір" : "My tournament"}
+      description={
+        isUk
+          ? "Тут зібрано твій статус у турнірі, check-in і найближчий матч."
+          : "Your tournament status, check-in, and next match in one place."
+      }
+    >
+      {!registration ? (
+        <EmptyState
+          icon={Trophy}
+          title={isUk ? "Ти ще не зареєстрований на турнір" : "You are not registered yet"}
+          body={
+            isUk
+              ? "Подай заявку на активний турнір, і тут зʼявиться твій прогрес, check-in та матчі."
+              : "Register for the active tournament and your progress, check-in, and matches will appear here."
+          }
+        >
+          <Link href="/registration" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-300">
+            <Calendar className="h-4 w-4" />
+            {isUk ? "Зареєструватися" : "Register"}
+          </Link>
+        </EmptyState>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.025] p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300">
+                  {isUk ? "Поточний статус" : "Current status"}
+                </p>
+                <h3 className="mt-2 break-words text-xl font-black text-white">
+                  {tournament?.name ?? registration.display_name ?? (isUk ? "Турнір" : "Tournament")}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-white/55">{experience.primaryBody}</p>
+              </div>
+              <span className={`w-fit rounded-full px-3 py-1 text-[11px] font-bold uppercase ${statusBadgeClass(registration.status ?? "pending")}`}>
+                {formatRegistrationStatus(registration.status, lang)}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <PlayerExperienceMetric
+                label={isUk ? "Учасник" : "Entry"}
+                value={registration.display_name ?? (isUk ? "Не вказано" : "Not specified")}
+              />
+              <PlayerExperienceMetric
+                label="Check-in"
+                value={formatPlayerCheckInState(experience.checkInState, lang)}
+                tone={experience.checkInState === "done" ? "success" : experience.checkInState === "ready" ? "active" : "neutral"}
+              />
+              <PlayerExperienceMetric
+                label={isUk ? "Турнір" : "Tournament"}
+                value={formatTournamentDate(tournament?.event_date, lang)}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {experience.checkInState === "ready" ? (
+                <form action={checkInTournament}>
+                  <input type="hidden" name="tournament_id" value={registration.tournament_id} />
+                  <input type="hidden" name="redirect_to" value="/account" />
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-300 sm:w-auto"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {isUk ? "Підтвердити участь" : "Check in"}
+                  </button>
+                </form>
+              ) : null}
+              <ActionLink href="/registration" icon={Calendar} label={isUk ? "Вкладка реєстрації" : "Registration tab"} />
+              <ActionLink href={getTournamentPageHref(tournament)} icon={ExternalLink} label={isUk ? "Сторінка турніру" : "Tournament page"} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">
+                  {isUk ? "Наступний матч" : "Next match"}
+                </p>
+                <h3 className="mt-2 text-lg font-black text-white">
+                  {nextMatch ? formatMatchTitle(nextMatch, lang) : (isUk ? "Матч ще не призначено" : "No match assigned yet")}
+                </h3>
+              </div>
+              <Swords className="h-5 w-5 shrink-0 text-cyan-300" />
+            </div>
+
+            {nextMatch ? (
+              <>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <PlayerExperienceMetric
+                    label={isUk ? "Час" : "Time"}
+                    value={formatMatchScheduleTime({
+                      scheduledAt: nextMatch.scheduled_at ?? null,
+                      timezone: nextMatch.timezone ?? null,
+                      scheduleNote: nextMatch.schedule_note ?? null,
+                      lang,
+                    })}
+                  />
+                  <PlayerExperienceMetric
+                    label={isUk ? "Раунд" : "Round"}
+                    value={nextMatch.bracket_round ?? nextMatch.round ?? (isUk ? "Раунд" : "Round")}
+                  />
+                </div>
+                <Link
+                  href={`/matches/${nextMatch.id}`}
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2.5 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/15"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {isUk ? "Відкрити матч" : "Open match"}
+                </Link>
+              </>
+            ) : (
+              <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+                <AlertTriangle className="mr-2 inline h-4 w-4" />
+                {registration.status === "approved"
+                  ? isUk
+                    ? "Після генерації сітки або розкладу твій матч зʼявиться тут."
+                    : "After the bracket or schedule is generated, your match will appear here."
+                  : isUk
+                    ? "Спочатку адмін має підтвердити заявку."
+                    : "Admin needs to approve the registration first."}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </DashboardPanel>
+  )
+}
+
+function PlayerExperienceMetric({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string
+  value: string
+  tone?: "neutral" | "success" | "active"
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-emerald-200"
+      : tone === "active"
+        ? "text-cyan-200"
+        : "text-white/85"
+
+  return (
+    <div className="rounded-xl border border-white/5 bg-black/20 p-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">{label}</div>
+      <div className={`mt-2 break-words text-sm font-bold ${toneClass}`}>{value}</div>
+    </div>
+  )
+}
+
+function buildPlayerTournamentExperience({
+  registrations,
+  playerMatches,
+  lang,
+}: {
+  registrations: AccountRegistration[]
+  playerMatches: AccountPlayerMatch[]
+  lang: string
+}): PlayerTournamentExperience {
+  const registration = pickPrimaryRegistration(registrations)
+  const tournament = readTournamentFromRegistration(registration)
+  const nextMatch = pickNextPlayerMatch(playerMatches, registration?.tournament_id)
+  const checkInState = getPlayerCheckInState(registration, tournament)
+  const isUk = lang === "uk"
+
+  if (!registration) {
+    return {
+      registration: null,
+      tournament: null,
+      nextMatch: null,
+      checkInState: "none",
+      primaryLabel: isUk ? "Немає заявки" : "No entry",
+      primaryBody: isUk
+        ? "Ти ще не подав заявку на турнір."
+        : "You have not submitted a tournament registration yet.",
+    }
+  }
+
+  return {
+    registration,
+    tournament,
+    nextMatch,
+    checkInState,
+    primaryLabel: formatRegistrationStatus(registration.status, lang),
+    primaryBody: getPlayerTournamentBody(registration, tournament, checkInState, lang),
+  }
+}
+
+function pickPrimaryRegistration(registrations: AccountRegistration[]) {
+  const priority = { approved: 4, pending: 3, rejected: 2, cancelled: 1 } as Record<string, number>
+  return [...registrations].sort((left, right) => {
+    const statusDelta = (priority[right.status ?? "pending"] ?? 0) - (priority[left.status ?? "pending"] ?? 0)
+    if (statusDelta !== 0) return statusDelta
+    return new Date(right.created_at ?? 0).getTime() - new Date(left.created_at ?? 0).getTime()
+  })[0] ?? null
+}
+
+function readTournamentFromRegistration(registration: AccountRegistration | null): AccountTournamentSummary | null {
+  const tournament = registration?.tournaments
+  if (Array.isArray(tournament)) return tournament[0] ?? null
+  return tournament ?? null
+}
+
+function pickNextPlayerMatch(matches: AccountPlayerMatch[], tournamentId: string | null | undefined) {
+  const relevant = tournamentId
+    ? matches.filter((match) => match.tournament_id === tournamentId)
+    : matches
+  const active = relevant.filter((match) => match.status === "live" || match.status === "upcoming")
+  const pool = active.length > 0 ? active : relevant
+
+  return [...pool].sort((left, right) => {
+    const leftTime = left.scheduled_at ? new Date(left.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
+    const rightTime = right.scheduled_at ? new Date(right.scheduled_at).getTime() : Number.MAX_SAFE_INTEGER
+    if (leftTime !== rightTime) return leftTime - rightTime
+    return String(left.id).localeCompare(String(right.id))
+  })[0] ?? null
+}
+
+function getPlayerCheckInState(
+  registration: AccountRegistration | null,
+  tournament: AccountTournamentSummary | null,
+): PlayerTournamentExperience["checkInState"] {
+  if (!registration) return "none"
+  if (registration.status !== "approved" || !registration.participant_id) return "pending"
+  if (registration.check_in_status === "checked_in") return "done"
+
+  const windowState = getCheckInWindowStateUtc({
+    opensAt: tournament?.check_in_opens_at,
+    closesAt: tournament?.check_in_closes_at,
+  })
+
+  if (windowState === "open") return "ready"
+  if (windowState === "soon") return "soon"
+  return "closed"
+}
+
+function getPlayerTournamentBody(
+  registration: AccountRegistration,
+  tournament: AccountTournamentSummary | null,
+  checkInState: PlayerTournamentExperience["checkInState"],
+  lang: string,
+) {
+  const isUk = lang === "uk"
+
+  if (registration.status === "pending") {
+    return isUk
+      ? "Заявку надіслано. Адмін ще має її перевірити й підтвердити."
+      : "Your entry was submitted. Admin still needs to review and approve it."
+  }
+
+  if (registration.status === "rejected") {
+    return isUk
+      ? "Заявку відхилено. Перевір деталі або подай нову заявку, якщо реєстрація відкрита."
+      : "Your entry was rejected. Check details or submit a new one if registration is open."
+  }
+
+  if (checkInState === "done") {
+    return isUk
+      ? `Участь підтверджено${registration.checked_in_at ? ` ${formatKyivCheckInDateWithLabel(registration.checked_in_at, lang)}` : ""}.`
+      : `Participation confirmed${registration.checked_in_at ? ` ${formatKyivCheckInDateWithLabel(registration.checked_in_at, lang)}` : ""}.`
+  }
+
+  if (checkInState === "ready") {
+    return isUk
+      ? "Check-in відкритий. Підтвердь участь, щоб адмін бачив, що ти готовий грати."
+      : "Check-in is open. Confirm participation so admins know you are ready."
+  }
+
+  if (checkInState === "soon") {
+    return isUk
+      ? `Check-in ще не відкритий. Старт: ${formatKyivCheckInDateWithLabel(tournament?.check_in_opens_at, lang)}.`
+      : `Check-in is not open yet. Opens: ${formatKyivCheckInDateWithLabel(tournament?.check_in_opens_at, lang)}.`
+  }
+
+  if (checkInState === "closed") {
+    return isUk
+      ? "Check-in зараз недоступний або ще не налаштований для цього турніру."
+      : "Check-in is unavailable or not configured for this tournament."
+  }
+
+  return isUk
+    ? "Твій статус у турнірі буде оновлюватися тут."
+    : "Your tournament status will update here."
+}
+
+function formatPlayerCheckInState(state: PlayerTournamentExperience["checkInState"], lang: string) {
+  const isUk = lang === "uk"
+  if (state === "done") return isUk ? "Підтверджено" : "Checked in"
+  if (state === "ready") return isUk ? "Можна пройти" : "Ready"
+  if (state === "soon") return isUk ? "Ще не відкритий" : "Not open yet"
+  if (state === "closed") return isUk ? "Недоступний" : "Unavailable"
+  if (state === "pending") return isUk ? "Очікує заявки" : "Waiting"
+  return isUk ? "Немає заявки" : "No entry"
+}
+
+function formatRegistrationStatus(status: string | null | undefined, lang: string) {
+  const isUk = lang === "uk"
+  if (status === "approved") return isUk ? "Підтверджено" : "Approved"
+  if (status === "rejected") return isUk ? "Відхилено" : "Rejected"
+  if (status === "cancelled") return isUk ? "Скасовано" : "Cancelled"
+  return isUk ? "На перевірці" : "Pending"
+}
+
+function formatTournamentDate(value: string | null | undefined, lang: string) {
+  if (!value) return lang === "uk" ? "Не оголошено" : "TBA"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date)
+}
+
+function formatMatchTitle(match: AccountPlayerMatch, lang: string) {
+  const left = match.team1 || (lang === "uk" ? "Учасник 1" : "Participant 1")
+  const right = match.team2 || (lang === "uk" ? "Учасник 2" : "Participant 2")
+  return `${left} vs ${right}`
+}
+
+function getTournamentPageHref(tournament: AccountTournamentSummary | null) {
+  if (tournament?.status === "finished" && tournament.id) {
+    return `/tournaments/${tournament.id}`
+  }
+
+  return "/tournament"
 }
 
 
