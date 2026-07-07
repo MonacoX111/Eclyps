@@ -201,11 +201,23 @@ function TournamentForm({
   const wizardSteps = [
     {
       title: isUk ? "Основне" : "Basics",
-      description: isUk ? "Назва, гра, дата та формат матчу." : "Name, game, date, and match format.",
+      description: isUk ? "Назва, гра, режим і дата старту." : "Name, game, mode, and start date.",
     },
     {
-      title: isUk ? "Формат" : "Format",
-      description: isUk ? "Структура, учасники, слоти, призи, банер та check-in." : "Structure, participants, slots, prize pool, banner, and check-in.",
+      title: isUk ? "Візуал" : "Visuals",
+      description: isUk ? "Формат матчу, призовий фонд і банер." : "Match format, prize pool, and banner.",
+    },
+    {
+      title: isUk ? "Формат турніру" : "Tournament format",
+      description: isUk ? "Структура турніру та її налаштування." : "Tournament structure and its settings.",
+    },
+    {
+      title: isUk ? "Учасники" : "Participants",
+      description: isUk ? "Тип учасників, слоти та кількість ігрових днів." : "Participant type, slots, and match days.",
+    },
+    {
+      title: isUk ? "Check-in" : "Check-in",
+      description: isUk ? "Вікно check-in і статус турніру." : "Check-in window and tournament status.",
     },
     {
       title: isUk ? "Frontend" : "Frontend",
@@ -294,53 +306,11 @@ function TournamentForm({
         <input name="event_date" type="date" defaultValue={tournament?.event_date ?? ""} className={inputClassName} />
       </AdminField>
 
-      <AdminField label={t.admin.tournaments.formatField} hint={hints.format}>
-        <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
-      </AdminField>
-
       </div>
 
       <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 1)}>
-      <AdminField label={isUk ? "Структура турніру" : "Tournament structure"} hint={hints.tournamentFormat}>
-        <select
-          name="tournament_format"
-          value={selectedTournamentFormat}
-          onChange={(e) => setSelectedTournamentFormat(e.target.value as TournamentFormat)}
-          className={inputClassName}
-        >
-          {TOURNAMENT_FORMAT_DEFINITIONS.map((format) => (
-            <option key={format.id} value={format.id} className="bg-neutral-900 text-white">
-              {format.label}{format.isImplemented ? "" : isUk ? " (engine скоро)" : " (engine soon)"}
-            </option>
-          ))}
-        </select>
-      </AdminField>
-
-      <TournamentFormatConfigFields
-        key={selectedTournamentFormat}
-        definition={tournamentFormatDefinition}
-        config={tournamentFormatConfig}
-        isUk={isUk}
-      />
-
-      <AdminField label={t.admin.tournaments.participantTypeField} hint={hints.participantType}>
-        <select
-          name="participant_type"
-          value={participantType}
-          onChange={(e) => setParticipantType(e.target.value as "team" | "player")}
-          className={inputClassName}
-        >
-          <option value="player">{t.admin.tournaments.playerTournamentOption}</option>
-          <option value="team">{t.admin.tournaments.teamTournamentOption}</option>
-        </select>
-      </AdminField>
-
-      <AdminField label={t.admin.tournaments.participantSlotsField} hint={hints.participantSlots}>
-        <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} className={inputClassName} />
-      </AdminField>
-
-      <AdminField label={t.admin.tournaments.matchDaysField} hint={hints.matchDays}>
-        <input name="match_days" type="number" min={1} step={1} defaultValue={tournament?.match_days ?? 1} className={inputClassName} />
+      <AdminField label={t.admin.tournaments.formatField} hint={hints.format}>
+        <input name="format" defaultValue={tournament?.format ?? gameConfig.matchFormats[0]} className={inputClassName} />
       </AdminField>
 
       <AdminField label={t.admin.tournaments.prizePoolField} hint={hints.prizePool}>
@@ -364,6 +334,57 @@ function TournamentForm({
         />
       </AdminField>
 
+      </div>
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 2)}>
+      <AdminField label={isUk ? "Структура турніру" : "Tournament structure"} hint={hints.tournamentFormat}>
+        <select
+          name="tournament_format"
+          value={selectedTournamentFormat}
+          onChange={(e) => setSelectedTournamentFormat(e.target.value as TournamentFormat)}
+          className={inputClassName}
+        >
+          {TOURNAMENT_FORMAT_DEFINITIONS.map((format) => (
+            <option key={format.id} value={format.id} className="bg-neutral-900 text-white">
+              {format.label}{format.isImplemented ? "" : isUk ? " (engine скоро)" : " (engine soon)"}
+            </option>
+          ))}
+        </select>
+      </AdminField>
+
+      <TournamentFormatConfigFields
+        key={selectedTournamentFormat}
+        definition={tournamentFormatDefinition}
+        config={tournamentFormatConfig}
+        isUk={isUk}
+      />
+
+      </div>
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 3)}>
+      <AdminField label={t.admin.tournaments.participantTypeField} hint={hints.participantType}>
+        <select
+          name="participant_type"
+          value={participantType}
+          onChange={(e) => setParticipantType(e.target.value as "team" | "player")}
+          className={inputClassName}
+        >
+          <option value="player">{t.admin.tournaments.playerTournamentOption}</option>
+          <option value="team">{t.admin.tournaments.teamTournamentOption}</option>
+        </select>
+      </AdminField>
+
+      <AdminField label={t.admin.tournaments.participantSlotsField} hint={hints.participantSlots}>
+        <input name="team_count" type="number" min={1} step={1} defaultValue={tournament?.team_count ?? ""} className={inputClassName} />
+      </AdminField>
+
+      <AdminField label={t.admin.tournaments.matchDaysField} hint={hints.matchDays}>
+        <input name="match_days" type="number" min={1} step={1} defaultValue={tournament?.match_days ?? 1} className={inputClassName} />
+      </AdminField>
+
+      </div>
+
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 4)}>
       <AdminField label={t.admin.tournaments.checkInOpensField} hint={hints.checkInOpens}>
         <input
           name="check_in_opens_at"
@@ -386,7 +407,7 @@ function TournamentForm({
 
       </div>
 
-      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 2)}>
+      <div className={getTournamentWizardPanelClassName(isWizard, wizardStep, 5)}>
       <AdminField label={t.admin.tournaments.arenaTitleField} hint={hints.arenaTitle}>
         <input name="arena_title" defaultValue={tournament?.arena_title ?? ""} className={inputClassName} />
       </AdminField>
@@ -472,7 +493,7 @@ function TournamentWizardSteps({
   activeStep: number
 }) {
   return (
-    <ol className="grid gap-2 sm:grid-cols-3">
+    <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {steps.map((step, index) => {
         const isActive = index === activeStep
         const isDone = index < activeStep
