@@ -1,6 +1,7 @@
 "use client"
 
 import { m } from "framer-motion"
+import { UserPlus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { InstagramCta } from "@/components/instagram-cta"
@@ -192,11 +193,19 @@ export function HeroSection({
 
       {/* CTA Button */}
       <m.div
+        className="relative z-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 1.0 }}
       >
         <InstagramCta className="px-6 py-3 text-sm sm:px-8 sm:py-4 sm:text-base" />
+        <Link
+          href="/registration"
+          className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-primary/35 bg-black/35 px-6 py-3 text-sm font-semibold text-primary transition-all duration-300 hover:border-primary/70 hover:bg-primary/10 hover:text-primary-foreground sm:px-8 sm:py-4 sm:text-base"
+        >
+          <UserPlus className="h-5 w-5" aria-hidden="true" />
+          {lang === "uk" ? "Зареєструватися" : "Register now"}
+        </Link>
       </m.div>
 
     </section>
