@@ -76,7 +76,7 @@ export function TournamentInfo({
   const displayArenaTitle = arenaTitle === "Enter the Arena" ? t.tournament.enterArena : arenaTitle
 
   return (
-    <section className="relative z-10 overflow-hidden px-4 py-24" id="tournament">
+    <section className="relative z-10 -mt-px overflow-hidden px-4 py-24" id="tournament">
       {bannerUrl ? (
         <div
           className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-80"
