@@ -64,6 +64,7 @@ async function ActiveTournamentInfo() {
     sectionName,
     prizePool,
     teamCount,
+    participantCapacity,
     matchDays,
     format,
     game,
@@ -79,6 +80,7 @@ async function ActiveTournamentInfo() {
       tournamentName={sectionName}
       prizePool={prizePool}
       teamCount={teamCount}
+      participantCapacity={participantCapacity}
       matchDays={matchDays}
       format={format}
       game={game}

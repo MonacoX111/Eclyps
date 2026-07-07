@@ -163,6 +163,7 @@ export type TournamentBlocksView = {
   game?: string
   format?: string
   teamCount?: string
+  participantCapacity?: string
   status?: string
   prizePool?: string
   bannerUrl?: string
@@ -767,6 +768,7 @@ function getTournamentBlocksView(
     game: readString(getDisplayGameName(tournament.game)),
     format: readString(tournament.format),
     teamCount: String(participantCount),
+    participantCapacity: readNumberString(tournament.team_count),
     status: formatStatus(readString(tournament.status)),
     prizePool: formatPrizePool(tournament.prize_pool),
     bannerUrl: readString(tournament.banner_url),

@@ -11,6 +11,7 @@ type TournamentInfoProps = {
   game?: string
   prizePool?: string
   teamCount?: string
+  participantCapacity?: string
   matchDays?: string
   format?: string
   arenaTitle?: string
@@ -25,6 +26,7 @@ export function TournamentInfo({
   game,
   prizePool,
   teamCount,
+  participantCapacity,
   matchDays,
   format,
   arenaTitle = "Enter the Arena",
@@ -38,6 +40,8 @@ export function TournamentInfo({
   const visiblePrizePool = readDisplayValue(prizePool)
   const visibleGame = readDisplayValue(game)
   const visibleTeamCount = readPositiveCount(teamCount)
+  const visibleParticipantCapacity = readPositiveCount(participantCapacity)
+  const visibleParticipantCount = formatParticipantCount(visibleTeamCount, visibleParticipantCapacity)
   const visibleMatchDays = readDisplayValue(matchDays)
   const visibleFormat = readDisplayValue(format)
 
@@ -45,8 +49,8 @@ export function TournamentInfo({
     visiblePrizePool
       ? { icon: Trophy, label: t.tournament.prizePool, value: visiblePrizePool }
       : null,
-    visibleTeamCount
-      ? { icon: Users, label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams, value: visibleTeamCount }
+    visibleParticipantCount
+      ? { icon: Users, label: participantLabel === "Players" ? t.navbar.players : t.navbar.teams, value: visibleParticipantCount }
       : null,
     visibleMatchDays
       ? { icon: Calendar, label: t.tournament.matchDays, value: visibleMatchDays }
@@ -181,4 +185,11 @@ function readPositiveCount(value?: string) {
 
   const numericValue = Number(normalizedValue)
   return Number.isFinite(numericValue) && numericValue >= 0 ? normalizedValue : null
+}
+
+
+function formatParticipantCount(registered: string | null, capacity: string | null) {
+  if (!registered) return null
+
+  return capacity ? `${registered}/${capacity}` : registered
 }
