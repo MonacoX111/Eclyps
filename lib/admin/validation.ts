@@ -48,6 +48,7 @@ export const tournamentSchema = z.object({
   match_days: positiveInteger(),
   status: statusSchema(),
   prize_pool: optionalString(),
+  banner_url: optionalHttpsUrlString(),
   arena_title: optionalString(),
   arena_description: optionalString(),
   arena_tags: optionalStringArray(),

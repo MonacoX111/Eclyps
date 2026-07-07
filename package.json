@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:engines": "node scripts/test-tournament-engines.mjs",
+    "qa:db": "node scripts/qa-db.mjs",
     "qa:smoke": "node scripts/qa-smoke.mjs"
   },
   "dependencies": {

@@ -62,13 +62,13 @@ export async function generateMetadata({ params }: TournamentDetailPageProps): P
       url: `/tournaments/${tournament.id}`,
       type: "article",
       siteName: "Eclyps",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: tournament.name }],
+      images: [{ url: tournament.bannerUrl ?? "/og-image.png", width: 1200, height: 630, alt: tournament.name }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/og-image.png"],
+      images: [tournament.bannerUrl ?? "/og-image.png"],
     },
   }
 }
@@ -108,7 +108,15 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
             </Link>
           </div>
 
-          <article id="overview" className="glass-card mt-6 scroll-mt-28 overflow-hidden rounded-2xl p-5 md:p-8">
+          <article id="overview" className="glass-card mt-6 scroll-mt-28 overflow-hidden rounded-2xl p-0">
+            {data.tournament.bannerUrl ? (
+              <div
+                className="h-52 bg-cover bg-center sm:h-64"
+                style={{ backgroundImage: `url("${data.tournament.bannerUrl}")` }}
+                aria-hidden="true"
+              />
+            ) : null}
+            <div className="p-5 md:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
@@ -136,6 +144,7 @@ export default async function TournamentDetailPage({ params }: TournamentDetailP
               <HeroStat icon={CalendarClock} label={t.tournamentArchive.date} value={formatShortEventDate(data.tournament.eventDate ?? data.tournament.createdAt, lang)} />
               <HeroStat icon={Users} label={t.tournamentArchive.participants} value={String(data.tournament.participantCount)} />
               <HeroStat icon={Trophy} label={t.tournamentArchive.winner} value={data.tournament.winner ?? t.tournamentArchive.tbd} />
+            </div>
             </div>
           </article>
 

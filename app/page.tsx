@@ -65,13 +65,14 @@ async function ActiveHero() {
     getHomepageData(),
     getLanguage(),
   ])
-  const { heroName, date, status } = homepageData.tournamentView ?? {}
+  const { heroName, date, status, bannerUrl } = homepageData.tournamentView ?? {}
 
   return (
     <HeroSection
       tournamentName={heroName}
       tournamentDate={date}
       registrationStatus={status}
+      bannerUrl={bannerUrl}
       nextMatch={getHeroFeaturedMatch(homepageData, lang)}
     />
   )

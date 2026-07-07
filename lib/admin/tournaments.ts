@@ -33,6 +33,7 @@ export type AdminTournament = {
   match_days: number | null
   status: string | null
   prize_pool: string | null
+  banner_url: string | null
   arena_title: string | null
   arena_description: string | null
   arena_tags: string[] | null
@@ -65,7 +66,7 @@ export async function getAdminTournaments(): Promise<AdminTournamentQueryResult>
   const { rows, error } = await runAdminRowsQuery("tournaments", async () => {
     const result = await supabase
       .from("tournaments")
-      .select("id, name, game, game_mode, participant_type, event_date, format, tournament_format, format_config, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
+      .select("id, name, game, game_mode, participant_type, event_date, format, tournament_format, format_config, team_count, match_days, status, prize_pool, banner_url, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, check_in_opens_at, check_in_closes_at, is_active, created_at")
       .order("created_at", { ascending: false })
 
     if (result.error && isMissingColumnError(result.error)) {
@@ -101,6 +102,7 @@ function normalizeTournament(row: Record<string, unknown>): AdminTournament | nu
     match_days: readPositiveInteger(row.match_days),
     status: readNullableString(row.status),
     prize_pool: readNullableString(row.prize_pool),
+    banner_url: readNullableString(row.banner_url),
     arena_title: readNullableString(row.arena_title),
     arena_description: readNullableString(row.arena_description),
     arena_tags: readStringArray(row.arena_tags),

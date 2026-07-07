@@ -325,6 +325,24 @@ function TournamentForm({
         <input name="prize_pool" defaultValue={tournament?.prize_pool ?? ""} className={inputClassName} />
       </AdminField>
 
+      <AdminField
+        label={isUk ? "Банер турніру" : "Tournament banner"}
+        hint={{
+          title: isUk
+            ? "Посилання на банер турніру. Використовується на головній та сторінках турніру."
+            : "Tournament banner image URL. Used on the homepage and tournament pages.",
+          example: "https://.../banner.jpg",
+        }}
+      >
+        <input
+          name="banner_url"
+          type="url"
+          defaultValue={tournament?.banner_url ?? ""}
+          placeholder="https://.../banner.jpg"
+          className={inputClassName}
+        />
+      </AdminField>
+
       <AdminField label={t.admin.tournaments.checkInOpensField} hint={hints.checkInOpens}>
         <input
           name="check_in_opens_at"

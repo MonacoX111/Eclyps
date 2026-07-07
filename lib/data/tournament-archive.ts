@@ -45,6 +45,7 @@ export type ArchiveTournament = {
   participantCount: number
   winner: string | null
   resultSummary: string | null
+  bannerUrl: string | null
 }
 
 export type ArchiveParticipant = {
@@ -104,6 +105,7 @@ export type TournamentArchiveDetail = {
     format: string | null
     prizePool: string | null
     matchDays: number | null
+    bannerUrl: string | null
     arenaTitle: string | null
     arenaDescription: string | null
     arenaTags: string[]
@@ -117,7 +119,7 @@ export type TournamentArchiveDetail = {
 type TournamentRow = Record<string, unknown>
 
 const TOURNAMENT_SELECT =
-  "id, name, game, game_mode, participant_type, event_date, format, tournament_format, team_count, match_days, status, prize_pool, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, created_at"
+  "id, name, game, game_mode, participant_type, event_date, format, tournament_format, team_count, match_days, status, prize_pool, banner_url, arena_title, arena_description, arena_tags, bracket_title, bracket_subtitle, bracket_stage_label, bracket_participant_label, bracket_arena_label, created_at"
 
 const PARTICIPANT_SELECT =
   "id, tournament_id, participant_type, display_name, seed, logo_url, avatar_url, source_team_id, source_player_id"
@@ -172,6 +174,7 @@ export async function getTournamentArchiveList(
       participantCount: participantCountByTournament.get(row.id) ?? 0,
       winner,
       resultSummary: createResultSummary(tournamentResults),
+      bannerUrl: row.bannerUrl,
     } satisfies ArchiveTournament
   })
 
@@ -348,6 +351,7 @@ function normalizeTournamentRow(row: TournamentRow) {
     matchDays: readNullableInteger(row.match_days),
     arenaTitle: readNullableString(row.arena_title),
     arenaDescription: readNullableString(row.arena_description),
+    bannerUrl: readNullableString(row.banner_url),
     arenaTags: readStringArray(row.arena_tags),
     bracketTitle: readNullableString(row.bracket_title),
     bracketSubtitle: readNullableString(row.bracket_subtitle),

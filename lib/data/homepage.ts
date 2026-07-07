@@ -57,6 +57,7 @@ export type HomepageTournament = {
   match_days: number | null
   status: string | null
   prize_pool: string | number | null
+  banner_url: string | null
   arena_title: string | null
   arena_description: string | null
   arena_tags: string[]
@@ -164,6 +165,7 @@ export type TournamentBlocksView = {
   teamCount?: string
   status?: string
   prizePool?: string
+  bannerUrl?: string
   matchDays?: string
   arenaTitle?: string
   arenaDescription?: string
@@ -536,6 +538,7 @@ function normalizeHomepageTournament(
       typeof row.prize_pool === "number"
         ? row.prize_pool
         : readNullableString(row.prize_pool),
+    banner_url: readNullableString(row.banner_url),
     arena_title: readNullableString(row.arena_title),
     arena_description: readNullableString(row.arena_description),
     arena_tags: readStringArray(row.arena_tags),
@@ -766,6 +769,7 @@ function getTournamentBlocksView(
     teamCount: String(participantCount),
     status: formatStatus(readString(tournament.status)),
     prizePool: formatPrizePool(tournament.prize_pool),
+    bannerUrl: readString(tournament.banner_url),
     matchDays: readNumberString(tournament.match_days),
     arenaTitle: readString(tournament.arena_title),
     arenaDescription: readString(tournament.arena_description),

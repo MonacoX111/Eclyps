@@ -26,6 +26,7 @@ type HeroSectionProps = {
   tournamentName?: string
   tournamentDate?: string
   registrationStatus?: string
+  bannerUrl?: string | null
   nextMatch?: HeroFeaturedMatch | null
 }
 
@@ -41,6 +42,7 @@ export function HeroSection({
   tournamentName = "Summer Private Cup",
   tournamentDate = "June 21, 2026",
   registrationStatus = "Registration Open",
+  bannerUrl = null,
   nextMatch = null,
 }: HeroSectionProps) {
   const { lang, t } = useLanguage()
@@ -52,6 +54,16 @@ export function HeroSection({
 
   return (
     <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-3 py-14 sm:px-4 sm:py-20">
+      {bannerUrl ? (
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-80"
+          style={{ backgroundImage: `url("${bannerUrl}")` }}
+          aria-hidden="true"
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,12,0.68),rgba(5,8,12,0.9)_55%,rgba(5,8,12,0.96))]" />
+        </div>
+      ) : null}
+
       {/* Radial background glow */}
       <div
         className="pointer-events-none absolute inset-0"

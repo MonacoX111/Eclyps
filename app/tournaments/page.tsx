@@ -169,9 +169,16 @@ function TournamentArchiveCard({
   t: any
 }) {
   return (
-    <article className="glass-card relative overflow-hidden rounded-2xl p-5 transition hover:border-primary/30">
+    <article className="glass-card relative overflow-hidden rounded-2xl p-0 transition hover:border-primary/30">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-      <div className="flex min-w-0 flex-col gap-4">
+      {tournament.bannerUrl ? (
+        <div
+          className="h-36 bg-cover bg-center sm:h-44"
+          style={{ backgroundImage: `url("${tournament.bannerUrl}")` }}
+          aria-hidden="true"
+        />
+      ) : null}
+      <div className="flex min-w-0 flex-col gap-4 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
