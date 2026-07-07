@@ -71,6 +71,7 @@ async function ActiveTournamentInfo() {
     arenaDescription,
     arenaTags,
     participantLabel,
+    bannerUrl,
   } = homepageData.tournamentView
 
   return (
@@ -85,6 +86,7 @@ async function ActiveTournamentInfo() {
       arenaDescription={arenaDescription}
       arenaTags={arenaTags}
       participantLabel={participantLabel}
+      bannerUrl={bannerUrl}
     />
   )
 }
