@@ -197,15 +197,15 @@ function TournamentForm({
     selectedTournamentFormat,
     tournament?.format_config,
   )
-  const isWizard = !tournament
+  const isWizard = true
   const wizardSteps = [
     {
       title: isUk ? "Основне" : "Basics",
-      description: isUk ? "Назва, гра, дата, призи та банер." : "Name, game, date, prize pool, and banner.",
+      description: isUk ? "Назва, гра, дата та формат матчу." : "Name, game, date, and match format.",
     },
     {
       title: isUk ? "Формат" : "Format",
-      description: isUk ? "Структура, учасники, слоти та check-in." : "Structure, participants, slots, and check-in.",
+      description: isUk ? "Структура, учасники, слоти, призи, банер та check-in." : "Structure, participants, slots, prize pool, banner, and check-in.",
     },
     {
       title: isUk ? "Frontend" : "Frontend",
@@ -232,7 +232,6 @@ function TournamentForm({
           name="game"
           value={selectedGame}
           onChange={(e) => handleGameChange(e.target.value)}
-          required
           className={inputClassName}
         >
           {supportedGames.map((game) => (
@@ -249,7 +248,6 @@ function TournamentForm({
             name="game_mode"
             value={selectedMode}
             onChange={(e) => handleModeChange(e.target.value)}
-            required
             className={inputClassName}
           >
             <option value="1v1" className="bg-neutral-900 text-white">1v1 Aim</option>
