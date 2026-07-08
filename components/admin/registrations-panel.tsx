@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { reviewRegistration } from "@/app/admin/actions"
+import { clearRecentRegistrationDecisions, reviewRegistration } from "@/app/admin/actions"
 import Image from "next/image"
 import type { AdminRegistration } from "@/lib/admin/registrations"
 import type { AdminTournament } from "@/lib/admin/tournaments"
@@ -64,7 +64,8 @@ export function RegistrationsPanel({
     (registration) => registration.check_in_status === "checked_in",
   )
   const reviewedRegistrations = filteredRegistrations
-    .filter((registration) => registration.status !== "pending")
+    .filter((registration) => registration.status !== "pending" && registration.reviewed_at)
+    .sort((left, right) => getTime(right.reviewed_at) - getTime(left.reviewed_at))
     .slice(0, 8)
 
   return (
@@ -138,7 +139,19 @@ export function RegistrationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">{t.admin.registrations.recentDecisions}</h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-medium">{t.admin.registrations.recentDecisions}</h3>
+            {reviewedRegistrations.length > 0 ? (
+              <ClearRecentDecisionsForm
+                label={lang === "uk" ? "Очистити" : "Clear"}
+                confirmMessage={
+                  lang === "uk"
+                    ? "Прибрати всі нещодавні рішення з цього блоку? Статуси заявок не зміняться."
+                    : "Clear all recent decisions from this block? Registration statuses will not change."
+                }
+              />
+            ) : null}
+          </div>
           {reviewedRegistrations.length === 0 ? (
             <AdminEmptyState>{t.admin.registrations.noReviewed}</AdminEmptyState>
           ) : (
@@ -158,6 +171,28 @@ export function RegistrationsPanel({
         </article>
       </div>
     </AdminSection>
+  )
+}
+
+function ClearRecentDecisionsForm({
+  label,
+  confirmMessage,
+}: {
+  label: string
+  confirmMessage: string
+}) {
+  return (
+    <form action={clearRecentRegistrationDecisions}>
+      <button
+        type="submit"
+        onClick={(event) => {
+          if (!window.confirm(confirmMessage)) event.preventDefault()
+        }}
+        className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+      >
+        {label}
+      </button>
+    </form>
   )
 }
 
@@ -522,4 +557,10 @@ function formatDateTime(value: string, lang: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date)
+}
+
+function getTime(value: string | null) {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? 0 : time
 }

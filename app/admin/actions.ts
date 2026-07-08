@@ -8,9 +8,12 @@ export {
 export { createTeam, deleteTeam, updateTeam, approveTeam, rejectTeam, restoreTeamToPending } from "./actions/teams"
 
 export { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "./actions/players"
-export { reviewPlayerApplication } from "./actions/player-applications"
+export {
+  clearRecentPlayerApplicationDecisions,
+  reviewPlayerApplication,
+} from "./actions/player-applications"
 export { reviewDispute } from "./actions/disputes"
-export { reviewRegistration } from "./actions/registrations"
+export { clearRecentRegistrationDecisions, reviewRegistration } from "./actions/registrations"
 export {
   assignBracketSlot,
   autoGenerateBracket,

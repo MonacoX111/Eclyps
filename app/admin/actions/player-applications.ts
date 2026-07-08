@@ -66,6 +66,33 @@ export async function reviewPlayerApplication(formData: FormData) {
   redirect("/admin?playerApplicationSuccess=approved#player-applications")
 }
 
+export async function clearRecentPlayerApplicationDecisions() {
+  await requireAdminSession()
+
+  const supabaseAdmin = createSupabaseAdminClient()
+  if (!supabaseAdmin) {
+    redirect("/admin?playerApplicationError=admin-client-unavailable#player-applications")
+  }
+
+  const { error } = await supabaseAdmin
+    .from("player_applications")
+    .update({
+      reviewed_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("status", ["approved", "rejected"])
+    .not("reviewed_at", "is", null)
+
+  if (error) {
+    logMutationError("clear recent player application decisions", error)
+    redirect("/admin?playerApplicationError=mutation-failed#player-applications")
+  }
+
+  revalidatePath("/")
+  revalidatePath("/admin")
+  redirect("/admin?playerApplicationSuccess=recent-decisions-cleared#player-applications")
+}
+
 async function findOrCreateApprovedPlayer({
   userProfileId,
   nickname,

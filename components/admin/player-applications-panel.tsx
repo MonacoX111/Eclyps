@@ -1,7 +1,10 @@
 "use client"
 
 import Image from "next/image"
-import { reviewPlayerApplication } from "@/app/admin/actions"
+import {
+  clearRecentPlayerApplicationDecisions,
+  reviewPlayerApplication,
+} from "@/app/admin/actions"
 import type { AdminPlayerApplication } from "@/lib/admin/player-applications"
 import type { AdminFeedback } from "@/lib/admin/types"
 import {
@@ -22,12 +25,13 @@ export function PlayerApplicationsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const pendingApplications = applications.filter(
     (application) => application.status === "pending",
   )
   const reviewedApplications = applications
-    .filter((application) => application.status !== "pending")
+    .filter((application) => application.status !== "pending" && application.reviewed_at)
+    .sort((left, right) => getTime(right.reviewed_at) - getTime(left.reviewed_at))
     .slice(0, 8)
 
   return (
@@ -58,7 +62,19 @@ export function PlayerApplicationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <h3 className="text-lg font-medium">{t.admin.applications.recentDecisions}</h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg font-medium">{t.admin.applications.recentDecisions}</h3>
+            {reviewedApplications.length > 0 ? (
+              <ClearRecentApplicationDecisionsForm
+                label={lang === "uk" ? "Очистити" : "Clear"}
+                confirmMessage={
+                  lang === "uk"
+                    ? "Прибрати всі нещодавні рішення з цього блоку? Статуси заявок не зміняться."
+                    : "Clear all recent decisions from this block? Application statuses will not change."
+                }
+              />
+            ) : null}
+          </div>
           {reviewedApplications.length === 0 ? (
             <AdminEmptyState>{t.admin.applications.noReviewed}</AdminEmptyState>
           ) : (
@@ -74,6 +90,28 @@ export function PlayerApplicationsPanel({
         </article>
       </div>
     </AdminSection>
+  )
+}
+
+function ClearRecentApplicationDecisionsForm({
+  label,
+  confirmMessage,
+}: {
+  label: string
+  confirmMessage: string
+}) {
+  return (
+    <form action={clearRecentPlayerApplicationDecisions}>
+      <button
+        type="submit"
+        onClick={(event) => {
+          if (!window.confirm(confirmMessage)) event.preventDefault()
+        }}
+        className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+      >
+        {label}
+      </button>
+    </form>
   )
 }
 
@@ -186,4 +224,10 @@ function ApplicationDecisionForm({
       </button>
     </form>
   )
+}
+
+function getTime(value: string | null) {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? 0 : time
 }

@@ -130,6 +130,33 @@ export async function reviewRegistration(formData: FormData) {
   redirect("/admin?registrationSuccess=approved#registrations")
 }
 
+export async function clearRecentRegistrationDecisions() {
+  await requireAdminSession()
+
+  const supabaseAdmin = createSupabaseAdminClient()
+
+  if (!supabaseAdmin) {
+    redirect("/admin?registrationError=admin-client-unavailable#registrations")
+  }
+
+  const { error } = await supabaseAdmin
+    .from("tournament_registrations")
+    .update({
+      reviewed_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("status", ["approved", "rejected"])
+    .not("reviewed_at", "is", null)
+
+  if (error) {
+    logMutationError("clear recent registration decisions", error)
+    redirect("/admin?registrationError=mutation-failed#registrations")
+  }
+
+  revalidateRegistrationPaths()
+  redirect("/admin?registrationSuccess=recent-decisions-cleared#registrations")
+}
+
 async function findApprovedParticipantBySource(
   supabaseAdmin: SupabaseClient,
   {
