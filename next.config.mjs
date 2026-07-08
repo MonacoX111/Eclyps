@@ -50,6 +50,8 @@ const privateRouteHeaders = [
 /** @type {import("next").NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+  htmlLimitedBots:
+    /TelegramBot|Discordbot|facebookexternalhit|Facebot|Twitterbot|XBot|Slackbot|LinkedInBot|WhatsApp|Viber|SkypeUriPreview|Google-Structured-Data-Testing-Tool|Embedly|Quora Link Preview|Pinterest|redditbot/i,
 
   images: {
     remotePatterns: [
