@@ -130,8 +130,15 @@ export async function reviewRegistration(formData: FormData) {
   redirect("/admin?registrationSuccess=approved#registrations")
 }
 
-export async function clearRecentRegistrationDecisions() {
+export async function clearRecentRegistrationDecision(formData: FormData) {
   await requireAdminSession()
+
+  const idValue = formData.get("id")
+  const id = typeof idValue === "string" ? idValue.trim() : ""
+
+  if (!id) {
+    redirect("/admin?registrationError=missing-id#registrations")
+  }
 
   const supabaseAdmin = createSupabaseAdminClient()
 
@@ -145,16 +152,17 @@ export async function clearRecentRegistrationDecisions() {
       reviewed_at: null,
       updated_at: new Date().toISOString(),
     })
+    .eq("id", id)
     .in("status", ["approved", "rejected"])
     .not("reviewed_at", "is", null)
 
   if (error) {
-    logMutationError("clear recent registration decisions", error)
+    logMutationError("clear recent registration decision", error)
     redirect("/admin?registrationError=mutation-failed#registrations")
   }
 
   revalidateRegistrationPaths()
-  redirect("/admin?registrationSuccess=recent-decisions-cleared#registrations")
+  redirect("/admin?registrationSuccess=recent-decision-cleared#registrations")
 }
 
 async function findApprovedParticipantBySource(

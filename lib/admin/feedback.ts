@@ -113,6 +113,7 @@ const ADMIN_FEEDBACK_UK: Record<string, string> = {
   "Result change could not be saved.": "Зміни результату не вдалося зберегти.",
   "Player application approved.": "Заявку гравця схвалено.",
   "Player application rejected.": "Заявку гравця відхилено.",
+  "Recent player application decision cleared.": "Нещодавнє рішення заявки гравця очищено.",
   "Recent player application decisions cleared.": "Нещодавні рішення заявок гравців очищено.",
   "Player application id is missing.": "ID заявки гравця відсутній.",
   "Player application decision must be approve or reject.": "Рішення щодо заявки гравця має бути схвалити або відхилити.",
@@ -122,6 +123,7 @@ const ADMIN_FEEDBACK_UK: Record<string, string> = {
   "Player application review could not be saved.": "Рішення щодо заявки гравця не вдалося зберегти.",
   "Registration approved and added to participants.": "Реєстрацію схвалено й додано до учасників.",
   "Registration rejected.": "Реєстрацію відхилено.",
+  "Recent registration decision cleared.": "Нещодавнє рішення реєстрації очищено.",
   "Recent registration decisions cleared.": "Нещодавні рішення реєстрацій очищено.",
   "Registration id is missing.": "ID реєстрації відсутній.",
   "Registration decision must be approve or reject.": "Рішення щодо реєстрації має бути схвалити або відхилити.",
@@ -361,6 +363,7 @@ export function getResultFeedback(searchParams?: Pick<AdminSearchParams, "result
 export function getPlayerApplicationFeedback(searchParams?: Pick<AdminSearchParams, "playerApplicationError" | "playerApplicationSuccess">, lang: AdminFeedbackLanguage = "en"): AdminFeedback | null {
   if (searchParams?.playerApplicationSuccess === "approved") return feedback("success", "Player application approved.", lang)
   if (searchParams?.playerApplicationSuccess === "rejected") return feedback("success", "Player application rejected.", lang)
+  if (searchParams?.playerApplicationSuccess === "recent-decision-cleared") return feedback("success", "Recent player application decision cleared.", lang)
   if (searchParams?.playerApplicationSuccess === "recent-decisions-cleared") return feedback("success", "Recent player application decisions cleared.", lang)
   if (!searchParams?.playerApplicationError) return null
 
@@ -380,6 +383,7 @@ export function getPlayerApplicationFeedback(searchParams?: Pick<AdminSearchPara
 export function getRegistrationFeedback(searchParams?: Pick<AdminSearchParams, "registrationError" | "registrationSuccess">, lang: AdminFeedbackLanguage = "en"): AdminFeedback | null {
   if (searchParams?.registrationSuccess === "approved") return feedback("success", "Registration approved and added to participants.", lang)
   if (searchParams?.registrationSuccess === "rejected") return feedback("success", "Registration rejected.", lang)
+  if (searchParams?.registrationSuccess === "recent-decision-cleared") return feedback("success", "Recent registration decision cleared.", lang)
   if (searchParams?.registrationSuccess === "recent-decisions-cleared") return feedback("success", "Recent registration decisions cleared.", lang)
   if (!searchParams?.registrationError) return null
 

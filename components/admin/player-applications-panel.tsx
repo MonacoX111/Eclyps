@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import {
-  clearRecentPlayerApplicationDecisions,
+  clearRecentPlayerApplicationDecision,
   reviewPlayerApplication,
 } from "@/app/admin/actions"
 import type { AdminPlayerApplication } from "@/lib/admin/player-applications"
@@ -25,7 +25,7 @@ export function PlayerApplicationsPanel({
   fetchError: string | null
   feedback: AdminFeedback | null
 }) {
-  const { t, lang } = useLanguage()
+  const { t } = useLanguage()
   const pendingApplications = applications.filter(
     (application) => application.status === "pending",
   )
@@ -62,19 +62,7 @@ export function PlayerApplicationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-medium">{t.admin.applications.recentDecisions}</h3>
-            {reviewedApplications.length > 0 ? (
-              <ClearRecentApplicationDecisionsForm
-                label={lang === "uk" ? "Очистити" : "Clear"}
-                confirmMessage={
-                  lang === "uk"
-                    ? "Прибрати всі нещодавні рішення з цього блоку? Статуси заявок не зміняться."
-                    : "Clear all recent decisions from this block? Application statuses will not change."
-                }
-              />
-            ) : null}
-          </div>
+          <h3 className="text-lg font-medium">{t.admin.applications.recentDecisions}</h3>
           {reviewedApplications.length === 0 ? (
             <AdminEmptyState>{t.admin.applications.noReviewed}</AdminEmptyState>
           ) : (
@@ -83,6 +71,7 @@ export function PlayerApplicationsPanel({
                 <ApplicationRecord
                   key={application.id}
                   application={application}
+                  showClearDecision
                 />
               ))}
             </div>
@@ -93,34 +82,14 @@ export function PlayerApplicationsPanel({
   )
 }
 
-function ClearRecentApplicationDecisionsForm({
-  label,
-  confirmMessage,
-}: {
-  label: string
-  confirmMessage: string
-}) {
-  return (
-    <form action={clearRecentPlayerApplicationDecisions}>
-      <button
-        type="submit"
-        onClick={(event) => {
-          if (!window.confirm(confirmMessage)) event.preventDefault()
-        }}
-        className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
-      >
-        {label}
-      </button>
-    </form>
-  )
-}
-
 function ApplicationRecord({
   application,
   showActions = false,
+  showClearDecision = false,
 }: {
   application: AdminPlayerApplication
   showActions?: boolean
+  showClearDecision?: boolean
 }) {
   const { t, lang } = useLanguage()
   const status = application.status
@@ -193,6 +162,20 @@ function ApplicationRecord({
           />
         </div>
       ) : null}
+
+      {showClearDecision ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <ClearApplicationDecisionForm
+            id={application.id}
+            label={lang === "uk" ? "Очистити це рішення" : "Clear this decision"}
+            confirmMessage={
+              lang === "uk"
+                ? `Прибрати це рішення для "${application.requested_nickname}" з нещодавніх? Статус заявки не зміниться.`
+                : `Clear this decision for "${application.requested_nickname}" from recent decisions? Application status will not change.`
+            }
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -219,6 +202,31 @@ function ApplicationDecisionForm({
             ? "w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10"
             : "w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-medium text-black transition hover:bg-emerald-200"
         }
+      >
+        {label}
+      </button>
+    </form>
+  )
+}
+
+function ClearApplicationDecisionForm({
+  id,
+  label,
+  confirmMessage,
+}: {
+  id: string
+  label: string
+  confirmMessage: string
+}) {
+  return (
+    <form action={clearRecentPlayerApplicationDecision}>
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        onClick={(event) => {
+          if (!window.confirm(confirmMessage)) event.preventDefault()
+        }}
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/70 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
       >
         {label}
       </button>

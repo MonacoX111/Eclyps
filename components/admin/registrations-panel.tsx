@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { clearRecentRegistrationDecisions, reviewRegistration } from "@/app/admin/actions"
+import { clearRecentRegistrationDecision, reviewRegistration } from "@/app/admin/actions"
 import Image from "next/image"
 import type { AdminRegistration } from "@/lib/admin/registrations"
 import type { AdminTournament } from "@/lib/admin/tournaments"
@@ -139,19 +139,7 @@ export function RegistrationsPanel({
         </article>
 
         <article className={innerPanelClassName}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-medium">{t.admin.registrations.recentDecisions}</h3>
-            {reviewedRegistrations.length > 0 ? (
-              <ClearRecentDecisionsForm
-                label={lang === "uk" ? "Очистити" : "Clear"}
-                confirmMessage={
-                  lang === "uk"
-                    ? "Прибрати всі нещодавні рішення з цього блоку? Статуси заявок не зміняться."
-                    : "Clear all recent decisions from this block? Registration statuses will not change."
-                }
-              />
-            ) : null}
-          </div>
+          <h3 className="text-lg font-medium">{t.admin.registrations.recentDecisions}</h3>
           {reviewedRegistrations.length === 0 ? (
             <AdminEmptyState>{t.admin.registrations.noReviewed}</AdminEmptyState>
           ) : (
@@ -164,6 +152,7 @@ export function RegistrationsPanel({
                     tournamentNames.get(registration.tournament_id) ??
                     t.admin.registrations.unknownTournament
                   }
+                  showClearDecision
                 />
               ))}
             </div>
@@ -171,28 +160,6 @@ export function RegistrationsPanel({
         </article>
       </div>
     </AdminSection>
-  )
-}
-
-function ClearRecentDecisionsForm({
-  label,
-  confirmMessage,
-}: {
-  label: string
-  confirmMessage: string
-}) {
-  return (
-    <form action={clearRecentRegistrationDecisions}>
-      <button
-        type="submit"
-        onClick={(event) => {
-          if (!window.confirm(confirmMessage)) event.preventDefault()
-        }}
-        className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
-      >
-        {label}
-      </button>
-    </form>
   )
 }
 
@@ -294,10 +261,12 @@ function RegistrationRecord({
   registration,
   tournamentName,
   showActions = false,
+  showClearDecision = false,
 }: {
   registration: AdminRegistration
   tournamentName: string
   showActions?: boolean
+  showClearDecision?: boolean
 }) {
   const { t, lang } = useLanguage()
   const displayParticipantType =
@@ -403,6 +372,20 @@ function RegistrationRecord({
           />
         </div>
       ) : null}
+
+      {showClearDecision ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <ClearRegistrationDecisionForm
+            id={registration.id}
+            label={lang === "uk" ? "Очистити це рішення" : "Clear this decision"}
+            confirmMessage={
+              lang === "uk"
+                ? `Прибрати це рішення для "${registration.display_name}" з нещодавніх? Статус заявки не зміниться.`
+                : `Clear this decision for "${registration.display_name}" from recent decisions? Registration status will not change.`
+            }
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -491,6 +474,31 @@ function RegistrationDecisionForm({
             ? "w-full rounded-xl border border-red-300/20 px-4 py-3 text-sm text-red-100 transition hover:border-red-300/40 hover:bg-red-300/10"
             : "w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-medium text-black transition hover:bg-emerald-200"
         }
+      >
+        {label}
+      </button>
+    </form>
+  )
+}
+
+function ClearRegistrationDecisionForm({
+  id,
+  label,
+  confirmMessage,
+}: {
+  id: string
+  label: string
+  confirmMessage: string
+}) {
+  return (
+    <form action={clearRecentRegistrationDecision}>
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        onClick={(event) => {
+          if (!window.confirm(confirmMessage)) event.preventDefault()
+        }}
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/70 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
       >
         {label}
       </button>

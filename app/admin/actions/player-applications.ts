@@ -66,8 +66,12 @@ export async function reviewPlayerApplication(formData: FormData) {
   redirect("/admin?playerApplicationSuccess=approved#player-applications")
 }
 
-export async function clearRecentPlayerApplicationDecisions() {
+export async function clearRecentPlayerApplicationDecision(formData: FormData) {
   await requireAdminSession()
+
+  const id = readRequiredFormString(formData, "id")
+
+  if (!id) redirect("/admin?playerApplicationError=missing-id#player-applications")
 
   const supabaseAdmin = createSupabaseAdminClient()
   if (!supabaseAdmin) {
@@ -80,17 +84,18 @@ export async function clearRecentPlayerApplicationDecisions() {
       reviewed_at: null,
       updated_at: new Date().toISOString(),
     })
+    .eq("id", id)
     .in("status", ["approved", "rejected"])
     .not("reviewed_at", "is", null)
 
   if (error) {
-    logMutationError("clear recent player application decisions", error)
+    logMutationError("clear recent player application decision", error)
     redirect("/admin?playerApplicationError=mutation-failed#player-applications")
   }
 
   revalidatePath("/")
   revalidatePath("/admin")
-  redirect("/admin?playerApplicationSuccess=recent-decisions-cleared#player-applications")
+  redirect("/admin?playerApplicationSuccess=recent-decision-cleared#player-applications")
 }
 
 async function findOrCreateApprovedPlayer({

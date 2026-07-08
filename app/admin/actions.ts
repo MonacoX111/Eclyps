@@ -9,11 +9,11 @@ export { createTeam, deleteTeam, updateTeam, approveTeam, rejectTeam, restoreTea
 
 export { createPlayer, deletePlayer, updatePlayer, reviewPlayer } from "./actions/players"
 export {
-  clearRecentPlayerApplicationDecisions,
+  clearRecentPlayerApplicationDecision,
   reviewPlayerApplication,
 } from "./actions/player-applications"
 export { reviewDispute } from "./actions/disputes"
-export { clearRecentRegistrationDecisions, reviewRegistration } from "./actions/registrations"
+export { clearRecentRegistrationDecision, reviewRegistration } from "./actions/registrations"
 export {
   assignBracketSlot,
   autoGenerateBracket,
