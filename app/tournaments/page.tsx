@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { Archive, CalendarDays, Search, SlidersHorizontal, Trophy, Users } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
@@ -13,8 +14,25 @@ import {
 } from "@/lib/data/tournament-archive"
 import { formatShortEventDate } from "@/lib/date-format"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [archive, t] = await Promise.all([
+    getTournamentArchiveList({}),
+    getTranslations(),
+  ])
+  const image = archive.tournaments.find((tournament) => tournament.bannerUrl)?.bannerUrl
+
+  return createPageMetadata({
+    title: `${t.tournamentArchive.historyTitle} | Eclyps`,
+    description: t.tournamentArchive.description,
+    path: "/tournaments",
+    image,
+    imageAlt: t.tournamentArchive.historyTitle,
+  })
+}
 
 type TournamentsPageProps = {
   searchParams?: Promise<{

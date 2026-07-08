@@ -18,6 +18,7 @@ import {
 import { formatShortEventDate } from "@/lib/date-format"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
@@ -50,27 +51,14 @@ export async function generateMetadata({ params }: TournamentDetailPageProps): P
     fallback: tournament.arenaDescription ?? tournament.resultSummary ?? t.metadata.description,
   })
 
-  return {
+  return createPageMetadata({
     title,
     description,
-    alternates: {
-      canonical: `/tournaments/${tournament.id}`,
-    },
-    openGraph: {
-      title,
-      description,
-      url: `/tournaments/${tournament.id}`,
-      type: "article",
-      siteName: "Eclyps",
-      images: [{ url: tournament.bannerUrl ?? "/og-image.png", width: 1200, height: 630, alt: tournament.name }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [tournament.bannerUrl ?? "/og-image.png"],
-    },
-  }
+    path: `/tournaments/${tournament.id}`,
+    image: tournament.bannerUrl,
+    imageAlt: tournament.name,
+    type: "article",
+  })
 }
 
 export default async function TournamentDetailPage({ params }: TournamentDetailPageProps) {

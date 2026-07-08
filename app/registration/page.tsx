@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import {
   RegistrationSection,
@@ -12,8 +13,26 @@ import { getPlatformUserState } from "@/lib/auth/player-state"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+  const tournamentName =
+    homepageData.tournament?.name ??
+    homepageData.tournament?.display_name ??
+    homepageData.tournament?.title ??
+    "турнір Eclyps"
+
+  return createPageMetadata({
+    title: `Реєстрація на ${tournamentName} | Eclyps`,
+    description: `Подай заявку або зроби check-in на ${tournamentName}.`,
+    path: "/registration",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: tournamentName,
+  })
+}
 
 type PageProps = {
   searchParams?: Promise<{

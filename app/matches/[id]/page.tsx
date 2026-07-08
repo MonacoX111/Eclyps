@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import {
   AlertTriangle,
@@ -27,11 +28,52 @@ import { cookies } from "next/headers"
 import { ADMIN_SESSION_COOKIE, isValidAdminSession } from "@/lib/admin-auth"
 import { getMatchMessages } from "@/lib/data/match-chat"
 import { MatchChat } from "@/components/match-chat"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
 type MatchPageProps = {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: MatchPageProps): Promise<Metadata> {
+  const { id } = await params
+  const [match, homepageData, t] = await Promise.all([
+    getPublicMatchDetail(id),
+    getHomepageData(),
+    getTranslations(),
+  ])
+
+  if (!match) {
+    return {
+      title: `${t.matchPage.matchDetails} | Eclyps`,
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const title = `${participantName(match.participants[0], t)} vs ${participantName(match.participants[1], t)} | Eclyps`
+  const scheduledTime = formatMatchScheduleTime({
+    scheduledAt: match.scheduledAt,
+    timezone: match.timezone,
+    scheduleNote: match.scheduleNote,
+  })
+  const tournamentBanner =
+    homepageData.tournament?.id === match.tournament.id
+      ? homepageData.tournamentView?.bannerUrl
+      : match.tournament.id
+        ? (await getTournamentArchiveDetail(match.tournament.id))?.tournament.bannerUrl
+        : null
+  const image =
+    tournamentBanner ??
+    match.participants.find((participant) => participant.imageUrl)?.imageUrl
+
+  return createPageMetadata({
+    title,
+    description: `${match.tournament.name ?? t.matchPage.tournament}. ${formatStatus(match.status, t)}. ${scheduledTime}.`,
+    path: `/matches/${id}`,
+    image,
+    imageAlt: title,
+  })
 }
 
 export default async function MatchPage({ params }: MatchPageProps) {

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { TournamentInfo } from "@/components/tournament-info"
 import { PublicBracket } from "@/components/public-bracket"
@@ -10,8 +11,27 @@ import { getHomepageData } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getLanguage } from "@/lib/i18n/server"
 import { translations } from "@/lib/i18n/translations"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+  const tournamentName =
+    homepageData.tournamentView?.sectionName ??
+    homepageData.tournament?.name ??
+    "Турнір"
+
+  return createPageMetadata({
+    title: `${tournamentName} | Eclyps`,
+    description:
+      homepageData.tournamentView?.arenaDescription ??
+      `Сторінка активного турніру Eclyps: формат, учасники, матчі та bracket.`,
+    path: "/tournament",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: tournamentName,
+  })
+}
 
 export default async function TournamentPage() {
   return (

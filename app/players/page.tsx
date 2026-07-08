@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { TeamsGrid } from "@/components/teams-grid"
 import { Footer } from "@/components/footer"
@@ -10,8 +11,21 @@ import { getApprovedPlayers } from "@/lib/data/players"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { withAvatarCacheBust } from "@/lib/avatar"
 import { getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+
+  return createPageMetadata({
+    title: "Гравці | Eclyps",
+    description: "Профілі гравців Eclyps, статистика, матчі, команди та історія турнірів.",
+    path: "/players",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: "Гравці Eclyps",
+  })
+}
 
 export default async function PlayersPage() {
   return (

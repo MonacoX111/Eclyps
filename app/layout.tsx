@@ -3,15 +3,13 @@ import { Analytics } from '@vercel/analytics/next'
 import { getPublicEnv } from '@/lib/env/public'
 import { getLanguage } from '@/lib/i18n/server'
 import { translations } from '@/lib/i18n/translations'
+import { getMetadataBase } from '@/lib/seo'
 import { LanguageProvider } from '@/components/language-provider'
 import { Toaster } from 'sonner'
 import './globals.css'
 
 const publicEnv = getPublicEnv()
-const siteUrl = publicEnv.siteUrl
-const metadataBase = new URL(
-  siteUrl ?? 'http://localhost:3000',
-)
+const metadataBase = getMetadataBase()
 const ogImage = '/og-image.png'
 
 

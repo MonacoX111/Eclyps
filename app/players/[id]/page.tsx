@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import {
   PublicProfileError,
   PublicProfilePage,
@@ -9,11 +10,42 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { PlayerDashboard, type TeamItem, type RegistrationItem } from "@/components/player-dashboard"
 import { FriendButton } from "@/components/friend-button"
 import { resolveUserProfileIdByAuthUserId, getFriendshipStatus, getFriendOverview } from "@/lib/data/friends"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
 type PlayerProfilePageProps = {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PlayerProfilePageProps): Promise<Metadata> {
+  const { id } = await params
+  const [data, t] = await Promise.all([
+    getPublicPlayerProfile(id),
+    getTranslations(),
+  ])
+
+  if (!data || data.profile.status !== "approved") {
+    return {
+      title: `${t.profile.playerUnavailable} | Eclyps`,
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const name = data.profile.display_name || data.profile.name
+  const descriptionParts = [
+    data.profile.region ? `Регіон: ${data.profile.region}` : null,
+    data.tournamentName ? `Турнір: ${data.tournamentName}` : null,
+    `Перемоги/поразки: ${data.profile.wins}/${data.profile.losses}`,
+  ].filter(Boolean)
+
+  return createPageMetadata({
+    title: `${name} | Eclyps`,
+    description: descriptionParts.join(". "),
+    path: `/players/${id}`,
+    image: data.profile.image_url,
+    imageAlt: name,
+  })
 }
 
 export default async function PlayerProfilePage({

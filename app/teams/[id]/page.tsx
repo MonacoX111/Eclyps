@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import {
   PublicProfileError,
   PublicProfilePage,
@@ -13,6 +14,7 @@ import {
   type CurrentJoinRequest,
   type PendingJoinRequest,
 } from "@/components/team-join-requests"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
@@ -24,6 +26,36 @@ type TeamProfilePageProps = {
     joinRequestError?: string
     joinRequestSuccess?: string
   }>
+}
+
+export async function generateMetadata({ params }: TeamProfilePageProps): Promise<Metadata> {
+  const { id } = await params
+  const [data, t] = await Promise.all([
+    getPublicTeamProfile(id),
+    getTranslations(),
+  ])
+
+  if (!data || data.profile.status !== "approved") {
+    return {
+      title: `${t.profile.teamUnavailable} | Eclyps`,
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const name = data.profile.display_name || data.profile.name
+  const descriptionParts = [
+    data.tournamentName ? `Турнір: ${data.tournamentName}` : null,
+    data.profile.member_count !== null ? `Учасників: ${data.profile.member_count}` : null,
+    `Перемоги/поразки: ${data.profile.wins}/${data.profile.losses}`,
+  ].filter(Boolean)
+
+  return createPageMetadata({
+    title: `${name} | Eclyps`,
+    description: descriptionParts.join(". "),
+    path: `/teams/${id}`,
+    image: data.profile.image_url,
+    imageAlt: name,
+  })
 }
 
 export default async function TeamProfilePage({ params, searchParams }: TeamProfilePageProps) {

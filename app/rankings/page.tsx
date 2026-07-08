@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ParticleField } from "@/components/particle-field"
@@ -8,8 +9,21 @@ import { getApprovedPlayers } from "@/lib/data/players"
 import { getApprovedTeams } from "@/lib/data/teams"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+
+  return createPageMetadata({
+    title: "Рейтинг | Eclyps",
+    description: "Рейтинг гравців і команд Eclyps за перемогами, поразками та турнірною активністю.",
+    path: "/rankings",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: "Рейтинг Eclyps",
+  })
+}
 
 function tagFromName(name: string) {
   const clean = name.trim()

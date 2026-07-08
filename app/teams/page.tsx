@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { TeamsGrid } from "@/components/teams-grid"
 import { Footer } from "@/components/footer"
@@ -11,8 +12,21 @@ import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { CreateTeamModal } from "@/components/create-team-modal"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+
+  return createPageMetadata({
+    title: "Команди | Eclyps",
+    description: "Переглядай команди Eclyps, їхній склад, статистику та участь у турнірах.",
+    path: "/teams",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: "Команди Eclyps",
+  })
+}
 
 type PageProps = {
   searchParams?: Promise<{

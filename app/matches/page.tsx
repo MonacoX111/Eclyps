@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import { CalendarClock, ExternalLink, Radio, Trophy } from "lucide-react"
 import { AdminShortcut } from "@/components/admin-shortcut"
 import { Footer } from "@/components/footer"
@@ -10,8 +11,21 @@ import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData, type HomepageMatch } from "@/lib/data/homepage"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
 import { getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+
+  return createPageMetadata({
+    title: "Матчі | Eclyps",
+    description: "Розклад матчів Eclyps, статуси live/upcoming/finished, результати та сторінки окремих матчів.",
+    path: "/matches",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: "Матчі Eclyps",
+  })
+}
 
 type MatchesPageProps = {
   searchParams?: Promise<{

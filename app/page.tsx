@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Navbar } from "@/components/navbar"
 import { HeroSection } from "@/components/hero-section"
 import { Footer } from "@/components/footer"
@@ -10,9 +11,27 @@ import { getHomepageData, type HomepageData, type HomepageMatch } from "@/lib/da
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getLanguage } from "@/lib/i18n/server"
 import { formatMatchScheduleTime } from "@/lib/matches/schedule"
+import { createPageMetadata } from "@/lib/seo"
 import type { HeroFeaturedMatch } from "@/components/hero-section"
 
 export const dynamic = "force-dynamic"
+
+export async function generateMetadata(): Promise<Metadata> {
+  const homepageData = await getHomepageData()
+  const title = "Eclyps Hub | Eclyps"
+  const tournamentName =
+    homepageData.tournamentView?.heroName ??
+    homepageData.tournament?.name ??
+    "Eclyps Hub"
+
+  return createPageMetadata({
+    title,
+    description: `Наступна подія Eclyps: ${tournamentName}. Турніри, матчі, команди та гравці в одному місці.`,
+    path: "/",
+    image: homepageData.tournamentView?.bannerUrl,
+    imageAlt: tournamentName,
+  })
+}
 
 export default async function Page() {
   return (

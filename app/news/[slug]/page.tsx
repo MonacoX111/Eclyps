@@ -11,6 +11,7 @@ import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { getHomepageData } from "@/lib/data/homepage"
 import { getPublishedNewsPostBySlug } from "@/lib/data/news"
 import { getLanguage, getTranslations } from "@/lib/i18n/server"
+import { createPageMetadata, createSeoDescription } from "@/lib/seo"
 
 export const dynamic = "force-dynamic"
 
@@ -36,29 +37,16 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const image = post.cover_image_url ?? "/og-image.png"
   const title = `${post.title} | Eclyps`
 
-  return {
+  return createPageMetadata({
     title,
     description,
-    alternates: {
-      canonical: `/news/${post.slug}`,
-    },
-    openGraph: {
-      title,
-      description,
-      url: `/news/${post.slug}`,
-      type: "article",
-      siteName: "Eclyps",
-      publishedTime: post.published_at ?? undefined,
-      authors: [post.author_name ?? "Eclyps"],
-      images: [{ url: image, width: 1200, height: 630, alt: post.title }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-  }
+    path: `/news/${post.slug}`,
+    image,
+    imageAlt: post.title,
+    type: "article",
+    publishedTime: post.published_at,
+    authors: [post.author_name ?? "Eclyps"],
+  })
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
@@ -145,12 +133,6 @@ async function Article({ slug }: { slug: string }) {
       </div>
     </article>
   )
-}
-
-function createSeoDescription(value: string | null, fallback: string) {
-  const compact = value?.replace(/\s+/g, " ").trim()
-  if (!compact) return fallback
-  return compact.length > 160 ? `${compact.slice(0, 157).trim()}...` : compact
 }
 
 function getCategoryLabel(category: string | null, t: any) {
