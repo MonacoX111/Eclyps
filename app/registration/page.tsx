@@ -33,6 +33,9 @@ export default async function RegistrationPage({ searchParams }: PageProps) {
   return (
     <main className="relative min-h-screen overflow-x-hidden pt-20">
       <AdminShortcut />
+      <Suspense fallback={null}>
+        <ActiveRegistrationBackdrop />
+      </Suspense>
       <ParticleField />
       <MotionProvider>
         <Suspense fallback={null}>
@@ -48,6 +51,30 @@ export default async function RegistrationPage({ searchParams }: PageProps) {
       </MotionProvider>
       <Footer />
     </main>
+  )
+}
+
+async function ActiveRegistrationBackdrop() {
+  const homepageData = await getHomepageData()
+  const bannerUrl = homepageData.tournamentView?.bannerUrl
+
+  if (!bannerUrl) return null
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-70"
+        style={{ backgroundImage: `url("${bannerUrl}")` }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,8,12,0.78),rgba(5,8,12,0.9)_48%,rgba(5,8,12,0.97))]" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 45% at 50% 18%, oklch(0.78 0.18 165 / 0.12) 0%, transparent 70%)",
+        }}
+      />
+    </div>
   )
 }
 
