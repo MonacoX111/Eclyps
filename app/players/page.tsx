@@ -47,8 +47,6 @@ async function ActiveNavbar() {
 }
 
 async function ActivePlayersGrid() {
-  await getCurrentUserProfile()
-
   const [approvedPlayers, t] = await Promise.all([
     getApprovedPlayers(),
     getTranslations(),

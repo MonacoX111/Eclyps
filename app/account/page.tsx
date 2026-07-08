@@ -1,8 +1,9 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { AccountDashboardClient, type AccountPlayerMatch } from "@/components/account-dashboard-client"
+import { PlayerAccessGate } from "@/components/player-access-gate"
 import { getCurrentUserProfile, type UserProfile } from "@/lib/auth/user-profile"
+import { getPlayerPageAccess } from "@/lib/auth/player-access"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getUserNotifications } from "@/lib/notifications/actions"
 import { getHomepageData } from "@/lib/data/homepage"
@@ -30,9 +31,7 @@ type AccountPageProps = {
 export default async function AccountPage({ searchParams }: AccountPageProps) {
   const resolvedParams = await searchParams
   const userProfile = await getCurrentUserProfile()
-  if (!userProfile) {
-    redirect("/#registration")
-  }
+  const access = await getPlayerPageAccess(userProfile)
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-x-hidden bg-background">
@@ -43,7 +42,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             <ActiveNavbar userProfile={userProfile} />
           </Suspense>
 
-          <AccountDashboard userProfile={userProfile} searchParams={resolvedParams} />
+          {access.allowed ? (
+            <AccountDashboard userProfile={access.userProfile} searchParams={resolvedParams} />
+          ) : (
+            <PlayerAccessGate reason={access.reason} />
+          )}
         </div>
       </MotionProvider>
       <Footer />

@@ -3,7 +3,7 @@ import {
   PublicProfilePage,
 } from "@/components/public-profile-page"
 import { getPublicTeamProfile } from "@/lib/data/profiles"
-import { getLanguage, getTranslations } from "@/lib/i18n/server"
+import { getTranslations } from "@/lib/i18n/server"
 import { getCurrentUserProfile } from "@/lib/auth/user-profile"
 import { canManageTeam } from "@/lib/auth/permissions"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
