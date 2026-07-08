@@ -464,3 +464,38 @@ export function getNewsFeedback(searchParams?: Pick<AdminSearchParams, "newsErro
 
   return feedback("error", message, lang)
 }
+
+export function getPowerToolFeedback(searchParams?: Pick<AdminSearchParams, "toolError" | "toolSuccess">, lang: AdminFeedbackLanguage = "en"): AdminFeedback | null {
+  if (searchParams?.toolSuccess === "participants-imported") {
+    return feedback("success", lang === "uk" ? "Учасників імпортовано." : "Participants imported.", lang)
+  }
+  if (searchParams?.toolSuccess === "content-updated") {
+    return feedback("success", lang === "uk" ? "Фронтенд-контент турніру оновлено." : "Tournament frontend content updated.", lang)
+  }
+  if (searchParams?.toolSuccess === "announcement-published") {
+    return feedback("success", lang === "uk" ? "Анонс опубліковано." : "Announcement published.", lang)
+  }
+  if (!searchParams?.toolError) return null
+
+  const isUk = lang === "uk"
+  const message =
+    {
+      "missing-tournament": isUk ? "Оберіть турнір." : "Select a tournament.",
+      "tournament-not-found": isUk ? "Турнір не знайдено." : "Tournament was not found.",
+      "empty-import": isUk ? "Список імпорту порожній." : "Import list is empty.",
+      "too-many-rows": isUk ? "За один раз можна імпортувати до 128 учасників." : "You can import up to 128 participants at once.",
+      "invalid-import-row": isUk ? "Один із рядків імпорту некоректний." : "One import row is invalid.",
+      "invalid-seed": isUk ? "Seed має бути додатнім числом." : "Seed must be a positive number.",
+      "seed-already-used": isUk ? "Один із seed вже зайнятий." : "One seed is already used.",
+      "duplicate-participant": isUk ? "У списку або турнірі є дубль учасника." : "The list or tournament contains a duplicate participant.",
+      "slot-limit-exceeded": isUk ? "Імпорт перевищує кількість слотів турніру." : "Import exceeds tournament slot limit.",
+      "bracket-already-generated": isUk ? "У турніру вже є сітка. Спершу скиньте або перегенеруйте її." : "This tournament already has a bracket. Reset or regenerate it first.",
+      "invalid-title": isUk ? "Назва анонсу не може бути порожньою." : "Announcement title cannot be empty.",
+      "invalid-content": isUk ? "Текст анонсу не може бути порожнім." : "Announcement content cannot be empty.",
+      "invalid-url": isUk ? "Посилання має бути валідним URL." : "URL must be valid.",
+      "admin-client-unavailable": isUk ? "Supabase admin client недоступний." : "Supabase admin client is unavailable.",
+      "mutation-failed": isUk ? "Дію не вдалося зберегти. Спробуйте ще раз." : "The action could not be saved. Please try again.",
+    }[searchParams.toolError] ?? (isUk ? "Дію не вдалося виконати." : "The action failed.")
+
+  return feedback("error", message, lang)
+}

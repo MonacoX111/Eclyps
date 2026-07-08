@@ -7,6 +7,7 @@ import {
   getPlayerApplicationFeedback,
   getPlayerFeedback,
   getParticipantFeedback,
+  getPowerToolFeedback,
   getRegistrationFeedback,
   getResultFeedback,
   getTeamFeedback,
@@ -69,6 +70,7 @@ export async function AdminDashboard({
     result: getResultFeedback(searchParams, lang),
     activeTournament: getActiveTournamentFeedback(searchParams, lang),
     news: getNewsFeedback(searchParams, lang),
+    tools: getPowerToolFeedback(searchParams, lang),
   }
 
   return (

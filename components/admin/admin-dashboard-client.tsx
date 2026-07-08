@@ -22,7 +22,8 @@ import {
   Inbox,
   CheckCircle2,
   AlertCircle,
-  Activity
+  Activity,
+  Wrench
 } from "lucide-react"
 
 // Import Reusable Panels
@@ -37,6 +38,7 @@ import { BracketPanel, MatchesPanel } from "@/components/admin/matches-panel"
 import { ResultsPanel } from "@/components/admin/results-panel"
 import { ActiveTournamentPanel } from "@/components/admin/active-tournament-panel"
 import { NewsPanel } from "@/components/admin/news-panel"
+import { PowerToolsPanel } from "@/components/admin/power-tools-panel"
 
 import { logoutAdmin } from "@/app/admin/actions"
 import { formatDisplayDate, formatStatus } from "@/lib/admin/formatters"
@@ -66,6 +68,7 @@ type AdminDashboardFeedbacks = {
   result: AdminFeedback | null
   activeTournament: AdminFeedback | null
   news: AdminFeedback | null
+  tools: AdminFeedback | null
 }
 
 type RecentEvent = {
@@ -151,6 +154,7 @@ export function AdminDashboardClient({
         else if (feedbacks.result) setActiveTab("results")
         else if (feedbacks.activeTournament) setActiveTab("tournaments")
         else if (feedbacks.news) setActiveTab("news")
+        else if (feedbacks.tools) setActiveTab("tools")
       }
     }
   }, [feedbacks])
@@ -255,6 +259,7 @@ export function AdminDashboardClient({
     { id: "bracket", label: t.admin.tabs.bracket, group: "content", icon: GitMerge },
     { id: "results", label: t.admin.tabs.results, group: "content", icon: Award },
     { id: "news", label: t.admin.tabs.news, group: "content", icon: Newspaper },
+    { id: "tools", label: lang === "uk" ? "Інструменти" : "Tools", group: "system", icon: Wrench },
     { id: "settings", label: t.admin.tabs.settings, group: "system", icon: Settings },
   ]
   const menuGroupLabels = {
@@ -923,7 +928,18 @@ export function AdminDashboardClient({
                 />
               )}
 
-              {/* Tab 12: Settings diagnostics */}
+              {/* Tab 12: Power tools */}
+              {activeTab === "tools" && (
+                <PowerToolsPanel
+                  tournaments={tournaments}
+                  participants={participants}
+                  matches={matches}
+                  newsPosts={newsPosts}
+                  feedback={feedbacks.tools}
+                />
+              )}
+
+              {/* Tab 13: Settings diagnostics */}
               {activeTab === "settings" && (
                 <div className="space-y-6">
                   <div className="glass-card rounded-2xl border border-white/5 p-6 space-y-6">
