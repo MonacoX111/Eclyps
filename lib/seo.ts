@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { getPublicEnv } from "@/lib/env/public"
 
-const DEFAULT_OG_IMAGE = "/og-image.png"
+const DEFAULT_SITE_URL = "https://eclyps.vercel.app"
+const DEFAULT_OG_IMAGE = "/og.png"
 const SITE_NAME = "Eclyps"
 
 type PageMetadataOptions = {
@@ -16,7 +17,7 @@ type PageMetadataOptions = {
 }
 
 export function getSiteUrl() {
-  return getPublicEnv().siteUrl ?? "http://localhost:3000"
+  return getPublicEnv().siteUrl ?? DEFAULT_SITE_URL
 }
 
 export function getMetadataBase() {
@@ -33,12 +34,8 @@ export function createPageMetadata({
   publishedTime,
   authors,
 }: PageMetadataOptions): Metadata {
-  const previewImage = image?.trim() || DEFAULT_OG_IMAGE
-  const ogImage = createOgImagePath({
-    title,
-    description,
-    image: previewImage,
-  })
+  const previewImage = toAbsoluteUrl(image?.trim() || DEFAULT_OG_IMAGE)
+  const pageUrl = toAbsoluteUrl(path)
 
   return {
     title,
@@ -49,14 +46,14 @@ export function createPageMetadata({
     openGraph: {
       title,
       description,
-      url: path,
+      url: pageUrl,
       type,
       siteName: SITE_NAME,
       publishedTime: type === "article" ? publishedTime ?? undefined : undefined,
       authors: type === "article" ? authors : undefined,
       images: [
         {
-          url: ogImage,
+          url: previewImage,
           width: 1200,
           height: 630,
           alt: imageAlt ?? title,
@@ -67,7 +64,7 @@ export function createPageMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
+      images: [previewImage],
     },
   }
 }
@@ -76,24 +73,6 @@ export function createSeoDescription(value: string | null | undefined, fallback:
   const compact = value?.replace(/\s+/g, " ").trim()
   if (!compact) return fallback
   return compact.length > 160 ? `${compact.slice(0, 157).trim()}...` : compact
-}
-
-function createOgImagePath({
-  title,
-  description,
-  image,
-}: {
-  title: string
-  description: string
-  image: string
-}) {
-  const params = new URLSearchParams({
-    title,
-    description,
-    image: toAbsoluteUrl(image),
-  })
-
-  return `/api/og?${params.toString()}`
 }
 
 function toAbsoluteUrl(value: string) {

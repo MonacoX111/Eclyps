@@ -10,7 +10,7 @@ import './globals.css'
 
 const publicEnv = getPublicEnv()
 const metadataBase = getMetadataBase()
-const ogImage = '/og-image.png'
+const ogImage = '/og.png'
 
 
 export async function generateMetadata(): Promise<Metadata> {
