@@ -6,8 +6,8 @@ import type { AdminFeedback } from "@/lib/admin/types"
 import { useLanguage } from "@/components/language-provider"
 
 export const panelGridClassName =
-  "mt-6 grid gap-5 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)]"
-export const innerPanelClassName = "rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+  "mt-6 grid gap-5 2xl:grid-cols-[minmax(360px,0.78fr)_minmax(0,1.22fr)]"
+export const innerPanelClassName = "min-w-0 rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
 export const recordClassName = "rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-white/20 hover:bg-white/[0.035]"
 export const pillClassName =
   "max-w-full break-words rounded-full border border-white/10 px-2.5 py-1 text-white/65"

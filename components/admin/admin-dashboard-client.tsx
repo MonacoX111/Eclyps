@@ -562,15 +562,35 @@ export function AdminDashboardClient({
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 text-xs font-mono text-white/40">
-            <span>{t.admin.extra.session}<span className="text-emerald-400">{t.admin.extra.active}</span></span>
-            <span className="h-3 w-px bg-white/10" />
-            <span>{t.admin.extra.version}<span className="text-emerald-400">2026.5</span></span>
+          <div className="flex items-center gap-3">
+            <label className="sr-only" htmlFor="admin-module-switcher">
+              {lang === "uk" ? "Перейти до модуля адмінки" : "Switch admin module"}
+            </label>
+            <select
+              id="admin-module-switcher"
+              value={activeTab}
+              onChange={(event) => handleTabChange(event.target.value)}
+              className="h-10 max-w-[44vw] rounded-xl border border-white/10 bg-black/40 px-3 text-xs font-semibold text-white outline-none transition hover:border-emerald-300/30 focus:border-emerald-300/50 sm:max-w-[220px]"
+              aria-label={lang === "uk" ? "Перейти до модуля адмінки" : "Switch admin module"}
+            >
+              {menuItems.map((item) => (
+                <option key={item.id} value={item.id} className="bg-neutral-950 text-white">
+                  {item.label}
+                  {item.badge ? ` (${item.badge})` : ""}
+                </option>
+              ))}
+            </select>
+
+            <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-white/40">
+              <span>{t.admin.extra.session}<span className="text-emerald-400">{t.admin.extra.active}</span></span>
+              <span className="h-3 w-px bg-white/10" />
+              <span>{t.admin.extra.version}<span className="text-emerald-400">2026.5</span></span>
+            </div>
           </div>
         </header>
 
         {/* Tab Canvas Area */}
-        <main className="flex-1 p-4 md:p-8 space-y-6 max-w-6xl w-full mx-auto overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 space-y-6 max-w-[1440px] w-full mx-auto overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
