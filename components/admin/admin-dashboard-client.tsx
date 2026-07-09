@@ -39,6 +39,7 @@ import { ResultsPanel } from "@/components/admin/results-panel"
 import { ActiveTournamentPanel } from "@/components/admin/active-tournament-panel"
 import { NewsPanel } from "@/components/admin/news-panel"
 import { PowerToolsPanel } from "@/components/admin/power-tools-panel"
+import { TournamentDayPanel } from "@/components/admin/tournament-day-panel"
 
 import { logoutAdmin } from "@/app/admin/actions"
 import { formatDisplayDate, formatStatus } from "@/lib/admin/formatters"
@@ -171,11 +172,22 @@ export function AdminDashboardClient({
 
   // Count metrics
   const activeTournament = tournaments.find((t) => t.is_active)
+  const activeTournamentRegistrations = activeTournament
+    ? registrations.filter((registration) => registration.tournament_id === activeTournament.id)
+    : []
+  const activeApprovedRegistrations = activeTournamentRegistrations.filter(
+    (registration) => registration.status === "approved",
+  )
+  const activeMissingCheckIns = activeApprovedRegistrations.filter(
+    (registration) => registration.check_in_status !== "checked_in",
+  )
   const pendingPlayersCount = applications.filter((a) => a.status === "pending").length
   const pendingTeamsCount = teams.filter((t) => t.status === "pending").length
   const pendingRegistrationsCount = registrations.filter((r) => r.status === "pending").length
+  const activePendingRegistrationsCount = activeTournamentRegistrations.filter((r) => r.status === "pending").length
   const openDisputesCount = disputes.filter((d) => d.status === "open" || d.status === "under_review").length
   const upcomingMatchesCount = matches.filter((m) => !m.bracket_id && m.status === "upcoming").length
+  const tournamentDayBadge = activePendingRegistrationsCount + activeMissingCheckIns.length
   const activeTournaments = tournaments.filter((tournament) => tournament.is_active)
   const adminIssues = buildAdminIssues({
     activeTournament,
@@ -249,6 +261,7 @@ export function AdminDashboardClient({
   // Navigation Links
   const menuItems: AdminMenuItem[] = [
     { id: "overview", label: t.admin.tabs.overview, group: "work", icon: LayoutDashboard, badge: adminErrorCount || urgentActionsCount },
+    { id: "control", label: lang === "uk" ? "День турніру" : "Tournament day", group: "work", icon: Activity, badge: tournamentDayBadge },
     { id: "applications", label: t.admin.tabs.applications, group: "work", icon: UserPlus, badge: pendingPlayersCount + pendingRegistrationsCount },
     { id: "teams", label: t.admin.tabs.teams, group: "work", icon: Shield, badge: pendingTeamsCount },
     { id: "disputes", label: t.admin.tabs.disputes, group: "work", icon: AlertTriangle, badge: openDisputesCount },
@@ -804,6 +817,17 @@ export function AdminDashboardClient({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* Tab 2: Tournament day control center */}
+              {activeTab === "control" && (
+                <TournamentDayPanel
+                  tournaments={tournaments}
+                  registrations={registrations}
+                  participants={participants}
+                  matches={matches}
+                  onNavigate={handleTabChange}
+                />
               )}
 
               {/* Tab 2: Tournaments */}
