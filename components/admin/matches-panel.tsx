@@ -70,6 +70,7 @@ export function MatchesPanel({
   const playerNames = getPlayerNames(players)
   const visibleMatches = getCanonicalMatches(matches)
   const hiddenManualDuplicates = getHiddenManualDuplicateMatches(matches)
+  const matchFlowIssues = getMatchFlowIssues(visibleMatches, lang)
 
   return (
     <AdminSection
@@ -80,6 +81,12 @@ export function MatchesPanel({
       fetchError={fetchError}
       fetchLabel="matches"
     >
+      <MatchFlowMonitor
+        matches={visibleMatches}
+        issues={matchFlowIssues}
+        lang={lang}
+      />
+
       <div className={panelGridClassName}>
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.matches.createMatch}</h3>
@@ -174,6 +181,130 @@ function getHiddenDuplicateLabel(count: number, lang: "uk" | "en") {
   return lang === "uk"
     ? `Приховано ручні дублікати: ${count}. Для турнірної сітки основним є bracket-матч.`
     : `Hidden manual duplicates: ${count}. The bracket match is the canonical match for bracket tournaments.`
+}
+
+type MatchFlowIssue = {
+  id: string
+  matchId: string
+  title: string
+  description: string
+  tone: "error" | "warning"
+}
+
+function MatchFlowMonitor({
+  matches,
+  issues,
+  lang,
+}: {
+  matches: AdminMatch[]
+  issues: MatchFlowIssue[]
+  lang: "uk" | "en"
+}) {
+  const isUk = lang === "uk"
+  const liveMatches = matches.filter((match) => match.status === "live")
+  const upcomingMatches = matches.filter((match) => match.status === "upcoming")
+  const finishedMatches = matches.filter((match) => isFinishedMatchStatus(match.status))
+  const errorCount = issues.filter((issue) => issue.tone === "error").length
+
+  return (
+    <article className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-300/75">
+            {isUk ? "Контроль матчів" : "Match control"}
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-white">
+            {isUk ? "Стан проведення матчів" : "Match flow state"}
+          </h3>
+          <p className="mt-1 text-sm text-white/55">
+            {isUk
+              ? "Швидка перевірка live/upcoming/finished і помилкових станів перед публікацією результатів."
+              : "Quick check for live/upcoming/finished and invalid states before publishing results."}
+          </p>
+        </div>
+        <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${
+          errorCount > 0
+            ? "border-red-300/25 bg-red-300/10 text-red-100"
+            : issues.length > 0
+              ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+              : "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+        }`}>
+          {errorCount > 0
+            ? isUk ? `${errorCount} помилок` : `${errorCount} errors`
+            : issues.length > 0
+              ? isUk ? `${issues.length} попереджень` : `${issues.length} warnings`
+              : isUk ? "Стан чистий" : "Clean"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MatchFlowStat label="Live" value={liveMatches.length} tone={liveMatches.length > 0 ? "ok" : undefined} />
+        <MatchFlowStat label={isUk ? "Майбутні" : "Upcoming"} value={upcomingMatches.length} />
+        <MatchFlowStat label={isUk ? "Завершені" : "Finished"} value={finishedMatches.length} tone="ok" />
+        <MatchFlowStat
+          label={isUk ? "Проблеми" : "Issues"}
+          value={issues.length}
+          tone={errorCount > 0 ? "error" : issues.length > 0 ? "warning" : "ok"}
+        />
+      </div>
+
+      {issues.length > 0 ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {issues.slice(0, 6).map((issue) => {
+            const match = matches.find((item) => item.id === issue.matchId)
+            return (
+              <a
+                key={issue.id}
+                href={`/matches/${issue.matchId}`}
+                className={`rounded-xl border px-4 py-3 transition hover:bg-white/[0.03] ${
+                  issue.tone === "error"
+                    ? "border-red-300/20 bg-red-300/10"
+                    : "border-amber-300/20 bg-amber-300/10"
+                }`}
+              >
+                <span className="block text-sm font-bold text-white">{issue.title}</span>
+                <span className="mt-1 block text-xs leading-5 text-white/60">
+                  {match ? `${getMatchLabel(match)} · ` : ""}
+                  {issue.description}
+                </span>
+              </a>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
+          {isUk
+            ? "Очевидних проблем у матчах не знайдено."
+            : "No obvious match flow issues were found."}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function MatchFlowStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone?: "ok" | "warning" | "error"
+}) {
+  return (
+    <div className={`rounded-xl border px-4 py-3 ${
+      tone === "ok"
+        ? "border-emerald-300/20 bg-emerald-300/10"
+        : tone === "warning"
+          ? "border-amber-300/20 bg-amber-300/10"
+          : tone === "error"
+            ? "border-red-300/20 bg-red-300/10"
+            : "border-white/10 bg-black/20"
+    }`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{label}</p>
+      <p className="mt-1 text-2xl font-black text-white">{value}</p>
+    </div>
+  )
 }
 
 function BracketTemplateForm({
@@ -730,8 +861,9 @@ function MatchRecord({
   playerNames: string[]
   tournamentName: string
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const isBracketMatch = Boolean(match.bracket_id)
+  const matchIssues = getSingleMatchFlowIssues(match, lang)
 
   return (
     <details className={recordClassName}>
@@ -757,6 +889,15 @@ function MatchRecord({
             <span className={pillClassName}>
               {match.score1 ?? "???"} : {match.score2 ?? "???"}
             </span>
+            {matchIssues.length > 0 ? (
+              <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                matchIssues.some((issue) => issue.tone === "error")
+                  ? "border-red-300/25 bg-red-300/10 text-red-100"
+                  : "border-amber-300/25 bg-amber-300/10 text-amber-100"
+              }`}>
+                {lang === "uk" ? "Потребує уваги" : "Needs review"}
+              </span>
+            ) : null}
             {match.match_order !== null && (
               <span className={pillClassName}>{t.admin.matches.orderLabel}{match.match_order}</span>
             )}
@@ -785,6 +926,23 @@ function MatchRecord({
             </p>
           </div>
         )}
+        {matchIssues.length > 0 ? (
+          <div className="mb-4 space-y-2">
+            {matchIssues.map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-xl border px-3 py-2 text-xs leading-5 ${
+                  issue.tone === "error"
+                    ? "border-red-300/20 bg-red-300/10 text-red-100"
+                    : "border-amber-300/20 bg-amber-300/10 text-amber-100"
+                }`}
+              >
+                <span className="font-bold">{issue.title}</span>
+                <span className="block text-white/60">{issue.description}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
           <MatchForm
             action={updateMatch}
@@ -1199,6 +1357,97 @@ function getBracketIssues(
   }
 
   return issues
+}
+
+function getMatchFlowIssues(matches: AdminMatch[], lang: "uk" | "en"): MatchFlowIssue[] {
+  return matches.flatMap((match) => getSingleMatchFlowIssues(match, lang))
+}
+
+function getSingleMatchFlowIssues(match: AdminMatch, lang: "uk" | "en"): MatchFlowIssue[] {
+  const isUk = lang === "uk"
+  const issues: MatchFlowIssue[] = []
+  const label = getMatchLabel(match)
+
+  if (
+    (match.status === "live" || isFinishedMatchStatus(match.status)) &&
+    (!hasFirstParticipant(match) || !hasSecondParticipant(match))
+  ) {
+    issues.push({
+      id: `${match.id}:missing-participant`,
+      matchId: match.id,
+      title: isUk ? "Матч без учасника" : "Match missing participant",
+      description: isUk
+        ? `${label}: live/finished матч має порожній слот учасника.`
+        : `${label}: live/finished match has an empty participant slot.`,
+      tone: "error",
+    })
+  }
+
+  if (isFinishedMatchStatus(match.status) && (match.score1 === null || match.score2 === null)) {
+    issues.push({
+      id: `${match.id}:missing-score`,
+      matchId: match.id,
+      title: isUk ? "Немає повного рахунку" : "Missing complete score",
+      description: isUk
+        ? "Finished матч має мати обидва значення рахунку."
+        : "Finished match must have both score values.",
+      tone: "error",
+    })
+  }
+
+  if (isFinishedMatchStatus(match.status) && !match.winner_participant_id) {
+    issues.push({
+      id: `${match.id}:missing-winner`,
+      matchId: match.id,
+      title: isUk ? "Немає переможця" : "Missing winner",
+      description: isUk
+        ? "Finished матч має мати визначеного переможця."
+        : "Finished match must have a resolved winner.",
+      tone: "error",
+    })
+  }
+
+  if (
+    !isFinishedMatchStatus(match.status) &&
+    match.score1 !== null &&
+    match.score2 !== null
+  ) {
+    issues.push({
+      id: `${match.id}:score-before-finished`,
+      matchId: match.id,
+      title: isUk ? "Рахунок без finished" : "Score without finished status",
+      description: isUk
+        ? "Якщо рахунок фінальний, зміни статус матчу на finished."
+        : "If this score is final, change the match status to finished.",
+      tone: "warning",
+    })
+  }
+
+  if (hasWinnerScoreMismatch(match)) {
+    issues.push({
+      id: `${match.id}:winner-score-mismatch`,
+      matchId: match.id,
+      title: isUk ? "Winner не відповідає рахунку" : "Winner does not match score",
+      description: isUk
+        ? "Обраний переможець не збігається з більшим рахунком."
+        : "Selected winner does not match the higher score.",
+      tone: "error",
+    })
+  }
+
+  return issues
+}
+
+function hasFirstParticipant(match: AdminMatch) {
+  return Boolean(match.participant_1_id || match.team1)
+}
+
+function hasSecondParticipant(match: AdminMatch) {
+  return Boolean(match.participant_2_id || match.team2)
+}
+
+function getMatchLabel(match: AdminMatch) {
+  return `${match.team1 ?? "TBD"} vs ${match.team2 ?? "TBD"}`
 }
 
 function getInitialRoundMatches(matches: AdminMatch[]) {

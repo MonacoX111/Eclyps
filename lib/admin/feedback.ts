@@ -483,6 +483,9 @@ export function getPowerToolFeedback(searchParams?: Pick<AdminSearchParams, "too
   if (searchParams?.toolSuccess === "announcement-published") {
     return feedback("success", lang === "uk" ? "Анонс опубліковано." : "Announcement published.", lang)
   }
+  if (searchParams?.toolSuccess === "notification-test-sent") {
+    return feedback("success", lang === "uk" ? "Тестове сповіщення надіслано." : "Test notification sent.", lang)
+  }
   if (!searchParams?.toolError) return null
 
   const isUk = lang === "uk"
@@ -501,6 +504,9 @@ export function getPowerToolFeedback(searchParams?: Pick<AdminSearchParams, "too
       "invalid-title": isUk ? "Назва анонсу не може бути порожньою." : "Announcement title cannot be empty.",
       "invalid-content": isUk ? "Текст анонсу не може бути порожнім." : "Announcement content cannot be empty.",
       "invalid-url": isUk ? "Посилання має бути валідним URL." : "URL must be valid.",
+      "missing-user": isUk ? "Оберіть користувача для тестового сповіщення." : "Select a user for the test notification.",
+      "no-push-subscription": isUk ? "У цього користувача немає активної push-підписки." : "This user has no active push subscription.",
+      "notification-test-failed": isUk ? "Тестове сповіщення не вдалося надіслати." : "The test notification could not be sent.",
       "admin-client-unavailable": isUk ? "Supabase admin client недоступний." : "Supabase admin client is unavailable.",
       "mutation-failed": isUk ? "Дію не вдалося зберегти. Спробуйте ще раз." : "The action could not be saved. Please try again.",
     }[searchParams.toolError] ?? (isUk ? "Дію не вдалося виконати." : "The action failed.")

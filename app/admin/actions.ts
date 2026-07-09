@@ -33,6 +33,7 @@ export {
   publishNewsPost,
   updateNewsPost,
 } from "./actions/news"
+export { sendTestPushNotification } from "./actions/notifications"
 export {
   bulkImportParticipants,
   quickPublishAnnouncement,

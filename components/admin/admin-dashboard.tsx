@@ -16,6 +16,7 @@ import {
 import { getLanguage } from "@/lib/i18n/server"
 import { getAdminMatches } from "@/lib/admin/matches"
 import { getAdminNewsPosts } from "@/lib/admin/news"
+import { getAdminNotificationDiagnostics } from "@/lib/admin/notifications"
 import { getAdminDisputes } from "@/lib/admin/disputes"
 import { getAdminParticipants } from "@/lib/admin/participants"
 import { getAdminPlayerApplications } from "@/lib/admin/player-applications"
@@ -43,6 +44,7 @@ export async function AdminDashboard({
     { matches, error: matchError },
     { results, error: resultError },
     { posts: newsPosts, error: newsError },
+    notificationDiagnostics,
   ] = await Promise.all([
     getLanguage(),
     getAdminTournaments(),
@@ -55,6 +57,7 @@ export async function AdminDashboard({
     getAdminMatches(),
     getAdminResults(),
     getAdminNewsPosts(),
+    getAdminNotificationDiagnostics(),
   ])
 
   // Collect feedbacks into an object
@@ -85,6 +88,7 @@ export async function AdminDashboard({
       matches={matches || []}
       results={results || []}
       newsPosts={newsPosts || []}
+      notificationDiagnostics={notificationDiagnostics}
       searchParams={searchParams}
       feedbacks={feedbacks}
     />

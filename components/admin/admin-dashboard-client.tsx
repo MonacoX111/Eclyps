@@ -40,6 +40,7 @@ import { ActiveTournamentPanel } from "@/components/admin/active-tournament-pane
 import { NewsPanel } from "@/components/admin/news-panel"
 import { PowerToolsPanel } from "@/components/admin/power-tools-panel"
 import { TournamentDayPanel } from "@/components/admin/tournament-day-panel"
+import { NotificationDiagnosticsPanel } from "@/components/admin/notification-diagnostics-panel"
 
 import { logoutAdmin } from "@/app/admin/actions"
 import { formatDisplayDate, formatStatus } from "@/lib/admin/formatters"
@@ -48,6 +49,7 @@ import { AdminEmptyState } from "@/components/admin/admin-section"
 import type { AdminDispute } from "@/lib/admin/disputes"
 import type { AdminMatch } from "@/lib/admin/matches"
 import type { AdminNewsPost } from "@/lib/admin/news"
+import type { AdminNotificationDiagnostics } from "@/lib/admin/notifications"
 import type { AdminParticipant } from "@/lib/admin/participants"
 import type { AdminPlayerApplication } from "@/lib/admin/player-applications"
 import type { AdminPlayer } from "@/lib/admin/players"
@@ -107,6 +109,7 @@ type AdminDashboardClientProps = {
   matches: AdminMatch[]
   results: AdminResult[]
   newsPosts: AdminNewsPost[]
+  notificationDiagnostics: AdminNotificationDiagnostics
   searchParams?: AdminSearchParams
   feedbacks: AdminDashboardFeedbacks
 }
@@ -122,6 +125,7 @@ export function AdminDashboardClient({
   matches,
   results,
   newsPosts,
+  notificationDiagnostics,
   searchParams,
   feedbacks
 }: AdminDashboardClientProps) {
@@ -966,6 +970,11 @@ export function AdminDashboardClient({
               {/* Tab 13: Settings diagnostics */}
               {activeTab === "settings" && (
                 <div className="space-y-6">
+                  <NotificationDiagnosticsPanel
+                    diagnostics={notificationDiagnostics}
+                    feedback={feedbacks.tools}
+                  />
+
                   <div className="glass-card rounded-2xl border border-white/5 p-6 space-y-6">
                     <div>
                       <h3 className="text-lg font-bold text-white flex items-center gap-2">
