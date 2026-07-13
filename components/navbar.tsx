@@ -49,7 +49,6 @@ export function Navbar({
 
   const primaryNavLinks = [
     { href: "/tournament", label: t.navbar.tournament },
-    { href: "/registration", label: t.navbar.registration },
     { href: "/teams", label: t.navbar.teams },
     { href: "/players", label: t.navbar.players },
     { href: "/matches", label: t.navbar.matches },
@@ -60,7 +59,8 @@ export function Navbar({
     { href: "/tournaments", label: t.navbar.archive },
     { href: "/news", label: t.navbar.news },
   ]
-  const mobileNavLinks = [...primaryNavLinks, ...secondaryNavLinks]
+  const registrationLink = { href: "/registration", label: t.navbar.registration }
+  const mobileNavLinks = [registrationLink, ...primaryNavLinks, ...secondaryNavLinks]
 
   return (
     <>
@@ -92,7 +92,7 @@ export function Navbar({
               sizes="36px"
               className="h-8 w-8 object-contain sm:h-9 sm:w-9"
             />
-            <span className="hidden text-sm font-bold tracking-wider uppercase text-foreground sm:inline">
+            <span className="font-display hidden text-sm font-bold tracking-normal uppercase text-foreground sm:inline">
               Eclyps
             </span>
           </a>
@@ -192,6 +192,10 @@ export function Navbar({
             })()}
 
             <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+              <RegistrationNavCta
+                active={pathname.startsWith(registrationLink.href)}
+                label={registrationLink.label}
+              />
               <GuideButton />
               <LanguageSwitcher />
               {userProfile && <FriendsBell currentUserId={userProfile.id} />}
@@ -254,7 +258,11 @@ export function Navbar({
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-primary"
+                className={
+                  link.href === registrationLink.href
+                    ? "rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-center text-sm font-bold text-primary transition-colors hover:bg-primary/15"
+                    : "rounded-xl px-2 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-primary"
+                }
                 onClick={() => setOpen(false)}
               >
                 {link.label}
@@ -301,6 +309,28 @@ function GuideButton({ mobile = false, onClick }: { mobile?: boolean; onClick?: 
     >
       <CircleHelp className="h-4 w-4" />
     </button>
+  )
+}
+
+function RegistrationNavCta({
+  active,
+  label,
+}: {
+  active: boolean
+  label: string
+}) {
+  return (
+    <a
+      href="/registration"
+      className={[
+        "inline-flex h-8 shrink-0 items-center justify-center rounded-full border px-3 text-xs font-bold uppercase tracking-[0.12em] transition",
+        active
+          ? "border-primary bg-primary text-primary-foreground shadow-[var(--glow)]"
+          : "border-primary/35 bg-primary/10 text-primary hover:border-primary/65 hover:bg-primary/16",
+      ].join(" ")}
+    >
+      {label}
+    </a>
   )
 }
 

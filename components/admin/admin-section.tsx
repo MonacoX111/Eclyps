@@ -7,10 +7,12 @@ import { useLanguage } from "@/components/language-provider"
 
 export const panelGridClassName =
   "mt-6 grid gap-5 2xl:grid-cols-[minmax(360px,0.78fr)_minmax(0,1.22fr)]"
+export const reviewPanelGridClassName =
+  "mt-6 grid gap-5 2xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]"
 export const innerPanelClassName = "min-w-0 rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-export const recordClassName = "rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-white/20 hover:bg-white/[0.035]"
+export const recordClassName = "min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-white/20 hover:bg-white/[0.035]"
 export const pillClassName =
-  "max-w-full break-words rounded-full border border-white/10 px-2.5 py-1 text-white/65"
+  "inline-flex max-w-full min-w-0 items-center break-words rounded-full border border-white/10 px-2.5 py-1 text-white/65"
 
 export function AdminSection({
   id,

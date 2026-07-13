@@ -11,6 +11,7 @@ import {
   innerPanelClassName,
   pillClassName,
   recordClassName,
+  reviewPanelGridClassName,
 } from "@/components/admin/admin-section"
 import { inputClassName } from "@/components/admin/admin-form-fields"
 import { useLanguage } from "@/components/language-provider"
@@ -53,7 +54,7 @@ export function DisputesPanel({
         withEvidence={evidenceDisputes.length}
       />
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+      <div className={reviewPanelGridClassName}>
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.disputes.openDisputes}</h3>
           {activeDisputes.length === 0 ? (

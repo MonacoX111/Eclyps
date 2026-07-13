@@ -54,7 +54,7 @@ export function HeroSection({
     : ""
 
   return (
-    <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-3 py-14 sm:px-4 sm:py-20">
+    <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-3 py-12 sm:px-4 sm:py-16">
       {bannerUrl ? (
         <div
           className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-80"
@@ -77,7 +77,7 @@ export function HeroSection({
 
       {/* Logo with glow */}
       <m.div
-        className="animate-float relative z-10 mb-5 sm:mb-8"
+        className="animate-float relative z-10 mb-4 sm:mb-6"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.2, ease: "easeOut" }}
@@ -98,7 +98,7 @@ export function HeroSection({
           height={320}
           priority
           sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, (min-width: 640px) 192px, 144px"
-          className="relative z-10 h-36 w-36 object-contain sm:h-48 sm:w-48 md:h-72 md:w-72 lg:h-80 lg:w-80"
+          className="relative z-10 h-32 w-32 object-contain sm:h-44 sm:w-44 md:h-60 md:w-60 lg:h-64 lg:w-64"
           style={{
             filter: "drop-shadow(0 0 24px oklch(0.78 0.18 165 / 0.4)) drop-shadow(0 0 56px oklch(0.78 0.18 165 / 0.15))",
           }}
@@ -107,7 +107,7 @@ export function HeroSection({
 
       {/* Title */}
       <m.h1
-        className="glow-text relative z-10 mb-5 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:mb-8 md:text-6xl lg:text-7xl"
+        className="font-display glow-text relative z-10 mb-4 text-center text-3xl font-bold tracking-normal text-foreground sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.4 }}
@@ -117,7 +117,7 @@ export function HeroSection({
 
       {/* Event label */}
       <m.p
-        className="relative z-10 mb-4 text-center text-xs font-semibold tracking-widest uppercase text-primary/80 sm:text-sm md:mb-8 md:text-base"
+        className="relative z-10 mb-4 text-center text-xs font-semibold tracking-widest uppercase text-primary/80 sm:text-sm md:mb-5 md:text-base"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.55 }}
@@ -127,7 +127,7 @@ export function HeroSection({
 
       {/* Subtitle */}
       <m.p
-        className="relative z-10 mb-4 max-w-full break-words text-center text-base font-medium tracking-widest uppercase text-primary sm:text-lg md:mb-8 md:text-xl"
+        className="relative z-10 mb-4 max-w-full break-words text-center text-base font-medium tracking-widest uppercase text-primary sm:text-lg md:mb-5 md:text-xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.6 }}
@@ -137,7 +137,7 @@ export function HeroSection({
 
       {/* Date & Status */}
       <m.div
-        className="relative z-10 mb-5 flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-xs text-muted-foreground sm:text-sm md:mb-8 md:text-base"
+        className="relative z-10 mb-5 flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-xs text-muted-foreground sm:text-sm md:mb-6 md:text-base"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, delay: 0.8 }}
@@ -198,14 +198,17 @@ export function HeroSection({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 1.0 }}
       >
-        <InstagramCta className="px-6 py-3 text-sm sm:px-8 sm:py-4 sm:text-base" />
         <Link
           href="/registration"
-          className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-primary/35 bg-black/35 px-6 py-3 text-sm font-semibold text-primary transition-all duration-300 hover:border-primary/70 hover:bg-primary/10 hover:text-primary-foreground sm:px-8 sm:py-4 sm:text-base"
+          className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-primary/70 bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-[var(--glow)] transition-all duration-300 hover:border-primary hover:bg-primary/90 hover:shadow-[var(--glow-strong)] sm:px-8 sm:py-4 sm:text-base"
         >
           <UserPlus className="h-5 w-5" aria-hidden="true" />
           {lang === "uk" ? "Зареєструватися" : "Register now"}
         </Link>
+        <InstagramCta
+          variant="secondary"
+          className="px-6 py-3 text-sm sm:px-8 sm:py-4 sm:text-base"
+        />
       </m.div>
 
     </section>

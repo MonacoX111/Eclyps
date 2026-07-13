@@ -22,10 +22,10 @@ export function SectionHeading({
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 0.7 }}
     >
-      <p className="mb-3 text-sm font-semibold tracking-widest uppercase text-primary">
+      <p className="mb-3 text-xs font-semibold tracking-[0.22em] uppercase text-primary/82 sm:text-sm">
         {eyebrow}
       </p>
-      <h2 className="glow-text text-3xl font-bold text-foreground md:text-5xl">
+      <h2 className="font-display text-3xl font-bold tracking-normal text-foreground md:text-5xl">
         <span className="text-balance">{title}</span>
       </h2>
       {children}

@@ -78,30 +78,23 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
             return (
               <m.div
                 key={card.href}
-                className="glass-card group relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 border border-primary/10 transition-all duration-300 hover:border-primary/45"
+                className="group relative flex min-h-56 flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-black/25 p-6 shadow-[var(--surface-shadow)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/28 hover:bg-black/32"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
               >
-                {/* Neon Hover Glow Overlay */}
                 <div
-                  className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/[0.01] group-hover:to-primary/[0.06] transition-all duration-500"
-                  aria-hidden="true"
-                />
-                
-                {/* Top Border Glow Line */}
-                <div
-                  className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-transparent to-transparent group-hover:via-primary/50 transition-all duration-500"
+                  className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent transition group-hover:via-primary/35"
                   aria-hidden="true"
                 />
 
                 <div className="relative z-10">
                   <div className="flex items-center gap-4">
-                    <span className="grid h-12 w-12 place-items-center rounded-xl border border-primary/20 bg-primary/5 text-primary group-hover:border-primary/50 group-hover:bg-primary/10 transition-all duration-300">
+                    <span className="grid h-12 w-12 place-items-center rounded-lg border border-primary/18 bg-primary/[0.06] text-primary transition-all duration-300 group-hover:border-primary/38 group-hover:bg-primary/10">
                       <Icon className="h-6 w-6" />
                     </span>
-                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors duration-300">
+                    <h3 className="text-lg font-bold text-foreground transition-colors duration-300 group-hover:text-primary">
                       {card.label}
                     </h3>
                   </div>
@@ -113,7 +106,7 @@ export function NavigationHub({ participantLabel = "Teams" }: NavigationHubProps
                 <div className="relative z-10 mt-6 pt-4 border-t border-white/5">
                   <Link
                     href={card.href}
-                    className="flex items-center justify-between text-xs font-mono uppercase tracking-wider text-primary"
+                    className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.16em] text-primary/88"
                   >
                     <span>{t.navigationHub.viewSection}</span>
                     <ArrowRight className="h-4 w-4 transform transition-transform group-hover:translate-x-1.5 duration-300" />

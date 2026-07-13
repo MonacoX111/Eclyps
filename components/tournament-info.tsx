@@ -100,7 +100,7 @@ export function TournamentInfo({
         {/* Section header */}
         <SectionHeading eyebrow={t.tournament.upcomingEvent} title={tournamentName}>
           {visibleGame ? (
-            <span className="glass-card mt-4 inline-flex max-w-full break-words rounded-full px-4 py-1.5 text-center text-sm font-medium uppercase tracking-widest text-primary">
+            <span className="mt-4 inline-flex max-w-full break-words rounded-full border border-primary/20 bg-primary/[0.06] px-4 py-1.5 text-center text-sm font-medium uppercase tracking-[0.18em] text-primary">
               {visibleGame}
             </span>
           ) : null}
@@ -123,7 +123,7 @@ export function TournamentInfo({
           {stats.map((stat, i) => (
             <m.div
               key={stat.label}
-              className="glass-card flex w-[calc((100%-1rem)/2)] flex-col items-center gap-3 rounded-xl p-6 text-center transition-all duration-300 md:w-[calc((100%-3rem)/4)]"
+              className="flex w-[calc((100%-1rem)/2)] flex-col items-center gap-3 rounded-xl border border-white/10 bg-black/24 p-6 text-center shadow-[var(--surface-shadow)] transition-all duration-300 hover:border-primary/24 md:w-[calc((100%-3rem)/4)]"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -142,7 +142,7 @@ export function TournamentInfo({
 
         {/* Tournament description card */}
         <m.div
-          className="glass-card mx-auto max-w-3xl rounded-2xl p-8 text-center md:p-12"
+          className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-black/28 p-8 text-center shadow-[var(--surface-shadow)] backdrop-blur-xl md:p-12"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -160,7 +160,7 @@ export function TournamentInfo({
             {arenaTags.map((tag) => (
               <span
                 key={tag}
-                className="glass-card max-w-full break-words rounded-full px-4 py-1.5 text-center text-primary"
+                className="max-w-full break-words rounded-full border border-primary/14 bg-primary/[0.05] px-4 py-1.5 text-center text-primary"
               >
                 {tag}
               </span>

@@ -13,6 +13,7 @@ import {
   innerPanelClassName,
   pillClassName,
   recordClassName,
+  reviewPanelGridClassName,
 } from "@/components/admin/admin-section"
 import { useLanguage } from "@/components/language-provider"
 
@@ -43,7 +44,7 @@ export function PlayerApplicationsPanel({
       fetchError={fetchError}
       fetchLabel="player applications"
     >
-      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+      <div className={reviewPanelGridClassName}>
         <article className={innerPanelClassName}>
           <h3 className="text-lg font-medium">{t.admin.applications.pendingApplications}</h3>
           {pendingApplications.length === 0 ? (
